@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">향상</string>
+    <string name="lookup_title">사전 항목</string>
+    <string name="search_placeholder">기사 검색…</string>
+    <string name="settings_title">설정</string>
+    <string name="back_button">뒤로</string>
+    <string name="general_section">일반</string>
+    <string name="language_setting">언어</string>
+    <string name="appearance_section">모양</string>
+    <string name="theme_setting">테마</string>
+    <string name="reader_preferences_section">독서 설정</string>
+    <string name="font_size_setting">글자 크기</string>
+    <string name="theme_light">밝게</string>
+    <string name="theme_dark">어둡게</string>
+    <string name="theme_system">시스템 기본값</string>
+    <string name="font_small">작게</string>
+    <string name="font_medium">중간 (기본값)</string>
+    <string name="font_large">크게</string>
+    <string name="font_system">시스템 기본값</string>
+    <string name="version_label">버전 %1$s</string>
+    <string name="released_label">출시일: %1$s</string>
+    <string name="discover_nav">탐색</string>
+    <string name="settings_nav">설정</string>
+    <string name="menu_button">메뉴</string>
+    <string name="reader_title">독서</string>
+</resources>

@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">향상</string>
+    <string name="settings_title">Settings</string>
+    <string name="back_button">Back</string>
+    <string name="general_section">General</string>
+    <string name="language_setting">Language</string>
+    <string name="appearance_section">Appearance</string>
+    <string name="theme_setting">Theme</string>
+    <string name="reader_preferences_section">Reader Preferences</string>
+    <string name="font_size_setting">Reader Font Size</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System default</string>
+    <string name="font_small">Small</string>
+    <string name="font_medium">Medium (Default)</string>
+    <string name="font_large">Large</string>
+    <string name="font_system">System default</string>
+    <string name="version_label">Version %1$s</string>
+    <string name="released_label">Released: %1$s</string>
+    <string name="discover_nav">Discover</string>
+    <string name="settings_nav">Settings</string>
+    <string name="menu_button">Menu</string>
+    <string name="reader_title">Reader</string>
+    <string name="lookup_title">Dictionary Entry</string>
+    <string name="search_placeholder">Search articles…</string>
+</resources>
