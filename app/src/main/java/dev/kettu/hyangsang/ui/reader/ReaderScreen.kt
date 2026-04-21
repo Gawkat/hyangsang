@@ -61,6 +61,7 @@ fun ReaderScreen(
 ) {
     var selectedWord by remember { mutableStateOf<String?>(null) }
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
+    val offlineResult by dictionaryViewModel.offlineResult.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
 
@@ -131,6 +132,7 @@ fun ReaderScreen(
                 DefinitionOverlay(
                     word = selectedWord ?: "",
                     entry = lookupResult,
+                    offlineEntries = offlineResult,
                     onMarkKnown = { vocabularyViewModel.markWordAsKnown(it) },
                     onMarkLearning = { vocabularyViewModel.markWordAsLearning(it) }
                 )
@@ -143,6 +145,7 @@ fun ReaderScreen(
 fun DefinitionOverlay(
     word: String,
     entry: WordEntry?,
+    offlineEntries: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
     onMarkKnown: (String) -> Unit,
     onMarkLearning: (String) -> Unit
 ) {
@@ -150,17 +153,31 @@ fun DefinitionOverlay(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 24.dp, end = 24.dp, bottom = 48.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = entry?.word ?: word,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        val displayWord = offlineEntries.firstOrNull()?.entry?.word ?: entry?.word ?: word
+        val origin = offlineEntries.firstOrNull()?.entry?.origin
+
+        Row {
+            Text(
+                text = displayWord,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (origin != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "($origin)",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
 
         Row(modifier = Modifier.padding(vertical = 8.dp)) {
             AssistChip(
-                onClick = { onMarkLearning(entry?.word ?: word) },
+                onClick = { onMarkLearning(displayWord) },
                 label = { Text("Learning") },
                 leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 colors = AssistChipDefaults.assistChipColors(
@@ -169,7 +186,7 @@ fun DefinitionOverlay(
             )
             Spacer(modifier = Modifier.width(8.dp))
             AssistChip(
-                onClick = { onMarkKnown(entry?.word ?: word) },
+                onClick = { onMarkKnown(displayWord) },
                 label = { Text("Known") },
                 leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 colors = AssistChipDefaults.assistChipColors(
@@ -178,22 +195,69 @@ fun DefinitionOverlay(
             )
         }
 
-        if (entry?.pronunciation != null) {
+        if (offlineEntries.isNotEmpty()) {
+            offlineEntries.forEach { fullEntry ->
+                val e = fullEntry.entry
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Row {
+                        if (e.pronunciation != null) {
+                            Text(
+                                text = "[${e.pronunciation}]",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = e.partOfSpeech ?: "",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    
+                    fullEntry.senses.forEachIndexed { index, senseWithExamples ->
+                        val sense = senseWithExamples.sense
+                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                            Text(
+                                text = "${index + 1}. ${sense.definitionKo}",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            if (sense.definitionEn != null) {
+                                Text(
+                                    text = sense.definitionEn,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            senseWithExamples.examples.forEach { example ->
+                                Text(
+                                    text = "• ${example.example}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            }
+        } else if (entry != null) {
+            // Fallback to legacy WordEntry
+            if (entry.pronunciation != null) {
+                Text(
+                    text = "[${entry.pronunciation}]",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
             Text(
-                text = "[${entry.pronunciation}]",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.secondary
+                text = entry.pos ?: "Dictionary Entry",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.outline
             )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = entry?.pos ?: "Dictionary Entry",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.outline
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-        if (entry != null) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             Text(
                 text = entry.definition,
                 style = MaterialTheme.typography.bodyLarge
