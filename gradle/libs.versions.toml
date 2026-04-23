@@ -11,6 +11,7 @@ composeBom = "2024.10.01"
 navigationCompose = "2.8.3"
 datastore = "1.1.1"
 appcompat = "1.7.0"
+openKoreanText = "2.3.1"
 room = "2.8.4"
 ksp = "2.3.2"
 coreKtxVersion = "1.18.0"
@@ -38,6 +39,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtxVersion" }
+open-korean-text = { module = "org.openkoreantext:open-korean-text", version.ref = "openKoreanText" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

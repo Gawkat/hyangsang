@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AssistChip
@@ -44,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.kettu.hyangsang.data.local.entity.WordEntry
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
 
@@ -60,8 +57,8 @@ fun ReaderScreen(
     fontSize: String = "Medium (Default)"
 ) {
     var selectedWord by remember { mutableStateOf<String?>(null) }
-    val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
-    val offlineResult by dictionaryViewModel.offlineResult.collectAsState()
+    val stemmedWord by dictionaryViewModel.stemmedWord.collectAsState()
+    val wordDefinitions by dictionaryViewModel.wordDefinitions.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
 
@@ -131,8 +128,8 @@ fun ReaderScreen(
             ) {
                 DefinitionOverlay(
                     word = selectedWord ?: "",
-                    entry = lookupResult,
-                    offlineEntries = offlineResult,
+                    stem = stemmedWord ?: "",
+                    definitions = wordDefinitions,
                     onMarkKnown = { vocabularyViewModel.markWordAsKnown(it) },
                     onMarkLearning = { vocabularyViewModel.markWordAsLearning(it) }
                 )
@@ -144,8 +141,8 @@ fun ReaderScreen(
 @Composable
 fun DefinitionOverlay(
     word: String,
-    entry: WordEntry?,
-    offlineEntries: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
+    stem: String,
+    definitions: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
     onMarkKnown: (String) -> Unit,
     onMarkLearning: (String) -> Unit
 ) {
@@ -155,8 +152,8 @@ fun DefinitionOverlay(
             .padding(start = 24.dp, end = 24.dp, bottom = 48.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        val displayWord = offlineEntries.firstOrNull()?.entry?.word ?: entry?.word ?: word
-        val origin = offlineEntries.firstOrNull()?.entry?.origin
+        val displayWord = definitions.firstOrNull()?.entry?.word ?: stem.ifEmpty { word }
+        val origin = definitions.firstOrNull()?.entry?.origin
 
         Row {
             Text(
@@ -179,7 +176,13 @@ fun DefinitionOverlay(
             AssistChip(
                 onClick = { onMarkLearning(displayWord) },
                 label = { Text("Learning") },
-                leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
                 colors = AssistChipDefaults.assistChipColors(
                     labelColor = MaterialTheme.colorScheme.secondary
                 )
@@ -188,15 +191,21 @@ fun DefinitionOverlay(
             AssistChip(
                 onClick = { onMarkKnown(displayWord) },
                 label = { Text("Known") },
-                leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
                 colors = AssistChipDefaults.assistChipColors(
                     labelColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
 
-        if (offlineEntries.isNotEmpty()) {
-            offlineEntries.forEach { fullEntry ->
+        if (definitions.isNotEmpty()) {
+            definitions.forEach { fullEntry ->
                 val e = fullEntry.entry
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     Row {
@@ -214,7 +223,7 @@ fun DefinitionOverlay(
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
-                    
+
                     fullEntry.senses.forEachIndexed { index, senseWithExamples ->
                         val sense = senseWithExamples.sense
                         Column(modifier = Modifier.padding(top = 8.dp)) {
@@ -229,7 +238,7 @@ fun DefinitionOverlay(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            
+
                             senseWithExamples.examples.forEach { example ->
                                 Text(
                                     text = "• ${example.example}",
@@ -243,35 +252,10 @@ fun DefinitionOverlay(
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             }
-        } else if (entry != null) {
-            // Fallback to legacy WordEntry
-            if (entry.pronunciation != null) {
-                Text(
-                    text = "[${entry.pronunciation}]",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-            Text(
-                text = entry.pos ?: "Dictionary Entry",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.outline
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            Text(
-                text = entry.definition,
-                style = MaterialTheme.typography.bodyLarge
-            )
         } else {
             Text(
                 text = "No definition found for '$word'.",
                 style = MaterialTheme.typography.bodyLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "In the next phase, we will integrate a morphological analyzer to show the stem (e.g., if you clicked '했어요', we show '하다') and fetch real definitions from the offline database.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

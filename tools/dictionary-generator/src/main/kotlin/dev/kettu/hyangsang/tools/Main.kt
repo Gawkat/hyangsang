@@ -43,7 +43,7 @@ object DictionaryMapper {
 }
 
 fun main(args: Array<String>) {
-    val inputDir = File("app/src/main/assets/dictionary")
+    val inputDir = File("app/src/main/assets/dictionary") // TODO update me
     val outputFile = File("app/src/main/assets/dictionary.db")
 
     if (outputFile.exists()) outputFile.delete()
