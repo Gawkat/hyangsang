@@ -28,7 +28,7 @@
 *   **Integrated Sources**: RSS feeds/scrapers for news (e.g., Yonhap) or learning blogs.
 *   **Search/Sort**: Filter by difficulty, length, or date.
 
-## 5. Statistics & Gamification
+## 5. Statistics & Gamification (Potentially)
 *   **Word Tracking**: Mark unique stems as "encountered" in the database.
 *   **Metrics**:
     *   Reading Heatmap.
@@ -43,7 +43,7 @@
 *   Show selected page on drawer.
 *   Allow users to add own content.
 *   Include open source notices (https://developers.google.com/android/guides/opensource).
-
+*   Assign articles a "difficulty score" based on a subset of the text (vocabulary frequency/other metrics).
 ---
 
 ## Roadmap
@@ -56,3 +56,7 @@
     *   **Fallback Logic**: Handling cases where no exact stem match is found.
 5.  **Phase 5: Search & Performance** - Implement FTS5 for high-speed dictionary lookups and full-text search across articles.
 6.  **Phase 6: Sources & Indexing** - Fetching real content.
+    1. Define the Schema: Add a FeedSource table (Name, URL, Icon) and link it to Article table via a sourceId.
+    2. The Fetcher: Create an RssRepository that handles the network request and XML parsing (Retrofit, Kotlinx.Serialization + XmlUtil?).
+    3. The Worker: Use WorkManager to sync the feeds in the background once or twice a day, so the user has fresh content ready when they wake up.
+    4. The UI: Create a "Feeds" screen where users can see a list of available feeds.

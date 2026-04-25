@@ -17,7 +17,6 @@ class UserPreferencesRepository(private val context: Context) {
     private object Keys {
         val THEME = stringPreferencesKey("theme")
         val FONT_SIZE = stringPreferencesKey("font_size")
-        val IS_INITIAL_SEED_DONE = booleanPreferencesKey("is_initial_seed_done")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -28,10 +27,6 @@ class UserPreferencesRepository(private val context: Context) {
         preferences[Keys.FONT_SIZE] ?: "Medium (Default)"
     }
 
-    val isInitialSeedDoneFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[Keys.IS_INITIAL_SEED_DONE] ?: false
-    }
-
     suspend fun setTheme(theme: String) {
         println("Setting theme to $theme")
         context.dataStore.edit { it[Keys.THEME] = theme }
@@ -40,10 +35,5 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setFontSize(fontSize: String) {
         println("Setting font size to $fontSize")
         context.dataStore.edit { it[Keys.FONT_SIZE] = fontSize }
-    }
-
-    suspend fun setInitialSeedDone(done: Boolean) {
-        println("Setting initial seed done to $done")
-        context.dataStore.edit { it[Keys.IS_INITIAL_SEED_DONE] = done }
     }
 }

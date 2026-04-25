@@ -4,14 +4,21 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
+import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.dao.VocabularyDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.DictionaryEntry
 import dev.kettu.hyangsang.data.local.entity.DictionaryExample
 import dev.kettu.hyangsang.data.local.entity.DictionarySense
+import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.local.entity.VocabularyWord
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Database(
     entities = [
@@ -19,15 +26,17 @@ import dev.kettu.hyangsang.data.local.entity.VocabularyWord
         VocabularyWord::class,
         DictionaryEntry::class,
         DictionarySense::class,
-        DictionaryExample::class
+        DictionaryExample::class,
+        RssFeed::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class HyangsangDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun vocabularyDao(): VocabularyDao
     abstract fun dictionaryDao(): DictionaryDao
+    abstract fun rssFeedDao(): RssFeedDao
 
     companion object {
         @Volatile
@@ -42,9 +51,23 @@ abstract class HyangsangDatabase : RoomDatabase() {
                 )
                     .createFromAsset("dictionary.db")
                     .fallbackToDestructiveMigration()
+                    .addCallback(object : Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+
+                            CoroutineScope(Dispatchers.IO).launch {
+                                val dao = getDatabase(context).rssFeedDao()
+                                seedDefaultFeeds(dao)
+                            }
+                        }
+                    })
                     .build()
                     .also { Instance = it }
             }
+        }
+
+        private suspend fun seedDefaultFeeds(dao: RssFeedDao) {
+            DefaultData.defaultFeeds.forEach { dao.insertFeed(it) }
         }
     }
 }

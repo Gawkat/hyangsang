@@ -1,4 +1,4 @@
-package dev.kettu.hyangsang.ui.index
+package dev.kettu.hyangsang.ui.discover
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,7 +45,7 @@ import dev.kettu.hyangsang.data.local.entity.Article
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SourceIndexScreen(
+fun DiscoverScreen(
     articles: List<Article>,
     onMenuClick: () -> Unit,
     onArticleClick: (Long) -> Unit,
@@ -148,7 +148,7 @@ fun ArticleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = article.source ?: "Unknown",
+                    text = article.sourceUrl ?: "Unknown",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -170,8 +170,8 @@ fun ArticleCard(
 
 @Preview(showBackground = true)
 @Composable
-fun SourceIndexScreenPreview() {
+fun DiscoverScreenPreview() {
     MaterialTheme {
-        SourceIndexScreen(articles = emptyList(), onMenuClick = {}, onArticleClick = {})
+        DiscoverScreen(articles = emptyList(), onMenuClick = {}, onArticleClick = {})
     }
 }

@@ -5,6 +5,7 @@ import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
+import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,10 @@ class HyangsangApplication : Application() {
 
     val vocabularyRepository: VocabularyRepository by lazy {
         VocabularyRepository(database.vocabularyDao())
+    }
+
+    val rssFeedRepository: RssFeedRepository by lazy {
+        RssFeedRepository(database.rssFeedDao(), database.articleDao())
     }
 
     val userPreferencesRepository: UserPreferencesRepository by lazy {

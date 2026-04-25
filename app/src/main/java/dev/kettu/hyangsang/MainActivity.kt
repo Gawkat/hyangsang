@@ -1,14 +1,15 @@
 package dev.kettu.hyangsang
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
@@ -36,13 +37,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
-import dev.kettu.hyangsang.ui.index.SourceIndexScreen
+import dev.kettu.hyangsang.ui.discover.DiscoverScreen
+import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
+import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -68,7 +71,8 @@ class MainActivity : AppCompatActivity() {
                 factory = AppViewModelFactory(
                     app.articleRepository,
                     app.dictionaryRepository,
-                    app.vocabularyRepository
+                    app.vocabularyRepository,
+                    app.rssFeedRepository
                 )
             )
 
@@ -76,7 +80,8 @@ class MainActivity : AppCompatActivity() {
                 factory = AppViewModelFactory(
                     app.articleRepository,
                     app.dictionaryRepository,
-                    app.vocabularyRepository
+                    app.vocabularyRepository,
+                    app.rssFeedRepository
                 )
             )
 
@@ -84,7 +89,17 @@ class MainActivity : AppCompatActivity() {
                 factory = AppViewModelFactory(
                     app.articleRepository,
                     app.dictionaryRepository,
-                    app.vocabularyRepository
+                    app.vocabularyRepository,
+                    app.rssFeedRepository
+                )
+            )
+
+            val feedViewModel: RssFeedViewModel = viewModel(
+                factory = AppViewModelFactory(
+                    app.articleRepository,
+                    app.dictionaryRepository,
+                    app.vocabularyRepository,
+                    app.rssFeedRepository
                 )
             )
 
@@ -94,6 +109,7 @@ class MainActivity : AppCompatActivity() {
                     articleViewModel = articleViewModel,
                     dictionaryViewModel = dictionaryViewModel,
                     vocabularyViewModel = vocabularyViewModel,
+                    rssFeedViewModel = feedViewModel,
                     currentTheme = theme,
                     currentFontSize = fontSize
                 )
@@ -108,6 +124,7 @@ fun MainApp(
     articleViewModel: ArticleViewModel,
     dictionaryViewModel: DictionaryViewModel,
     vocabularyViewModel: VocabularyViewModel,
+    rssFeedViewModel: RssFeedViewModel,
     currentTheme: String,
     currentFontSize: String
 ) {
@@ -115,31 +132,6 @@ fun MainApp(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val articles by articleViewModel.allArticles.collectAsState()
-
-    // Seed data if not done before
-    LaunchedEffect(Unit) {
-        if (!prefsRepository.isInitialSeedDoneFlow.first()) {
-            println("Starting initial seed...")
-            articleViewModel.insertArticle(
-                Article(
-                    title = "첫 번째 기사: 한국의 봄",
-                    content = "한국의 봄은 매우 아름답습니다. 벚꽃이 피고 날씨가 따뜻해집니다. 많은 사람들이 공원으로 나들이를 갑니다.",
-                    source = "Sample"
-                )
-            )
-            articleViewModel.insertArticle(
-                Article(
-                    title = "서울의 맛집 가이드",
-                    content = "서울에는 맛있는 음식이 정말 많습니다. 특히 명동과 홍대에는 유명한 맛집들이 밀집해 있습니다. 비빔밥과 떡볶이를 꼭 드셔보세요.",
-                    source = "Sample"
-                )
-            )
-            prefsRepository.setInitialSeedDone(true)
-            println("Initial seed marked as done.")
-        } else {
-            println("Initial seed already done, skipping.")
-        }
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -156,9 +148,19 @@ fun MainApp(
                     label = { Text(stringResource(R.string.discover_nav)) },
                     selected = false,
                     onClick = {
-                        navController.navigate("index") {
-                            popUpTo("index") { inclusive = true }
+                        navController.navigate("discover") {
+                            popUpTo("discover") { inclusive = true }
                         }
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.RssFeed, contentDescription = null) },
+                    label = { Text(stringResource(R.string.feeds_nav)) },
+                    selected = false,
+                    onClick = {
+                        navController.navigate("manage_feeds")
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -176,9 +178,9 @@ fun MainApp(
             }
         }
     ) {
-        NavHost(navController = navController, startDestination = "index") {
-            composable("index") {
-                SourceIndexScreen(
+        NavHost(navController = navController, startDestination = "discover") {
+            composable("discover") {
+                DiscoverScreen(
                     articles = articles,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onArticleClick = { articleId ->
@@ -205,6 +207,12 @@ fun MainApp(
                     currentFontSize = currentFontSize,
                     onFontSizeChange = { scope.launch { prefsRepository.setFontSize(it) } },
                     onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable("manage_feeds") {
+                FeedsScreen(
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    viewModel = rssFeedViewModel
                 )
             }
         }
