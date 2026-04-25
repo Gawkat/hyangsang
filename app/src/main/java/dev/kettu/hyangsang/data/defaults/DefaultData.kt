@@ -6,37 +6,37 @@ object DefaultData {
     val defaultFeeds: List<RssFeed> = listOf(
         RssFeed(
             title = "Yonhap News",
-            url = "https://en.yna.co.kr/RSS/news.xml",
+            url = "https://www.yna.co.kr/rss/news.xml",
             category = "News"
         ),
         RssFeed(
-            title = "Yonhap News - National",
-            url = "https://en.yna.co.kr/RSS/national.xml",
-            category = "National"
+            title = "Yonhap News - Politics",
+            url = "https://www.yna.co.kr/rss/politics.xml",
+            category = "Politics"
         ),
         RssFeed(
             title = "Yonhap News - North Korea",
-            url = "https://en.yna.co.kr/RSS/nk.xml",
+            url = "https://www.yna.co.kr/rss/northkorea.xml",
             category = "North Korea"
         ),
         RssFeed(
             title = "Yonhap News - Economy",
-            url = "https://en.yna.co.kr/RSS/economy-finance.xml",
+            url = "https://www.yna.co.kr/rss/economy.xml",
             category = "Economy"
         ),
         RssFeed(
-            title = "Yonhap News - Business",
-            url = "https://en.yna.co.kr/RSS/biz.xml",
-            category = "Business"
-        ),
-        RssFeed(
             title = "Yonhap News - Culture",
-            url = "https://en.yna.co.kr/RSS/culture.xml",
+            url = "https://www.yna.co.kr/rss/culture.xml",
             category = "Culture"
         ),
         RssFeed(
+            title = "Yonhap News - Entertainment",
+            url = "https://www.yna.co.kr/rss/entertainment.xml",
+            category = "Entertainment"
+        ),
+        RssFeed(
             title = "Yonhap News - Sports",
-            url = "https://en.yna.co.kr/RSS/sports.xml",
+            url = "https://www.yna.co.kr/rss/sports.xml",
             category = "Sports"
         ),
         RssFeed(

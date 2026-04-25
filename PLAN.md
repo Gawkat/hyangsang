@@ -44,6 +44,7 @@
 *   Allow users to add own content.
 *   Include open source notices (https://developers.google.com/android/guides/opensource).
 *   Assign articles a "difficulty score" based on a subset of the text (vocabulary frequency/other metrics).
+*   Use Dagger for Dependency Injection.
 ---
 
 ## Roadmap

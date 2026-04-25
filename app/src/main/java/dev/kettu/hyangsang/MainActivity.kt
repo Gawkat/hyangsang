@@ -35,7 +35,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
@@ -47,7 +46,6 @@ import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -234,7 +232,8 @@ fun ReaderWithDrawer(
     LaunchedEffect(articleId) {
         if (articleId != null) {
             val article = articleViewModel.getArticleById(articleId)
-            if (article != null) {
+            // TODO: fetch article contents
+            if (article != null && article.content != null) {
                 title = article.title
                 content = article.content
             }

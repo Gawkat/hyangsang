@@ -1,20 +1,23 @@
 package dev.kettu.hyangsang.data.repository
 
+import android.icu.util.Calendar
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
-import dev.kettu.hyangsang.data.local.entity.RssItem
+import dev.kettu.hyangsang.network.RssFeedService
+import dev.kettu.hyangsang.parser.RssFeedParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.net.URL
+
+private const val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5 * 60 * 1000
 
 class RssFeedRepository(
     private val rssFeedDao: RssFeedDao,
-    private val articleDao: ArticleDao
+    private val articleDao: ArticleDao,
+    private val rssService: RssFeedService
 ) {
     val allFeeds: Flow<List<RssFeed>> = rssFeedDao.getAllFeeds()
 
@@ -30,11 +33,16 @@ class RssFeedRepository(
     }
 
     // Only fetch for enabled feeds
-    suspend fun refreshEnabledFeeds() {
-        val enabledFeeds = rssFeedDao.getEnabledFeeds() // You'll need this in DAO
+    suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) {
+        val enabledFeeds = rssFeedDao.getEnabledFeeds()
         enabledFeeds.collect { feedList ->
             feedList.forEach { feed ->
-                fetchAndSaveRss(feed.url)
+                // Skip if forceRefresh is false and lastSynced is within the last 5 minutes
+                if (!forceRefresh && feed.lastSynced + DEFAULT_FEED_REFRESH_RATE_LIMIT > Calendar.getInstance().timeInMillis) {
+                    return@forEach
+                }
+
+                fetchAndSaveRss(feed)
             }
         }
     }
@@ -51,33 +59,33 @@ class RssFeedRepository(
         rssFeedDao.deleteFeed(feed)
     }
 
-    suspend fun fetchAndSaveRss(feedUrl: String) {
+    suspend fun fetchAndSaveRss(feed: RssFeed) {
         withContext(Dispatchers.IO) {
             try {
-                // 1. Fetch the XML (Simplified example)
-                val xmlContent = URL(feedUrl).readText()
+                val response = rssService.getRssFeed(feed.url)
+                if (response.isSuccessful) {
+                    val xmlString = response.body()?.string() ?: ""
+                    val items = RssFeedParser().parse(xmlString)
 
-                // 2. Parse the XML
-                // You can use a library or a simple regex/XmlPullParser
-                val items = parseRssXml(xmlContent)
+                    items.forEach { item ->
+                        if (item.title.isEmpty() || item.link.isEmpty()) {
+                            return@forEach
+                        }
 
-                // 3. Convert RssItem to Article and Save
-                items.forEach { item ->
-                    val article = Article(
-                        title = item.title,
-                        content = item.description, // TODO: Clean HTML tags if necessary
-                        sourceUrl = item.link
-                    )
-                    articleDao.insertArticle(article)
+                        val article = Article(
+                            title = item.title,
+                            description = item.description,
+                            sourceUrl = item.link
+                        )
+                        articleDao.insertArticle(article)
+                    }
+
+                    val syncedFeed = feed.copy(lastSynced = Calendar.getInstance().timeInMillis)
+                    rssFeedDao.updateFeed(syncedFeed)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun parseRssXml(xml: String): List<RssItem> {
-        // Implementation using XmlPullParser or a library
-        return emptyList()
     }
 }

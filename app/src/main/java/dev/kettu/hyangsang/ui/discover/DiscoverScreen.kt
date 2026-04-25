@@ -148,7 +148,7 @@ fun ArticleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = article.sourceUrl ?: "Unknown",
+                    text = article.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -172,6 +172,9 @@ fun ArticleCard(
 @Composable
 fun DiscoverScreenPreview() {
     MaterialTheme {
-        DiscoverScreen(articles = emptyList(), onMenuClick = {}, onArticleClick = {})
+        DiscoverScreen(
+            articles = listOf(Article(1, "Title", "Description", "Source")),
+            onMenuClick = {},
+            onArticleClick = {})
     }
 }

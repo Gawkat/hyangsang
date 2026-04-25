@@ -8,7 +8,8 @@ data class Article(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
-    val content: String,
+    val description: String,
+    val content: String? = null,
     val sourceUrl: String? = null,
     val addedDate: Long = System.currentTimeMillis(),
     val lastReadDate: Long? = null,
