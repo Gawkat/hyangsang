@@ -185,7 +185,7 @@ fun AppInfo() {
             color = MaterialTheme.colorScheme.outline
         )
         Text(
-            text = stringResource(R.string.released_label, "April 2024"),
+            text = stringResource(R.string.released_label, "April 2026"),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline
         )

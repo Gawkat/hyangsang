@@ -32,8 +32,7 @@ class HyangsangApplication : Application() {
 
     val dictionaryRepository: DictionaryRepository by lazy {
         DictionaryRepository(
-            database.dictionaryDao(),
-            database.offlineDictionaryDao()
+            database.dictionaryDao()
         )
     }
 

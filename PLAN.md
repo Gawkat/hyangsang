@@ -1,4 +1,4 @@
-# 향상 Project Plan: Korean Immersion & Learning App
+# 향상 Project Plan: Reader App For Korean Learners
 
 ## 1. Architectural Foundation
 *   **Language & UI**: Kotlin with Jetpack Compose (Material 3).
@@ -18,10 +18,10 @@
 ## 3. Dictionary Management
 *   **Offline First**: Built-in Room database containing the KR-EN/KR-KR dictionary. 
 *   **Lookup Overlay**: Modal Bottom Sheet rendering `DictionaryWithSenses` objects.
-*   **The "Stemming Pipeline"**: 
+*   **The "Stemming Pipeline"**:
     1. User taps word in Reader.
     2. Morphological analyzer identifies the stem (Lemma).
-    3. Repository queries `OfflineDictionaryDao` using the stem.
+    3. Repository queries `DictionaryDao` using the stem.
     4. Overlay displays results with primary definition and collapsible examples.
 
 ## 4. Source Index & Discovery
@@ -35,17 +35,14 @@
     *   Vocabulary Level estimation.
     *   Total Immersion Time.
 
-## 6. Advanced Features (Future)
-*   **Local LLM Integration**: llama.cpp with JNI for contextual grammar/nuance explanations (not a chatbot).
-
----
-
 ## Bugfixes & Improvements
+*   Improve dictionary lookup visuals.
 *   Let user choose reader font type.
 *   Ensure status bar legibility with all themes.
 *   Update default theme to Solarized, add different themes.
 *   Show selected page on drawer.
 *   Allow users to add own content.
+*   Include open source notices (https://developers.google.com/android/guides/opensource).
 
 ---
 
@@ -53,7 +50,7 @@
 1.  **Phase 1: Reader UI & Navigation** (Completed) - Interactive text prototype, Navigation Drawer, and Settings UI.
 2.  **Phase 2: Persistence & Settings** (Completed) - DataStore integration for theme, font size, and language. Dynamic theme/font size observers in UI.
 3.  **Phase 3: Local Database (Room)** (In Progress) - Dictionary schema (Entries, Senses, Examples) is implemented. *Next: Article storage, reading progress, and vocabulary tracking.*
-4.  **Phase 4: Definition Overlay Integration** (Next) - Connect the offline dictionary to the Reader UI. This involves:
+4.  **Phase 4: Definition Overlay Integration** (Completed) - Connect the offline dictionary to the Reader UI. This involves:
     *   **Morphological Analysis**: Integrating OKT or Komoran to convert conjugated words (e.g., "갔어요") into dictionary stems ("가다").
     *   **Rich UI Rendering**: Displaying multiple senses, part-of-speech tags, and example sentences in the BottomSheet.
     *   **Fallback Logic**: Handling cases where no exact stem match is found.
