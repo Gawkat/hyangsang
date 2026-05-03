@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,24 +39,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
-    title: String,
-    content: String,
+    articleWithFeed: ArticleWithFeed,
     onMenuClick: () -> Unit,
     dictionaryViewModel: DictionaryViewModel,
     vocabularyViewModel: VocabularyViewModel,
     modifier: Modifier = Modifier,
     fontSize: String = "Medium (Default)"
 ) {
+    val article = articleWithFeed.article
+    val content = article.content ?: ""
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var selectedWord by remember { mutableStateOf<String?>(null) }
     val stemmedWord by dictionaryViewModel.stemmedWord.collectAsState()
     val wordDefinitions by dictionaryViewModel.wordDefinitions.collectAsState()
@@ -75,7 +81,12 @@ fun ReaderScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(
+                        articleWithFeed.feed.category,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -86,7 +97,7 @@ fun ReaderScreen(
                 )
             )
         },
-        modifier = modifier
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             Column(
@@ -95,6 +106,7 @@ fun ReaderScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
+                ArticleHeader(articleWithFeed = articleWithFeed)
                 FlowRow {
                     tokens.forEach { token ->
                         if (token.isBlank()) {

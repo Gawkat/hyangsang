@@ -249,8 +249,7 @@ fun ReaderWithDrawer(
 
         is ArticleUiState.Success -> {
             ReaderScreen(
-                title = state.article.title,
-                content = state.article.content ?: "", // Maybe do something here
+                state.articleWithFeed,
                 onMenuClick = onMenuClick,
                 dictionaryViewModel = dictionaryViewModel,
                 vocabularyViewModel = vocabularyViewModel,

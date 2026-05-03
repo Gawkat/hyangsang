@@ -2,6 +2,7 @@ package dev.kettu.hyangsang.data.repository
 
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -11,6 +12,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
 
     suspend fun getArticleById(id: Long): Article? = articleDao.getArticleById(id)
+
+    suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed? = articleDao.getArticleWithFeedById(id)
 
     suspend fun insertArticle(article: Article): Long = articleDao.insertArticle(article)
 

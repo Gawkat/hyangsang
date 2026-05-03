@@ -3,6 +3,7 @@ package dev.kettu.hyangsang.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 
 sealed class ArticleUiState {
     object Loading : ArticleUiState()
-    data class Success(val article: Article) : ArticleUiState()
+    data class Success(val articleWithFeed: ArticleWithFeed) : ArticleUiState()
     data class Error(val message: String) : ArticleUiState()
 }
 
@@ -39,14 +40,17 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
     fun loadArticle(articleId: Long) {
         viewModelScope.launch {
             _currentArticleState.value = ArticleUiState.Loading
-            val article = articleRepository.getArticleById(articleId)
+            val articleWithFeed = articleRepository.getArticleWithFeedById(articleId)
 
-            if (article != null) {
-                if (article.content.isNullOrBlank()) {
-                    val updated = articleRepository.fetchAndSaveArticleContent(article)
-                    _currentArticleState.value = ArticleUiState.Success(updated)
+            if (articleWithFeed != null) {
+                if (articleWithFeed.article.content.isNullOrBlank()) {
+                    val updatedArticle =
+                        articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
+                    _currentArticleState.value = ArticleUiState.Success(
+                        articleWithFeed.copy(article = updatedArticle)
+                    )
                 } else {
-                    _currentArticleState.value = ArticleUiState.Success(article)
+                    _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
                 }
             } else {
                 _currentArticleState.value = ArticleUiState.Error("Article not found")

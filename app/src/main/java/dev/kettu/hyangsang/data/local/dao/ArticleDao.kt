@@ -20,6 +20,10 @@ interface ArticleDao {
     suspend fun getArticleById(id: Long): Article?
 
     @Transaction
+    @Query("SELECT * FROM articles WHERE id = :id")
+    suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed?
+
+    @Transaction
     @Query("SELECT * FROM articles ORDER BY addedDate DESC")
     fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>>
 
