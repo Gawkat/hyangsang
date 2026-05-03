@@ -78,4 +78,7 @@ dependencies {
     // Retrofit
     implementation(libs.retrofit)
     implementation(libs.logging.interceptor)
+
+    //Jsoup
+    implementation(libs.jsoup)
 }

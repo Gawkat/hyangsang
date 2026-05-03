@@ -4,13 +4,16 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,10 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
+import dev.kettu.hyangsang.ui.viewmodel.ArticleUiState
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
@@ -226,26 +228,34 @@ fun ReaderWithDrawer(
     onMenuClick: () -> Unit,
     fontSize: String
 ) {
-    var title by remember { mutableStateOf("Loading...") }
-    var content by remember { mutableStateOf("") }
+    val uiState by articleViewModel.currentArticleState.collectAsState()
 
     LaunchedEffect(articleId) {
         if (articleId != null) {
-            val article = articleViewModel.getArticleById(articleId)
-            // TODO: fetch article contents
-            if (article != null && article.content != null) {
-                title = article.title
-                content = article.content
-            }
+            articleViewModel.loadArticle(articleId)
         }
     }
 
-    ReaderScreen(
-        title = title,
-        content = content,
-        onMenuClick = onMenuClick,
-        dictionaryViewModel = dictionaryViewModel,
-        vocabularyViewModel = vocabularyViewModel,
-        fontSize = fontSize
-    )
+    when (val state = uiState) {
+        is ArticleUiState.Loading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+
+        is ArticleUiState.Error -> {
+            Text("Error: ${state.message}")
+        }
+
+        is ArticleUiState.Success -> {
+            ReaderScreen(
+                title = state.article.title,
+                content = state.article.content ?: "", // Maybe do something here
+                onMenuClick = onMenuClick,
+                dictionaryViewModel = dictionaryViewModel,
+                vocabularyViewModel = vocabularyViewModel,
+                fontSize = fontSize
+            )
+        }
+    }
 }

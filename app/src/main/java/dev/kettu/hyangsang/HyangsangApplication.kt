@@ -1,6 +1,5 @@
 package dev.kettu.hyangsang
 
-import android.R.attr.level
 import android.app.Application
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
@@ -45,7 +44,7 @@ class HyangsangApplication : Application() {
         super.onCreate()
 
         applicationScope.launch {
-            // Fetch latest articles
+            // Fetch latest articles from feeds
             rssFeedRepository.refreshEnabledFeeds()
 
             // Initialize Open Korean Text resources

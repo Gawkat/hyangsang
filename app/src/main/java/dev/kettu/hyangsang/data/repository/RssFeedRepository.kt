@@ -75,7 +75,9 @@ class RssFeedRepository(
                         val article = Article(
                             title = item.title,
                             description = item.description,
-                            sourceUrl = item.link
+                            sourceUrl = item.link,
+                            feedId = feed.id,
+                            pubDate = item.pubDate
                         )
                         articleDao.insertArticle(article)
                     }
@@ -84,6 +86,7 @@ class RssFeedRepository(
                     rssFeedDao.updateFeed(syncedFeed)
                 }
             } catch (e: Exception) {
+                // TODO: Probably note that this feed failed to sync
                 e.printStackTrace()
             }
         }

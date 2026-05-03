@@ -35,7 +35,18 @@
     *   Vocabulary Level estimation.
     *   Total Immersion Time.
 
+### 6. Sources & Indexing (Refined)
+1. [x] **Define Schema**: Add `RssFeed` and update `Article` to include `link` and `isSaved`.
+2. [x] **The Fetcher**: Retrofit + XML Parser (Implemented).
+3. [ ] **The Extractor**: Integrate **Jsoup** to pull full article bodies from news URLs.
+    *   Implement `HtmlSanitizer` utility to strip ads/scripts.
+4. [ ] **Reader Integration**:
+    *   Update `ReaderViewModel` to handle "Loading" and "Error" states for remote articles.
+    *   Implement "Save for Offline" toggle.
+5. [ ] **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread articles older than 7 days) to save space.
+
 ## Bugfixes & Improvements
+*   Ensure articles are unique.
 *   Improve dictionary lookup visuals.
 *   Let user choose reader font type.
 *   Ensure status bar legibility with all themes.
@@ -45,6 +56,7 @@
 *   Include open source notices (https://developers.google.com/android/guides/opensource).
 *   Assign articles a "difficulty score" based on a subset of the text (vocabulary frequency/other metrics).
 *   Use Dagger for Dependency Injection.
+*   Programmatically update version number and build ID from commit hash.
 ---
 
 ## Roadmap

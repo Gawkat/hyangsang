@@ -5,8 +5,10 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -16,6 +18,13 @@ interface ArticleDao {
 
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: Long): Article?
+
+    @Transaction
+    @Query("SELECT * FROM articles ORDER BY addedDate DESC")
+    fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>>
+
+    @Query("SELECT * FROM articles WHERE feedId = :feedId")
+    fun getArticlesByFeed(feedId: Long): Flow<List<Article>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticle(article: Article): Long

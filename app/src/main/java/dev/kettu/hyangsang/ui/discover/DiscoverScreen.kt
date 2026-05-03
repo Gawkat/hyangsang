@@ -173,7 +173,18 @@ fun ArticleCard(
 fun DiscoverScreenPreview() {
     MaterialTheme {
         DiscoverScreen(
-            articles = listOf(Article(1, "Title", "Description", "Source")),
+            articles = listOf(
+                Article(
+                    1,
+                    1,
+                    "Title",
+                    "Description",
+                    "Source",
+                    "PubDate",
+                    1,
+                    "2023-07-01"
+                )
+            ),
             onMenuClick = {},
             onArticleClick = {})
     }
