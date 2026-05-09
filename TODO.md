@@ -1,23 +1,28 @@
 # 향상 Project Plan
----
 
 ## General
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread articles older than 7 days) to save space
-*   Update default theme to Solarized, add different themes
-*   Include open source notices (https://developers.google.com/android/guides/opensource)
+* Update default theme to Solarized, add different themes
+* Add OLED theme
+* Include open source notices (https://developers.google.com/android/guides/opensource)
 * Move from side drawer to bottom app bar?
-*   Allow users to add own content
-*   Use Dagger for Dependency Injection
-*   Programmatically update version number and build ID from commit hash
-*   Research if full-text search would speed up dictionary lookups
+* Allow users to add own content
+* Use Dagger for Dependency Injection
+* Programmatically update version number and build ID from commit hash
+* Research if full-text search would speed up dictionary lookups
+* Add initial startup configuration screens to allow user to select preferred feeds
 
 ## Reader
 * **Progress Tracking**: Save scroll position or last visible paragraph index to Room
-*   Improve dictionary lookup visuals
-*   Let user choose reader font type
+* Improve dictionary lookup visuals
+* Let user choose reader font type
 
 ## Discover/Main Feed
 * **Search/Sort**: Filter by difficulty, length, or date
+
+## Feeds
+* Allow user to restore built-in feeds if removed
+* Allow user to enable and disable feeds
 
 ## Favorites
 * Allow users to save/unsave articles
@@ -25,10 +30,10 @@
 ## Statistics
 * **Word Tracking**: Mark unique stems as "encountered" in the database
 * **Metrics**:
-  *   Reading Heatmap
-  *   Vocabulary Level estimation
-  *   Total Immersion Time
+  * Reading Heatmap
+  * Vocabulary Level estimation
+  * Total Immersion Time
 
 ## Bugfixes
-*   Ensure articles are unique
-*   Ensure status bar legibility with all themes
+* Ensure articles are unique
+* Ensure status bar legibility with all themes

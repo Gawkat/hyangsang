@@ -1,5 +1,4 @@
 # 향상 - Reader App For Korean Learners
----
 
 ## Features
 * Integrated RSS feeds
