@@ -11,6 +11,7 @@
 * Programmatically update version number and build ID from commit hash
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
+* Update dates to be stored and displayed in a consistent manner
 
 ## Reader
 * **Progress Tracking**: Save scroll position or last visible paragraph index to Room
@@ -24,7 +25,7 @@
 * Allow user to restore built-in feeds if removed
 * Allow user to enable and disable feeds
 
-## Favorites
+## Saved
 * Allow users to save/unsave articles
 
 ## Statistics

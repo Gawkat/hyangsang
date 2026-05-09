@@ -11,6 +11,8 @@ import org.jsoup.Jsoup
 class ArticleRepository(private val articleDao: ArticleDao) {
     fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
 
+    fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>> = articleDao.getAllArticlesWithFeed()
+
     suspend fun getArticleById(id: Long): Article? = articleDao.getArticleById(id)
 
     suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed? = articleDao.getArticleWithFeedById(id)
@@ -49,7 +51,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
                 updateArticle(updatedArticle)
                 updatedArticle
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 article // Return original on failure
             }
         }

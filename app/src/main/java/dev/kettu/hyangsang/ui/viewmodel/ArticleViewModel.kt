@@ -29,6 +29,14 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             initialValue = emptyList()
         )
 
+    val allArticlesWithFeed: StateFlow<List<ArticleWithFeed>> =
+        articleRepository.getAllArticlesWithFeed()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
+
     fun insertArticle(article: Article) {
         viewModelScope.launch {
             articleRepository.insertArticle(article)

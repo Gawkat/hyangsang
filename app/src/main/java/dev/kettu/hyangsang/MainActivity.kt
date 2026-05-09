@@ -131,7 +131,7 @@ fun MainApp(
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val articles by articleViewModel.allArticles.collectAsState()
+    val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -181,7 +181,7 @@ fun MainApp(
         NavHost(navController = navController, startDestination = "discover") {
             composable("discover") {
                 DiscoverScreen(
-                    articles = articles,
+                    articlesWithFeed = articlesWithFeed,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onArticleClick = { articleId ->
                         navController.navigate("reader/$articleId")
