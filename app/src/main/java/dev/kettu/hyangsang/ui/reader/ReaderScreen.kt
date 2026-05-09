@@ -5,24 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
 
@@ -58,13 +51,38 @@ fun ReaderScreen(
     modifier: Modifier = Modifier,
     fontSize: String = "Medium (Default)"
 ) {
+    val stemmedWord by dictionaryViewModel.stemmedWord.collectAsState()
+    val wordDefinitions by dictionaryViewModel.wordDefinitions.collectAsState()
+
+    ReaderContent(
+        articleWithFeed = articleWithFeed,
+        onMenuClick = onMenuClick,
+        stemmedWord = stemmedWord,
+        wordDefinitions = wordDefinitions,
+        onLookupWord = { dictionaryViewModel.lookupWord(it) },
+        onClearLookup = { dictionaryViewModel.clearLookup() },
+        modifier = modifier,
+        fontSize = fontSize
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun ReaderContent(
+    articleWithFeed: ArticleWithFeed,
+    onMenuClick: () -> Unit,
+    stemmedWord: String?,
+    wordDefinitions: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
+    onLookupWord: (String) -> Unit,
+    onClearLookup: () -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: String = "Medium (Default)"
+) {
     val article = articleWithFeed.article
     val content = article.content ?: ""
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var selectedWord by remember { mutableStateOf<String?>(null) }
-    val stemmedWord by dictionaryViewModel.stemmedWord.collectAsState()
-    val wordDefinitions by dictionaryViewModel.wordDefinitions.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
 
@@ -119,7 +137,7 @@ fun ReaderScreen(
                                 onClick = {
                                     val wordToLookup = token.trim { it in "!.?,\"'" }
                                     selectedWord = token
-                                    dictionaryViewModel.lookupWord(wordToLookup)
+                                    onLookupWord(wordToLookup)
                                     showBottomSheet = true
                                 }
                             )
@@ -134,141 +152,16 @@ fun ReaderScreen(
                 onDismissRequest = {
                     showBottomSheet = false
                     selectedWord = null
-                    dictionaryViewModel.clearLookup()
+                    onClearLookup()
                 },
                 sheetState = sheetState
             ) {
                 DefinitionOverlay(
                     word = selectedWord ?: "",
                     stem = stemmedWord ?: "",
-                    definitions = wordDefinitions,
-                    onMarkKnown = { vocabularyViewModel.markWordAsKnown(it) },
-                    onMarkLearning = { vocabularyViewModel.markWordAsLearning(it) }
+                    definitions = wordDefinitions
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun DefinitionOverlay(
-    word: String,
-    stem: String,
-    definitions: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
-    onMarkKnown: (String) -> Unit,
-    onMarkLearning: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 48.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        val displayWord = definitions.firstOrNull()?.entry?.word ?: stem.ifEmpty { word }
-        val origin = definitions.firstOrNull()?.entry?.origin
-
-        Row {
-            Text(
-                text = displayWord,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            if (origin != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "($origin)",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
-        }
-
-        Row(modifier = Modifier.padding(vertical = 8.dp)) {
-            AssistChip(
-                onClick = { onMarkLearning(displayWord) },
-                label = { Text("Learning") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                    labelColor = MaterialTheme.colorScheme.secondary
-                )
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            AssistChip(
-                onClick = { onMarkKnown(displayWord) },
-                label = { Text("Known") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                    labelColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
-
-        if (definitions.isNotEmpty()) {
-            definitions.forEach { fullEntry ->
-                val e = fullEntry.entry
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Row {
-                        if (e.pronunciation != null) {
-                            Text(
-                                text = "[${e.pronunciation}]",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = e.partOfSpeech ?: "",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    fullEntry.senses.forEachIndexed { index, senseWithExamples ->
-                        val sense = senseWithExamples.sense
-                        Column(modifier = Modifier.padding(top = 8.dp)) {
-                            Text(
-                                text = "${index + 1}. ${sense.definitionKo}",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            if (sense.definitionEn != null) {
-                                Text(
-                                    text = sense.definitionEn,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            senseWithExamples.examples.forEach { example ->
-                                Text(
-                                    text = "• ${example.example}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(start = 12.dp, top = 4.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            }
-        } else {
-            Text(
-                text = "No definition found for '$word'.",
-                style = MaterialTheme.typography.bodyLarge
-            )
         }
     }
 }
@@ -294,6 +187,29 @@ fun ClickableWord(
 @Preview(showBackground = true)
 @Composable
 fun ReaderScreenPreview() {
-    // Previews cannot easily provide ViewModels without a lot of boilerplate,
-    // so in a real app we'd usually use a stateless version of the screen for previews.
+    HyangsangTheme {
+        ReaderContent(
+            articleWithFeed = ArticleWithFeed(
+                article = Article(
+                    id = 1,
+                    feedId = 1,
+                    title = "스타크래프트 2: 자유의 날개 다시 보기",
+                    description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
+                    content = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다. 테란, 저그, 프로토스 세 종족의 운명이 걸린 거대한 전쟁 속으로 뛰어들어 보세요.",
+                    pubDate = "2024-03-20"
+                ),
+                feed = RssFeed(
+                    id = 1,
+                    title = "게임 소식",
+                    url = "https://example.com/rss",
+                    category = "게임"
+                )
+            ),
+            onMenuClick = {},
+            stemmedWord = null,
+            wordDefinitions = emptyList(),
+            onLookupWord = {},
+            onClearLookup = {}
+        )
+    }
 }

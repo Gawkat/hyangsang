@@ -15,10 +15,11 @@
 
 ## Reader
 * **Progress Tracking**: Save scroll position or last visible paragraph index to Room
-* Improve dictionary lookup visuals
 * Let user choose reader font type
+* Improve dictionary lookups for compound words
+* Update dictionary lookups for homonyms, for example 무상
 
-## Discover/Main Feed
+## Discover/Start
 * **Search/Sort**: Filter by difficulty, length, or date
 
 ## Feeds
