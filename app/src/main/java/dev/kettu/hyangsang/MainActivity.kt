@@ -5,24 +5,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,14 +25,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
+import dev.kettu.hyangsang.ui.menu.MenuScreen
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
@@ -129,63 +126,63 @@ fun MainApp(
     currentFontSize: String
 ) {
     val navController = rememberNavController()
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    stringResource(R.string.app_name),
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text(stringResource(R.string.discover_nav)) },
-                    selected = false,
-                    onClick = {
-                        navController.navigate("discover") {
-                            popUpTo("discover") { inclusive = true }
-                        }
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.RssFeed, contentDescription = null) },
-                    label = { Text(stringResource(R.string.feeds_nav)) },
-                    selected = false,
-                    onClick = {
-                        navController.navigate("manage_feeds")
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.settings_nav)) },
-                    selected = false,
-                    onClick = {
-                        navController.navigate("settings")
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+    val navItems = listOf(
+        Triple("discover", Icons.Default.Home, R.string.discover_nav),
+        Triple("manage_feeds", Icons.Default.RssFeed, R.string.feeds_nav),
+        Triple("menu", Icons.Default.Menu, R.string.menu_nav)
+    )
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    Scaffold(
+        bottomBar = {
+            if (currentDestination?.route in navItems.map { it.first }) {
+                NavigationBar {
+                    navItems.forEach { (route, icon, labelRes) ->
+                        NavigationBarItem(
+                            icon = { Icon(icon, contentDescription = stringResource(labelRes)) },
+                            label = { Text(stringResource(labelRes)) },
+                            selected = currentDestination?.hierarchy?.any { it.route == route } == true,
+                            onClick = {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
-    ) {
-        NavHost(navController = navController, startDestination = "discover") {
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = navItems.first().first,
+            modifier = Modifier.padding(innerPadding)
+        ) {
             composable("discover") {
                 DiscoverScreen(
                     articlesWithFeed = articlesWithFeed,
-                    onMenuClick = { scope.launch { drawerState.open() } },
                     onArticleClick = { articleId ->
                         navController.navigate("reader/$articleId")
                     }
+                )
+            }
+            composable("manage_feeds") {
+                FeedsScreen(
+                    viewModel = rssFeedViewModel
+                )
+            }
+            composable("menu") {
+                MenuScreen(
+                    onSettingsClick = { navController.navigate("settings") }
                 )
             }
             composable("reader/{articleId}") { backStackEntry ->
@@ -195,8 +192,7 @@ fun MainApp(
                     articleId = articleId,
                     articleViewModel = articleViewModel,
                     dictionaryViewModel = dictionaryViewModel,
-                    vocabularyViewModel = vocabularyViewModel,
-                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onBackClick = { navController.popBackStack() },
                     fontSize = currentFontSize
                 )
             }
@@ -209,12 +205,6 @@ fun MainApp(
                     onBackClick = { navController.popBackStack() }
                 )
             }
-            composable("manage_feeds") {
-                FeedsScreen(
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    viewModel = rssFeedViewModel
-                )
-            }
         }
     }
 }
@@ -224,8 +214,7 @@ fun ReaderWithDrawer(
     articleId: Long?,
     articleViewModel: ArticleViewModel,
     dictionaryViewModel: DictionaryViewModel,
-    vocabularyViewModel: VocabularyViewModel,
-    onMenuClick: () -> Unit,
+    onBackClick: () -> Unit,
     fontSize: String
 ) {
     val uiState by articleViewModel.currentArticleState.collectAsState()
@@ -250,9 +239,8 @@ fun ReaderWithDrawer(
         is ArticleUiState.Success -> {
             ReaderScreen(
                 state.articleWithFeed,
-                onMenuClick = onMenuClick,
+                onBackClick = onBackClick,
                 dictionaryViewModel = dictionaryViewModel,
-                vocabularyViewModel = vocabularyViewModel,
                 fontSize = fontSize
             )
         }

@@ -5,7 +5,6 @@
 * Update default theme to Solarized, add different themes
 * Add OLED theme
 * Include open source notices (https://developers.google.com/android/guides/opensource)
-* Move from side drawer to bottom app bar?
 * Allow users to add own content
 * Use Dagger for Dependency Injection
 * Programmatically update version number and build ID from commit hash
@@ -21,6 +20,7 @@
 
 ## Discover/Start
 * **Search/Sort**: Filter by difficulty, length, or date
+* Add visual to indicate if article has been read
 
 ## Feeds
 * Allow user to restore built-in feeds if removed

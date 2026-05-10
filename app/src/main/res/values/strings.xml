@@ -24,4 +24,6 @@
     <string name="lookup_title">Dictionary Entry</string>
     <string name="search_placeholder">Search articles…</string>
     <string name="feeds_nav">Feeds</string>
+    <string name="menu_title">Menu</string>
+    <string name="menu_nav">Menu</string>
 </resources>

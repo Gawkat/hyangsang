@@ -83,10 +83,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             FontSizeSetting(currentFontSize, onFontSizeChange)
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            AppInfo()
         }
     }
 }
@@ -165,30 +161,6 @@ fun FontSizeSetting(currentFontSize: String, onFontSizeChange: (String) -> Unit)
                 )
             }
         }
-    }
-}
-
-@Composable
-fun AppInfo() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.outline
-        )
-        Text(
-            text = stringResource(R.string.version_label, "0.1.0-alpha"),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline
-        )
-        Text(
-            text = stringResource(R.string.released_label, "April 2026"),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
     }
 }
 

@@ -7,12 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,22 +26,13 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 @Composable
 fun DiscoverScreen(
     articlesWithFeed: List<ArticleWithFeed>,
-    onMenuClick: () -> Unit,
     onArticleClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                navigationIcon = {
-                    IconButton(onClick = onMenuClick) {
-                        Icon(
-                            Icons.Default.Menu,
-                            contentDescription = stringResource(R.string.menu_button)
-                        )
-                    }
-                }
+                title = { Text(stringResource(R.string.app_name)) }
             )
         },
         modifier = modifier
@@ -91,7 +78,6 @@ fun DiscoverScreenPreview() {
                     )
                 )
             ),
-            onMenuClick = {},
             onArticleClick = {})
     }
 }

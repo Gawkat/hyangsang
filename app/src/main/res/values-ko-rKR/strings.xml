@@ -24,4 +24,7 @@
     <string name="settings_nav">설정</string>
     <string name="menu_button">메뉴</string>
     <string name="reader_title">독서</string>
+    <string name="feeds_nav">피드</string>
+    <string name="menu_title">메뉴</string>
+    <string name="menu_nav">메뉴</string>
 </resources>
