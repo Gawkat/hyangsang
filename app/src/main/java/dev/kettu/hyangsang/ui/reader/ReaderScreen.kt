@@ -1,11 +1,12 @@
 package dev.kettu.hyangsang.ui.reader
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -86,6 +87,7 @@ fun ReaderContent(
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
 
+    // TODO: use enum or something
     val baseFontSize = when (fontSize) {
         "Small" -> 16.sp
         "Medium (Default)" -> 20.sp
@@ -110,6 +112,7 @@ fun ReaderContent(
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 )
@@ -117,31 +120,31 @@ fun ReaderContent(
         },
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                ArticleHeader(articleWithFeed = articleWithFeed)
-                FlowRow {
-                    tokens.forEach { token ->
-                        if (token.isBlank()) {
-                            Text(text = token, fontSize = baseFontSize)
-                        } else {
-                            ClickableWord(
-                                word = token,
-                                isSelected = selectedWord == token,
-                                fontSize = baseFontSize,
-                                onClick = {
-                                    val wordToLookup = token.trim { it in "!.?,\"'" }
-                                    selectedWord = token
-                                    onLookupWord(wordToLookup)
-                                    showBottomSheet = true
-                                }
-                            )
-                        }
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            ArticleHeader(articleWithFeed = articleWithFeed)
+            FlowRow {
+                tokens.forEach { token ->
+                    if (token.isBlank()) {
+                        Text(text = token, fontSize = baseFontSize)
+                    } else {
+                        ClickableWord(
+                            word = token,
+                            isSelected = selectedWord == token,
+                            fontSize = baseFontSize,
+                            onClick = {
+                                val wordToLookup = token.trim { it in "!.?,\"'" }
+                                selectedWord = token
+                                onLookupWord(wordToLookup)
+                                showBottomSheet = true
+                            }
+                        )
                     }
                 }
             }
@@ -195,7 +198,15 @@ fun ReaderScreenPreview() {
                     feedId = 1,
                     title = "스타크래프트 2: 자유의 날개 다시 보기",
                     description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
-                    content = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다. 테란, 저그, 프로토스 세 종족의 운명이 걸린 거대한 전쟁 속으로 뛰어들어 보세요.",
+                    content = "스타크래프트 II의 이야기는 오리지널 스타크래프트 출시작의 이야기를 이어가며, 스타크래프트의 종족과 스타크래프트 시리즈의 등장인물 목록을 다룬다.\n" +
+                            "\n" +
+                            "자유의 날개는 스타크래프트: 브루드 워 사건으로부터 4년 후를 배경으로 하며, 짐 레이너의 반란군과 황제 아크튜러스 멩스크가 이끄는 테란 자치령 간의 갈등에 초점을 맞춘다. 저그는 자주 위협으로 다시 나타나지만, 레이너는 결국 저그 모행성에서 무력화된 그들의 여왕 사라 케리건을 회수한다.\n" +
+                            "\n" +
+                            "군단의 심장에서는 자치령이 레이너와 케리건을 공격하고, 이야기는 주로 멩스크의 병력과 새로 나타난 프로토스-저그 혼종에 맞서는 케리건의 활약을 따라간다.\n" +
+                            "\n" +
+                            "공허의 유산에서는 프로토스가 주인공이며, 제라툴과 아르타니스가 이끄는 프로토스-저그 혼종의 창조자인 악한 존재 아몬에 맞서 싸운다. 공허의 유산이 끝난 후 짧은 에필로그에서 세 진영 모두 공허 속에서 아몬에 맞서기 위해 합류한다.\n" +
+                            "\n" +
+                            "노바 비밀 작전은 아몬의 최종 패배 후 어느 시점을 배경으로 하며, 유령 요원 노바가 재편성된 테란 자치령을 위협하는 음모를 밝혀내는 과정을 따라간다.",
                     pubDate = "2024-03-20"
                 ),
                 feed = RssFeed(
