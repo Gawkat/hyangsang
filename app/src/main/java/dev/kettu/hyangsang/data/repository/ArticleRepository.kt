@@ -3,6 +3,7 @@ package dev.kettu.hyangsang.data.repository
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.parser.ArticleParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -33,20 +34,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
             try {
                 val doc = Jsoup.connect(url).get()
 
-                // TODO: clean the input?
-                //doc = Jsoup.clean(doc.text(), Safelist.basic())
-
-                // TODO: Improve this
-                // Basic extraction: Try common article tags or the largest text block
-                val articleBody = doc.select("article").first()
-                    ?: doc.select("div.article-body").first()
-                    ?: doc.select("div.content").first()
-                    ?: doc.body()
-
-                // Strip common non-content elements
-                articleBody.select("script, style, iframe, footer, nav, .ads").remove()
-
-                val content = articleBody.text()
+                val content = ArticleParser().extractContent(doc)
                 val updatedArticle = article.copy(content = content)
 
                 updateArticle(updatedArticle)

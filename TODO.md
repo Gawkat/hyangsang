@@ -17,6 +17,7 @@
 * Let user choose reader font type
 * Improve dictionary lookups for compound words
 * Update dictionary lookups for homonyms, for example 무상
+* Investigate performance issues
 
 ## Discover/Start
 * **Search/Sort**: Filter by difficulty, length, or date

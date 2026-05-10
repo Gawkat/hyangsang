@@ -81,4 +81,7 @@ dependencies {
 
     //Jsoup
     implementation(libs.jsoup)
+
+    // Parser
+    implementation(project(":parser"))
 }
