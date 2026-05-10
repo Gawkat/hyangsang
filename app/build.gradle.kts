@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.android.gms.oss-licenses-plugin")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.android)
@@ -84,4 +85,7 @@ dependencies {
 
     // Parser
     implementation(project(":parser"))
+
+    // For OSS licensing
+    implementation(libs.play.services.oss.licenses)
 }

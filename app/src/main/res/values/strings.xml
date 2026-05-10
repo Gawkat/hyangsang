@@ -26,4 +26,6 @@
     <string name="feeds_nav">Feeds</string>
     <string name="menu_title">Menu</string>
     <string name="menu_nav">Menu</string>
+    <string name="oss_licenses_nav">Open source licenses</string>
+    <string name="feeds_title">Feeds</string>
 </resources>

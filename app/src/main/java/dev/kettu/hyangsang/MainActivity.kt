@@ -1,11 +1,11 @@
 package dev.kettu.hyangsang
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -33,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
@@ -183,7 +184,16 @@ fun MainApp(
             }
             composable("menu") {
                 MenuScreen(
-                    onSettingsClick = { navController.navigate("settings") }
+                    onSettingsClick = { navController.navigate("settings") },
+                    onOssLicensesClick = {
+                        //TODO: Set theme to match app
+                        navController.context.startActivity(
+                            Intent(
+                                navController.context,
+                                OssLicensesMenuActivity::class.java
+                            )
+                        )
+                    }
                 )
             }
             composable("reader/{articleId}") { backStackEntry ->

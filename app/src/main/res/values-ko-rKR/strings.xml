@@ -27,4 +27,6 @@
     <string name="feeds_nav">피드</string>
     <string name="menu_title">메뉴</string>
     <string name="menu_nav">메뉴</string>
+    <string name="oss_licenses_nav">오픈 소스 라이선스</string>
+    <string name="feeds_title">피드</string>
 </resources>

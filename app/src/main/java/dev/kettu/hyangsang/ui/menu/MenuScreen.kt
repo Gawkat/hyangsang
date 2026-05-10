@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -31,6 +32,7 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 @Composable
 fun MenuScreen(
     onSettingsClick: () -> Unit,
+    onOssLicensesClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -48,6 +50,7 @@ fun MenuScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // Settings
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_nav)) },
                 leadingContent = {
@@ -63,6 +66,24 @@ fun MenuScreen(
                     )
                 },
                 modifier = Modifier.clickable { onSettingsClick() }
+            )
+
+            // OSS Licenses
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.oss_licenses_nav)) },
+                leadingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Article,
+                        contentDescription = stringResource(R.string.oss_licenses_nav)
+                    )
+                },
+                trailingContent = {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.clickable { onOssLicensesClick() }
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -101,7 +122,8 @@ fun AppInfo() {
 fun MenuScreenPreview() {
     HyangsangTheme {
         MenuScreen(
-            onSettingsClick = {}
+            onSettingsClick = {},
+            onOssLicensesClick = {}
         )
     }
 }

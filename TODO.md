@@ -4,13 +4,17 @@
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread articles older than 7 days) to save space
 * Update default theme to Solarized, add different themes
 * Add OLED theme
-* Include open source notices (https://developers.google.com/android/guides/opensource)
+* Include licensing for dictionary (https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)
 * Allow users to add own content
 * Use Dagger for Dependency Injection
 * Programmatically update version number and build ID from commit hash
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Update dates to be stored and displayed in a consistent manner
+
+## Parser
+* Add tests
+* Add specific parsers for known feeds
 
 ## Reader
 * **Progress Tracking**: Save scroll position or last visible paragraph index to Room
@@ -20,6 +24,7 @@
 * Investigate performance issues
 
 ## Discover/Start
+* Add pull to refresh
 * **Search/Sort**: Filter by difficulty, length, or date
 * Add visual to indicate if article has been read
 
