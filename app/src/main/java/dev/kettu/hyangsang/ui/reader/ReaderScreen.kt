@@ -1,16 +1,18 @@
 package dev.kettu.hyangsang.ui.reader
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -35,6 +37,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.kettu.hyangsang.R
@@ -89,15 +92,18 @@ fun ReaderContent(
     var showBottomSheet by remember { mutableStateOf(false) }
 
     // TODO: use enum or something
-    val baseFontSize = when (fontSize) {
-        "Small" -> 16.sp
-        "Medium (Default)" -> 20.sp
-        "Large" -> 24.sp
-        else -> 20.sp
+    val baseFontSize = remember(fontSize) {
+        when (fontSize) {
+            "Small" -> 16.sp
+            "Medium (Default)" -> 20.sp
+            "Large" -> 24.sp
+            else -> 20.sp
+        }
     }
 
-    // Basic tokenization: split by spaces and keep them to preserve layout
-    val tokens = remember(content) { content.split(Regex("(?<=\\s)|(?=\\s)")) }
+    val paragraphs = remember(content) {
+        content.split("\n")
+    }
 
     Scaffold(
         topBar = {
@@ -116,43 +122,39 @@ fun ReaderContent(
                         )
                     }
                 },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+                scrollBehavior = scrollBehavior
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            ArticleHeader(articleWithFeed = articleWithFeed)
-            FlowRow {
-                tokens.forEach { token ->
-                    if (token.isBlank()) {
-                        Text(text = token, fontSize = baseFontSize)
-                    } else {
-                        ClickableWord(
-                            word = token,
-                            isSelected = selectedWord == token,
-                            fontSize = baseFontSize,
-                            onClick = {
-                                val wordToLookup = token.trim { it in "!.?,\"'" }
-                                selectedWord = token
-                                onLookupWord(wordToLookup)
-                                showBottomSheet = true
-                            }
-                        )
-                    }
+            item {
+                ArticleHeader(articleWithFeed = articleWithFeed)
+            }
+            items(paragraphs) { paragraph ->
+                if (paragraph.isNotBlank()) {
+                    ParagraphContent(
+                        paragraph = paragraph,
+                        selectedWord = selectedWord,
+                        baseFontSize = baseFontSize,
+                        onWordClick = { word, token ->
+                            selectedWord = token
+                            onLookupWord(word)
+                            showBottomSheet = true
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                } else {
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
 
         if (showBottomSheet) {
@@ -178,7 +180,7 @@ fun ReaderContent(
 fun ClickableWord(
     word: String,
     isSelected: Boolean,
-    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontSize: TextUnit,
     onClick: () -> Unit
 ) {
     Text(
@@ -190,6 +192,37 @@ fun ClickableWord(
         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
     )
+}
+
+@Composable
+fun ParagraphContent(
+    paragraph: String,
+    selectedWord: String?,
+    baseFontSize: TextUnit,
+    onWordClick: (String, String) -> Unit
+) {
+    val tokens = remember(paragraph) { paragraph.split(Regex("(?<=\\s)|(?=\\s)")) }
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        tokens.forEach { token ->
+            if (token.isBlank()) {
+                Text(text = token, fontSize = baseFontSize)
+            } else {
+                ClickableWord(
+                    word = token,
+                    isSelected = selectedWord == token,
+                    fontSize = baseFontSize,
+                    onClick = {
+                        val wordToLookup = token.trim { it in "!.?,\"'" }
+                        onWordClick(wordToLookup, token)
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
