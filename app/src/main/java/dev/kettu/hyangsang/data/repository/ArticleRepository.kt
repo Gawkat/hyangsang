@@ -34,7 +34,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
             try {
                 val doc = Jsoup.connect(url).get()
 
-                val content = ArticleParser().extractContent(doc)
+                val content = ArticleParser().parse(url, doc)
                 val updatedArticle = article.copy(content = content)
 
                 updateArticle(updatedArticle)

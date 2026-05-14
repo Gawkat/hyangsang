@@ -2,12 +2,9 @@ package dev.kettu.hyangsang.parser
 
 import org.jsoup.nodes.Document
 
-class ArticleParser {
-    fun extractContent(document: Document): String {
+class GenericContentsParser : ContentsParser {
+    override fun extractContents(document: Document): String {
         /*
-        TODO:
-         Consider adding specific parser for known feeds
-
          look at these:
          https://www.ccs.neu.edu/home/vip/teach/IRcourse/6_ML/other_notes/Boilerplate%20Detection%20using%20Shallow%20Text%20Features.pdf
          https://www.researchgate.net/publication/257935932_Heuristics_to_Extract_the_Main_Text_from_a_Captured_Web_Page
@@ -36,7 +33,6 @@ class ArticleParser {
         for (el in contentElements) {
             val text = el.text().trim()
             if (text.isNotEmpty()) {
-                // TODO: verify this
                 sb.append(text).append("\n\n") // Double newline for paragraph spacing
             }
         }

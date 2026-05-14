@@ -13,11 +13,12 @@
 * Update dates to be stored and displayed in a consistent manner
 
 ## Parser
-* Add tests
-* Add specific parsers for known feeds
+* Update parsers to handle subheadings
+* Improve parsers
 
 ## Reader
-* **Progress Tracking**: Save scroll position or last visible paragraph index to Room
+* Add basic formatting for subheadings
+* Track reading progress by saving scroll position or last visible paragraph index to Room
 * Let user choose reader font type
 * Improve dictionary lookups for compound words
 * Update dictionary lookups for homonyms, for example 무상
@@ -31,6 +32,7 @@
 ## Feeds
 * Allow user to restore built-in feeds if removed
 * Allow user to enable and disable feeds
+* Show if last pull from feed was successful
 
 ## Saved
 * Allow users to save/unsave articles
