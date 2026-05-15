@@ -1,18 +1,22 @@
 package dev.kettu.hyangsang.data.repository
 
-import android.icu.util.Calendar
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.network.RssFeedService
 import dev.kettu.hyangsang.parser.RssFeedParser
+import dev.kettu.hyangsang.parser.parseToIso8601
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
-private const val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5 * 60 * 1000
+private val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5.minutes
 
 class RssFeedRepository(
     private val rssFeedDao: RssFeedDao,
@@ -33,12 +37,14 @@ class RssFeedRepository(
     }
 
     // Only fetch for enabled feeds
+    @OptIn(ExperimentalTime::class)
     suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) {
         val enabledFeeds = rssFeedDao.getEnabledFeeds()
         enabledFeeds.collect { feedList ->
             feedList.forEach { feed ->
                 // Skip if forceRefresh is false and lastSynced is within the last 5 minutes
-                if (!forceRefresh && feed.lastSynced + DEFAULT_FEED_REFRESH_RATE_LIMIT > Calendar.getInstance().timeInMillis) {
+                val lastSynced = Instant.parse(feed.lastSynced)
+                if (!forceRefresh && ((Clock.System.now() - lastSynced) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
                     return@forEach
                 }
 
@@ -59,6 +65,7 @@ class RssFeedRepository(
         rssFeedDao.deleteFeed(feed)
     }
 
+    @OptIn(ExperimentalTime::class)
     suspend fun fetchAndSaveRss(feed: RssFeed) {
         withContext(Dispatchers.IO) {
             try {
@@ -77,12 +84,12 @@ class RssFeedRepository(
                             description = item.description,
                             sourceUrl = item.link,
                             feedId = feed.id,
-                            pubDate = item.pubDate
+                            pubDate = parseToIso8601(item.pubDate)
                         )
                         articleDao.insertArticle(article)
                     }
 
-                    val syncedFeed = feed.copy(lastSynced = Calendar.getInstance().timeInMillis)
+                    val syncedFeed = feed.copy(lastSynced = Clock.System.now().toString())
                     rssFeedDao.updateFeed(syncedFeed)
                 }
             } catch (e: Exception) {

@@ -15,7 +15,9 @@ import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
-import java.time.LocalDateTime
+import dev.kettu.hyangsang.ui.utils.DateTimeUtils
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 private const val wordsPerMinute = 200
 
@@ -45,7 +47,7 @@ fun ArticleHeader(
         ) {
             if (articleWithFeed.article.pubDate != null) {
                 Text(
-                    text = articleWithFeed.article.pubDate,
+                    text = DateTimeUtils.formatFullDate(articleWithFeed.article.pubDate),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -69,6 +71,7 @@ fun ArticleHeader(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
 @Composable
 fun ArticleHeaderPreview() {
@@ -82,8 +85,8 @@ fun ArticleHeaderPreview() {
                     "Article Description",
                     "Article Content",
                     "Source URL",
-                    System.currentTimeMillis(),
-                    LocalDateTime.now().toString()
+                    Clock.System.now().toString(),
+                    Clock.System.now().toString()
                 ),
                 RssFeed(
                     0,

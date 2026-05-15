@@ -46,6 +46,8 @@ import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -225,6 +227,7 @@ fun ParagraphContent(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
 @Composable
 fun ReaderScreenPreview() {
@@ -245,7 +248,7 @@ fun ReaderScreenPreview() {
                             "공허의 유산에서는 프로토스가 주인공이며, 제라툴과 아르타니스가 이끄는 프로토스-저그 혼종의 창조자인 악한 존재 아몬에 맞서 싸운다. 공허의 유산이 끝난 후 짧은 에필로그에서 세 진영 모두 공허 속에서 아몬에 맞서기 위해 합류한다.\n" +
                             "\n" +
                             "노바 비밀 작전은 아몬의 최종 패배 후 어느 시점을 배경으로 하며, 유령 요원 노바가 재편성된 테란 자치령을 위협하는 음모를 밝혀내는 과정을 따라간다.",
-                    pubDate = "2024-03-20"
+                    pubDate = Clock.System.now().toString()
                 ),
                 feed = RssFeed(
                     id = 1,

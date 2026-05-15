@@ -23,8 +23,9 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
-import java.time.Instant
-import java.time.ZoneId
+import dev.kettu.hyangsang.ui.utils.DateTimeUtils
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Composable
 fun ArticleCard(
@@ -57,8 +58,7 @@ fun ArticleCard(
                     fontWeight = FontWeight.Normal
                 )
                 Text(
-                    text = article.pubDate ?: Instant.ofEpochMilli(article.addedDate)
-                        .atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+                    text = DateTimeUtils.formatRelativeTime(article.pubDate ?: article.addedDate),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.outline,
                     fontWeight = FontWeight.Normal
@@ -81,6 +81,7 @@ fun ArticleCard(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
 @Composable
 fun ArticleCardPreview() {
@@ -92,7 +93,7 @@ fun ArticleCardPreview() {
                     feedId = 1,
                     title = "스타크래프트 2: 자유의 날개 다시 보기",
                     description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
-                    pubDate = "2024-03-20"
+                    pubDate = Clock.System.now().toString()
                 ),
                 feed = RssFeed(
                     0,

@@ -4,6 +4,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Entity(
     tableName = "articles",
@@ -17,7 +19,7 @@ import androidx.room.PrimaryKey
     ],
     indices = [Index(value = ["feedId"])]
 )
-data class Article(
+data class Article @OptIn(ExperimentalTime::class) constructor(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val feedId: Long,
@@ -25,7 +27,7 @@ data class Article(
     val description: String,
     val content: String? = null,
     val sourceUrl: String? = null,
-    val addedDate: Long = System.currentTimeMillis(),
+    val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
     val lastReadDate: Long? = null,
     val scrollPosition: Int = 0
