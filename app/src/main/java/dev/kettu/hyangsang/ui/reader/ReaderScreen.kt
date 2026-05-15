@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.ui.reader
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,12 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
@@ -92,6 +96,7 @@ fun ReaderContent(
     var selectedWord by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // TODO: use enum or something
     val baseFontSize = remember(fontSize) {
@@ -123,6 +128,29 @@ fun ReaderContent(
                             contentDescription = stringResource(R.string.back_button)
                         )
                     }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                article.sourceUrl.toUri()
+                            )
+                        )
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.OpenInBrowser,
+                            contentDescription = stringResource(R.string.open_in_browser_button) // TODO: add description
+                        )
+                    }
+                    /*
+                    IconButton(onClick = { }) {
+                        Icon(
+                            imageVector = Icons.Filled.BookmarkBorder, // TODO: Indicate if saved or not
+                            contentDescription = null // TODO: Change description if saved/not saved
+                        )
+                    }
+                    */
                 },
                 scrollBehavior = scrollBehavior
             )

@@ -26,7 +26,6 @@
 * Improve dictionary lookups for compound words
 * Update dictionary lookups for homonyms, for example 무상
 * Investigate performance issues
-* Add option to open article in browser
 * Support images?
 
 ## Discover/Start

@@ -29,4 +29,5 @@
     <string name="menu_nav">메뉴</string>
     <string name="oss_licenses_nav">오픈 소스 라이선스</string>
     <string name="feeds_title">피드</string>
+    <string name="open_in_browser_button">브라우저로 열기</string>
 </resources>
