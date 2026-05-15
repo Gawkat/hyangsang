@@ -57,5 +57,4 @@
 
 ## Bugfixes
 
-* Ensure articles are unique
 * Ensure status bar legibility with all themes

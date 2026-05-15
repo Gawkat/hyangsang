@@ -35,7 +35,7 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE feedId = :feedId")
     fun getArticlesByFeed(feedId: Long): Flow<List<Article>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticle(article: Article): Long
 
     @Update

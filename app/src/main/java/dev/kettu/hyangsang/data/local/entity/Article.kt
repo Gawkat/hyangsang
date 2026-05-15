@@ -20,7 +20,8 @@ import kotlin.time.ExperimentalTime
     indices = [
         Index(value = ["feedId"]),
         Index(value = ["pubDate"]),
-        Index(value = ["addedDate"])
+        Index(value = ["addedDate"]),
+        Index(value = ["sourceUrl"], unique = true)
     ]
 )
 data class Article @OptIn(ExperimentalTime::class) constructor(
@@ -30,7 +31,7 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val title: String,
     val description: String,
     val content: String? = null,
-    val sourceUrl: String? = null,
+    val sourceUrl: String,
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
     val lastReadDate: Long? = null,

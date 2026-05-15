@@ -22,6 +22,8 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +60,7 @@ fun DiscoverScreen(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
 @Composable
 fun DiscoverScreenPreview() {
@@ -70,7 +73,8 @@ fun DiscoverScreenPreview() {
                         feedId = 1,
                         title = "스타크래프트 2: 자유의 날개 다시 보기",
                         description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
-                        pubDate = "2024-03-20"
+                        pubDate = Clock.System.now().toString(),
+                        sourceUrl = "https://www.source.url/article"
                     ),
                     feed = RssFeed(
                         0,
