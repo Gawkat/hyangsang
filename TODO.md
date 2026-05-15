@@ -9,9 +9,9 @@
 * Include licensing for dictionary (https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)
 * Allow users to add own content
 * Use Dagger for Dependency Injection
-* Programmatically build ID from commit hash and version number from resource(?)
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
+* Add link to GitHub issues page
 
 ## Parser
 
@@ -22,7 +22,11 @@
 
 * Add basic formatting for subheadings
 * Track reading progress by saving scroll position or last visible paragraph index to Room
-* Let user choose reader font type
+* Text and layout settings:
+  * text size (update from current implementation)
+  * font
+  * font weight
+  * line spacing
 * Improve dictionary lookups for compound words
 * Update dictionary lookups for homonyms, for example 무상
 * Investigate performance issues
@@ -33,7 +37,7 @@
 * Add pull to refresh
 * Filter by feed, category, date?
 * Add search
-* Add visual to indicate if article has been read
+* Add visual to indicate if article has been read/viewed
 
 ## Feeds
 

@@ -11,9 +11,6 @@ class GenericContentsParser : ContentsParser {
          https://stackoverflow.com/questions/3652657/what-algorithm-does-readability-use-for-extracting-text-from-urls
          */
 
-        // TODO: clean the input?
-        //document = Jsoup.clean(document.text(), Safelist.basic())
-
         // 1. Remove known "noise" globally before searching
         document.select("script, style, iframe, footer, nav, .ads, .comments, .sidebar, .related")
             .remove()

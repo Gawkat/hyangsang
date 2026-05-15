@@ -42,4 +42,21 @@ object DateTimeUtils {
             isoString
         }
     }
+
+    /**
+     * Formats an ISO8601 string into a "Month Year" string (e.g., "June 2028").
+     */
+    fun formatMonthYear(isoString: String?): String {
+        if (isoString.isNullOrBlank()) return ""
+        return try {
+            val instant = Instant.parse(isoString)
+            val formatter = DateTimeFormatter
+                .ofPattern("MMMM yyyy")
+                .withLocale(Locale.getDefault())
+                .withZone(ZoneId.systemDefault())
+            formatter.format(instant)
+        } catch (_: Exception) {
+            isoString
+        }
+    }
 }

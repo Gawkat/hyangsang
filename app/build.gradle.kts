@@ -1,3 +1,8 @@
+@file:OptIn(ExperimentalTime::class)
+
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.android.gms.oss-licenses-plugin")
@@ -15,7 +20,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,6 +36,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            val currentTime = Clock.System.now().toString()
+            buildConfigField("String", "BUILD_TIME", "\"${currentTime}\"")
+            resValue("string", "build_time", currentTime)
+        }
+        debug {
+            buildConfigField("String", "BUILD_TIME", "\"2007-12-03T10:15:30.00Z\"")
+            resValue("string", "build_time", "2007-12-03T10:15:30.00Z")
         }
     }
     compileOptions {
@@ -39,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     kotlinOptions {
         jvmTarget = "11"
