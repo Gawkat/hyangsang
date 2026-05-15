@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
         DictionaryExample::class,
         RssFeed::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class HyangsangDatabase : RoomDatabase() {

@@ -9,7 +9,7 @@
 * Include licensing for dictionary (https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)
 * Allow users to add own content
 * Use Dagger for Dependency Injection
-* Programmatically update version number and build ID from commit hash
+* Programmatically build ID from commit hash and version number from resource(?)
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 
@@ -32,7 +32,6 @@
 ## Discover/Start
 
 * Add pull to refresh
-* Sort by latest first
 * Filter by feed, category, date?
 * Add search
 * Add visual to indicate if article has been read

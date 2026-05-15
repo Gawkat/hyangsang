@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles ORDER BY addedDate DESC")
+    @Query("SELECT * FROM articles ORDER BY COALESCE(pubDate, addedDate) DESC")
     fun getAllArticles(): Flow<List<Article>>
 
     @Query("SELECT * FROM articles WHERE id = :id")
@@ -24,7 +24,12 @@ interface ArticleDao {
     suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed?
 
     @Transaction
-    @Query("SELECT * FROM articles ORDER BY addedDate DESC")
+    @Query(
+        """
+        SELECT * FROM articles 
+        ORDER BY COALESCE(pubDate, addedDate) DESC
+    """
+    )
     fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>>
 
     @Query("SELECT * FROM articles WHERE feedId = :feedId")

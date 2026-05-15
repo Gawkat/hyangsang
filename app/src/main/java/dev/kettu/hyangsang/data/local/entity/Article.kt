@@ -17,7 +17,11 @@ import kotlin.time.ExperimentalTime
             onDelete = ForeignKey.CASCADE // If a feed is deleted, delete its articles
         )
     ],
-    indices = [Index(value = ["feedId"])]
+    indices = [
+        Index(value = ["feedId"]),
+        Index(value = ["pubDate"]),
+        Index(value = ["addedDate"])
+    ]
 )
 data class Article @OptIn(ExperimentalTime::class) constructor(
     @PrimaryKey(autoGenerate = true)
