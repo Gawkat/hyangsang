@@ -30,4 +30,5 @@
     <string name="feeds_title">Feeds</string>
     <string name="open_in_browser_button">Open in browser</string>
     <string name="article_not_found_label">Article not found</string>
+    <string name="report_issue_nav">Report an issue</string>
 </resources>

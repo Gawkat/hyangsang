@@ -11,7 +11,6 @@
 * Use Dagger for Dependency Injection
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
-* Add link to GitHub issues page
 
 ## Parser
 
@@ -23,10 +22,10 @@
 * Add basic formatting for subheadings
 * Track reading progress by saving scroll position or last visible paragraph index to Room
 * Text and layout settings:
-  * text size (update from current implementation)
-  * font
-  * font weight
-  * line spacing
+    * text size (update from current implementation)
+    * font
+    * font weight
+    * line spacing
 * Improve dictionary lookups for compound words
 * Update dictionary lookups for homonyms, for example 무상
 * Investigate performance issues

@@ -1,10 +1,7 @@
 package dev.kettu.hyangsang.ui.viewmodel
 
-import android.content.Context
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
