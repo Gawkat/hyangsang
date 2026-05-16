@@ -130,6 +130,7 @@ fun MainApp(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
+    val isRefreshing by rssFeedViewModel.isRefreshing.collectAsState()
 
     val navItems = listOf(
         Triple("discover", Icons.Default.Home, R.string.discover_nav),
@@ -172,6 +173,8 @@ fun MainApp(
             composable("discover") {
                 DiscoverScreen(
                     articlesWithFeed = articlesWithFeed,
+                    isRefreshing = isRefreshing,
+                    onRefresh = { rssFeedViewModel.refreshFeeds() },
                     onArticleClick = { articleId ->
                         navController.navigate("reader/$articleId")
                     }

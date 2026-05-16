@@ -34,7 +34,6 @@
 
 ## Discover/Start
 
-* Add pull to refresh
 * Filter by feed, category, date?
 * Add search
 * Add visual to indicate if article has been read/viewed

@@ -3,6 +3,7 @@ package dev.kettu.hyangsang.data.defaults
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 
 object DefaultData {
+    // TODO: really should be using resources strings here for localization and whatnot
     val defaultFeeds: List<RssFeed> = listOf(
         RssFeed(
             title = "Yonhap News",

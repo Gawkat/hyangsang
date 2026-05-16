@@ -1,7 +1,6 @@
 package dev.kettu.hyangsang.ui.discover
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +11,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,6 +29,8 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun DiscoverScreen(
     articlesWithFeed: List<ArticleWithFeed>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onArticleClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -41,7 +43,9 @@ fun DiscoverScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
     ) { innerPadding ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
@@ -84,6 +88,9 @@ fun DiscoverScreenPreview() {
                     )
                 )
             ),
-            onArticleClick = {})
+            isRefreshing = false,
+            onRefresh = {},
+            onArticleClick = {}
+        )
     }
 }

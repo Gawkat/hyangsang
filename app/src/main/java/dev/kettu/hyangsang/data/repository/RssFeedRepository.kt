@@ -9,6 +9,7 @@ import dev.kettu.hyangsang.parser.RssFeedParser
 import dev.kettu.hyangsang.parser.parseToIso8601
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.time.Clock
@@ -39,17 +40,21 @@ class RssFeedRepository(
     // Only fetch for enabled feeds
     @OptIn(ExperimentalTime::class)
     suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) {
-        val enabledFeeds = rssFeedDao.getEnabledFeeds()
-        enabledFeeds.collect { feedList ->
-            feedList.forEach { feed ->
-                // Skip if forceRefresh is false and lastSynced is within the last 5 minutes
-                val lastSynced = Instant.parse(feed.lastSynced)
-                if (!forceRefresh && ((Clock.System.now() - lastSynced) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
-                    return@forEach
-                }
+        val enabledFeeds = rssFeedDao.getEnabledFeeds().first()
 
-                fetchAndSaveRss(feed)
+        enabledFeeds.forEach { feed ->
+            val lastSynced = try {
+                Instant.parse(feed.lastSynced)
+            } catch (_: Exception) {
+                Instant.DISTANT_PAST
             }
+
+            // Skip if forceRefresh is false and lastSynced is within the last 5 minutes
+            if (!forceRefresh && ((Clock.System.now() - lastSynced) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
+                return@forEach
+            }
+
+            fetchAndSaveRss(feed)
         }
     }
 
