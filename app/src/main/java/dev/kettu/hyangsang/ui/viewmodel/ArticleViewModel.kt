@@ -1,7 +1,10 @@
 package dev.kettu.hyangsang.ui.viewmodel
 
+import android.content.Context
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
@@ -48,21 +51,25 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
     fun loadArticle(articleId: Long) {
         viewModelScope.launch {
             _currentArticleState.value = ArticleUiState.Loading
-            val articleWithFeed = articleRepository.getArticleWithFeedById(articleId)
+            var articleWithFeed = articleRepository.getArticleWithFeedById(articleId)
 
-            if (articleWithFeed != null) {
-                if (articleWithFeed.article.content.isNullOrBlank()) {
-                    val updatedArticle =
-                        articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
-                    _currentArticleState.value = ArticleUiState.Success(
-                        articleWithFeed.copy(article = updatedArticle)
-                    )
-                } else {
-                    _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
-                }
-            } else {
+            if (articleWithFeed == null) {
                 _currentArticleState.value = ArticleUiState.Error("Article not found")
+                return@launch
             }
+
+            if (articleWithFeed.article.content.isNullOrBlank()) {
+                val updatedArticle =
+                    articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
+                articleWithFeed = articleWithFeed.copy(article = updatedArticle)
+            }
+
+            articleRepository.updateProgress(
+                id = articleId,
+                position = articleWithFeed.article.scrollPosition
+            )
+
+            _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
         }
     }
 }

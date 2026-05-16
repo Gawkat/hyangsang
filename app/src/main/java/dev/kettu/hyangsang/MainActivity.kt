@@ -247,7 +247,7 @@ fun ReaderWithDrawer(
         }
 
         is ArticleUiState.Error -> {
-            Text("Error: ${state.message}")
+            Text(stringResource(R.string.article_not_found_label))
         }
 
         is ArticleUiState.Success -> {

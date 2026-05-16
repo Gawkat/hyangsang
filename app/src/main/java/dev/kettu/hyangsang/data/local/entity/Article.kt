@@ -34,6 +34,6 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val sourceUrl: String,
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
-    val lastReadDate: Long? = null,
+    val lastReadDate: String? = null,
     val scrollPosition: Int = 0
 )

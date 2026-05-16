@@ -29,4 +29,5 @@
     <string name="oss_licenses_nav">Open source licenses</string>
     <string name="feeds_title">Feeds</string>
     <string name="open_in_browser_button">Open in browser</string>
+    <string name="article_not_found_label">Article not found</string>
 </resources>

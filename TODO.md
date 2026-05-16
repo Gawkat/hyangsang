@@ -34,9 +34,8 @@
 
 ## Discover/Start
 
-* Filter by feed, category, date?
+* Filter by feed, category, read
 * Add search
-* Add visual to indicate if article has been read/viewed
 
 ## Feeds
 

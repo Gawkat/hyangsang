@@ -10,6 +10,8 @@ import androidx.room.Update
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import kotlinx.coroutines.flow.Flow
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Dao
 interface ArticleDao {
@@ -44,10 +46,11 @@ interface ArticleDao {
     @Delete
     suspend fun deleteArticle(article: Article)
 
+    @OptIn(ExperimentalTime::class)
     @Query("UPDATE articles SET scrollPosition = :position, lastReadDate = :timestamp WHERE id = :id")
     suspend fun updateProgress(
         id: Long,
         position: Int,
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: String = Clock.System.now().toString()
     )
 }

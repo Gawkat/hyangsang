@@ -30,4 +30,5 @@
     <string name="oss_licenses_nav">오픈 소스 라이선스</string>
     <string name="feeds_title">피드</string>
     <string name="open_in_browser_button">브라우저로 열기</string>
+    <string name="article_not_found_label">기사를 찾을 수 없습니다</string>
 </resources>
