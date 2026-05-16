@@ -31,5 +31,9 @@
     <string name="feeds_title">피드</string>
     <string name="open_in_browser_button">브라우저로 열기</string>
     <string name="article_not_found_label">기사를 찾을 수 없습니다</string>
-    <string name="report_issue_nav">문제를 보고합니다</string>
+    <string name="report_issue_nav">문제 신고</string>
+    <string name="view_license_information">라이선스 정보 보기</string>
+    <string name="support_label">앱 소개</string>
+    <string name="about_label">고객지원</string>
+    <string name="dictionary_attribution_label">사전 출처</string>
 </resources>

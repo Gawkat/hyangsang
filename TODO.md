@@ -5,9 +5,6 @@
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread
   articles older than 7 days) to save space
 * Update default theme to Solarized, add different themes
-* Add OLED theme
-* Include licensing for dictionary (https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)
-* Allow users to add own content
 * Use Dagger for Dependency Injection
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
@@ -27,7 +24,7 @@
     * font weight
     * line spacing
 * Improve dictionary lookups for compound words
-* Update dictionary lookups for homonyms, for example 무상
+* Update dictionary lookups for homographs, for example 무상
 * Investigate performance issues
 * Support images?
 

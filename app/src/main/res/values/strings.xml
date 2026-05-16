@@ -31,4 +31,9 @@
     <string name="open_in_browser_button">Open in browser</string>
     <string name="article_not_found_label">Article not found</string>
     <string name="report_issue_nav">Report an issue</string>
+    <string name="dictionary_attribution_label">Dictionary attribution</string>
+    <string name="dictionary_attribution_text">This application uses data from the National Institute of Korean Language\'s Korean-English Learners\' Dictionary.\n\nAll dictionary content is owned by its respective copyright holders and is provided under the Creative Commons Attribution-ShareAlike license.</string>
+    <string name="view_license_information">View license information</string>
+    <string name="support_label">Support</string>
+    <string name="about_label">About</string>
 </resources>

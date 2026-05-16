@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -139,7 +139,7 @@ fun ReaderContent(
                         )
                     }) {
                         Icon(
-                            imageVector = Icons.Filled.OpenInBrowser,
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = stringResource(R.string.open_in_browser_button) // TODO: add description
                         )
                     }
