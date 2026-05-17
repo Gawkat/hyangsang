@@ -8,6 +8,7 @@
 * Use Dagger for Dependency Injection
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
+* Let user add own content
 
 ## Parser
 
@@ -23,10 +24,13 @@
     * font
     * font weight
     * line spacing
-* Improve dictionary lookups for compound words
-* Update dictionary lookups for homographs, for example 무상
 * Investigate performance issues
 * Support images?
+* Improve dictionary lookups for compound words
+* Consider hiding examples from dictionary overlay (move somewhere else?)
+* Handle numbers in words (e.g. 14일)
+* Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
+  placeholder while this happens instead of current "No definitions found"
 
 ## Discover/Start
 

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
@@ -62,14 +63,12 @@ fun ReaderScreen(
     modifier: Modifier = Modifier,
     fontSize: String = "Medium (Default)"
 ) {
-    val stemmedWord by dictionaryViewModel.stemmedWord.collectAsState()
-    val wordDefinitions by dictionaryViewModel.wordDefinitions.collectAsState()
+    val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
 
     ReaderContent(
         articleWithFeed = articleWithFeed,
         onBackClick = onBackClick,
-        stemmedWord = stemmedWord,
-        wordDefinitions = wordDefinitions,
+        lookupResult = lookupResult,
         onLookupWord = { dictionaryViewModel.lookupWord(it) },
         onClearLookup = { dictionaryViewModel.clearLookup() },
         modifier = modifier,
@@ -82,8 +81,7 @@ fun ReaderScreen(
 fun ReaderContent(
     articleWithFeed: ArticleWithFeed,
     onBackClick: () -> Unit,
-    stemmedWord: String?,
-    wordDefinitions: List<dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses>,
+    lookupResult: Map<String, List<DictionaryWithSenses>>,
     onLookupWord: (String) -> Unit,
     onClearLookup: () -> Unit,
     modifier: Modifier = Modifier,
@@ -197,9 +195,8 @@ fun ReaderContent(
                 sheetState = sheetState
             ) {
                 DefinitionOverlay(
-                    word = selectedWord ?: "",
-                    stem = stemmedWord ?: "",
-                    definitions = wordDefinitions
+                    selectedWord = selectedWord ?: "",
+                    lookupResults = lookupResult
                 )
             }
         }
@@ -287,8 +284,7 @@ fun ReaderScreenPreview() {
                 )
             ),
             onBackClick = {},
-            stemmedWord = null,
-            wordDefinitions = emptyList(),
+            lookupResult = emptyMap<String, List<DictionaryWithSenses>>(),
             onLookupWord = {},
             onClearLookup = {}
         )

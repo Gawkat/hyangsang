@@ -13,26 +13,20 @@ class DictionaryViewModel(
     private val dictionaryRepository: DictionaryRepository
 ) : ViewModel() {
 
-    private val _wordDefinitions = MutableStateFlow<List<DictionaryWithSenses>>(emptyList())
-    val wordDefinitions: StateFlow<List<DictionaryWithSenses>> = _wordDefinitions.asStateFlow()
-
-    private val _stemmedWord = MutableStateFlow<String?>(null)
-    val stemmedWord: StateFlow<String?> = _stemmedWord.asStateFlow()
+    private val _lookupResult =
+        MutableStateFlow<Map<String, List<DictionaryWithSenses>>>(emptyMap())
+    val lookupResult: StateFlow<Map<String, List<DictionaryWithSenses>>> =
+        _lookupResult.asStateFlow()
 
     fun lookupWord(word: String) {
-        val stem = dictionaryRepository.getStem(word)
-        _stemmedWord.value = stem
-
         viewModelScope.launch {
-            // New offline dictionary lookup
-            dictionaryRepository.getOfflineEntriesByWord(word).collect {
-                _wordDefinitions.value = it
+            dictionaryRepository.getDefinitionsForWord(word).collect { result ->
+                _lookupResult.value = result
             }
         }
     }
 
     fun clearLookup() {
-        _wordDefinitions.value = emptyList()
-        _stemmedWord.value = null
+        _lookupResult.value = emptyMap()
     }
 }
