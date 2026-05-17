@@ -28,7 +28,6 @@
 * Support images?
 * Improve dictionary lookups for compound words
 * Consider hiding examples from dictionary overlay (move somewhere else?)
-* Handle numbers in words (e.g. 14일)
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"
 

@@ -18,10 +18,26 @@ class DictionaryRepository(
 
         val stems = javaTokens
             .filter { it.pos.toString() !in listOf("Space", "Punctuation") }
-            .map { if (!it.stem.isNullOrEmpty()) it.stem else it.text }
+            .flatMap { token ->
+                val list = mutableListOf<String>()
+                val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
+                list.add(stem)
 
-        // Combine original word with its constituent stems, removing duplicates
-        return (listOf(word) + stems).distinct()
+                // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
+                // This ensures "년" or "일" are added as separate search terms
+                val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
+                numericSuffixMatch?.let {
+                    list.add(it.groupValues[1])
+                }
+
+                list
+            }
+
+        // Combine original word with stems, remove duplicates,
+        // and filter out pure numbers (e.g. "2009") to keep the UI chips clean
+        return (listOf(word) + stems)
+            .distinct()
+            .filter { term -> term.any { !it.isDigit() } || term == word }
     }
 
     fun getDefinitionsForWord(word: String): Flow<Map<String, List<DictionaryWithSenses>>> {
