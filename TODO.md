@@ -26,10 +26,10 @@
     * line spacing
 * Investigate performance issues
 * Support images?
-* Improve dictionary lookups for compound words
-* Consider hiding examples from dictionary overlay (move somewhere else?)
+* Consider hiding examples from dictionary overlay (currently only showing 2, move somewhere else?)
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"
+* If no definitions found, allow user to look up word themselves (search in browser or something)
 
 ## Discover/Start
 

@@ -14,14 +14,23 @@ class DictionaryRepository(
         val tokens = OpenKoreanTextProcessorJava.tokenize(normalized)
         val javaTokens = OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(tokens)
 
-        // TODO: figure out how to handle compound words better (e.g. "한국전력")
-
         val stems = javaTokens
             .filter { it.pos.toString() !in listOf("Space", "Punctuation") }
             .flatMap { token ->
                 val list = mutableListOf<String>()
                 val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
                 list.add(stem)
+
+                // Handle compound nouns by generating all sub-strings (Length >= 2)
+                // This lets the dictionary decide which parts are "real" words.
+                if (token.pos.toString() == "Noun" && stem.length >= 3) {
+                    for (i in 0 until stem.length) {
+                        for (j in i + 2..stem.length) {
+                            val sub = stem.substring(i, j)
+                            if (sub.length < stem.length) list.add(sub)
+                        }
+                    }
+                }
 
                 // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
                 // This ensures "년" or "일" are added as separate search terms
@@ -45,6 +54,14 @@ class DictionaryRepository(
 
         return dictionaryDao.getEntriesForTerms(terms).map { entries ->
             entries.groupBy { it.entry.word }
+                .toList()
+                // Sort: 1. Exact match first, 2. Longest sub-strings next
+                .sortedWith(compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
+                    it.first == word
+                }.thenByDescending {
+                    it.first.length
+                })
+                .toMap()
         }
     }
 }
