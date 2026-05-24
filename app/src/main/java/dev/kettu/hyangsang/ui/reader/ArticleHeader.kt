@@ -24,20 +24,28 @@ private const val wordsPerMinute = 200
 @Composable
 fun ArticleHeader(
     articleWithFeed: ArticleWithFeed,
+    selectedWord: String?,
+    onWordClick: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(bottom = 24.dp)) {
-        Text(
+        ClickableText(
             text = articleWithFeed.feed.title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
+            selectedWord = selectedWord,
+            onWordClick = onWordClick,
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         )
 
-        Text(
+        ClickableText(
             text = articleWithFeed.article.title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            selectedWord = selectedWord,
+            onWordClick = onWordClick,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
@@ -77,7 +85,7 @@ fun ArticleHeader(
 fun ArticleHeaderPreview() {
     MaterialTheme {
         ArticleHeader(
-            ArticleWithFeed(
+            articleWithFeed = ArticleWithFeed(
                 Article(
                     0,
                     0,
@@ -94,7 +102,9 @@ fun ArticleHeaderPreview() {
                     "Feed URL",
                     "Feed Category"
                 )
-            )
+            ),
+            selectedWord = null,
+            onWordClick = { _, _ -> }
         )
     }
 }

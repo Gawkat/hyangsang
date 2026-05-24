@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
@@ -163,7 +164,15 @@ fun ReaderContent(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
         ) {
             item {
-                ArticleHeader(articleWithFeed = articleWithFeed)
+                ArticleHeader(
+                    articleWithFeed = articleWithFeed,
+                    selectedWord = selectedWord,
+                    onWordClick = { word, token ->
+                        selectedWord = token
+                        onLookupWord(word)
+                        showBottomSheet = true
+                    }
+                )
             }
             items(paragraphs) { paragraph ->
                 if (paragraph.isNotBlank()) {
@@ -207,18 +216,52 @@ fun ReaderContent(
 fun ClickableWord(
     word: String,
     isSelected: Boolean,
-    fontSize: TextUnit,
+    style: TextStyle,
     onClick: () -> Unit
 ) {
     Text(
         text = word,
-        fontSize = fontSize,
+        style = style.copy(
+            color = if (isSelected) MaterialTheme.colorScheme.primary else style.color,
+            fontWeight = if (isSelected) FontWeight.Bold else style.fontWeight
+        ),
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 1.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            .padding(horizontal = 1.dp)
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ClickableText(
+    text: String,
+    selectedWord: String?,
+    onWordClick: (String, String) -> Unit,
+    style: TextStyle,
+    modifier: Modifier = Modifier
+) {
+    val tokens = remember(text) { text.split(Regex("(?<=\\s)|(?=\\s)")) }
+
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        tokens.forEach { token ->
+            if (token.isBlank()) {
+                Text(text = token, style = style)
+            } else {
+                ClickableWord(
+                    word = token,
+                    isSelected = selectedWord == token,
+                    style = style,
+                    onClick = {
+                        val wordToLookup = token.trim { it in "!.?,\"'" }
+                        onWordClick(wordToLookup, token)
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -228,28 +271,13 @@ fun ParagraphContent(
     baseFontSize: TextUnit,
     onWordClick: (String, String) -> Unit
 ) {
-    val tokens = remember(paragraph) { paragraph.split(Regex("(?<=\\s)|(?=\\s)")) }
-
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
-    ) {
-        tokens.forEach { token ->
-            if (token.isBlank()) {
-                Text(text = token, fontSize = baseFontSize)
-            } else {
-                ClickableWord(
-                    word = token,
-                    isSelected = selectedWord == token,
-                    fontSize = baseFontSize,
-                    onClick = {
-                        val wordToLookup = token.trim { it in "!.?,\"'" }
-                        onWordClick(wordToLookup, token)
-                    }
-                )
-            }
-        }
-    }
+    ClickableText(
+        text = paragraph,
+        selectedWord = selectedWord,
+        onWordClick = onWordClick,
+        style = MaterialTheme.typography.bodyLarge.copy(fontSize = baseFontSize),
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @OptIn(ExperimentalTime::class)

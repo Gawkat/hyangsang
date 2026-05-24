@@ -4,7 +4,7 @@
 
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread
   articles older than 7 days) to save space
-* Update default theme to Solarized, add different themes
+* Update default theme to Solarized (Gruvbox?), add different themes
 * Use Dagger for Dependency Injection
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
@@ -30,11 +30,13 @@
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"
 * If no definitions found, allow user to look up word themselves (search in browser or something)
+* Improve word lookup order, (e.g. nouns before verbs... other things?)
 
 ## Discover/Start
 
 * Filter by feed, category, read
 * Add search
+* Add scroll-to-top thing
 
 ## Feeds
 
