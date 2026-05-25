@@ -30,14 +30,15 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun ArticleCard(
     articleWithFeed: ArticleWithFeed,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
     val feed = articleWithFeed.feed
     val isRead = article.lastReadDate != null
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(

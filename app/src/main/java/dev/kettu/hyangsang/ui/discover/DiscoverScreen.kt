@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -29,6 +32,9 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun DiscoverScreen(
     articlesWithFeed: List<ArticleWithFeed>,
+    categories: List<String>,
+    selectedCategory: String?,
+    onCategorySelected: (String?) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onArticleClick: (Long) -> Unit,
@@ -51,13 +57,44 @@ fun DiscoverScreen(
                 .fillMaxSize()
         ) {
             LazyColumn(
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedCategory == null,
+                                onClick = { onCategorySelected(null) },
+                                label = { Text(stringResource(R.string.category_all)) }
+                            )
+                        }
+                        items(categories) { category ->
+                            FilterChip(
+                                selected = selectedCategory == category,
+                                onClick = {
+                                    if (selectedCategory == category) {
+                                        onCategorySelected(null)
+                                    } else {
+                                        onCategorySelected(category)
+                                    }
+                                },
+                                label = { Text(category) }
+                            )
+                        }
+                    }
+                }
+
                 items(articlesWithFeed) { articleWithFeed ->
                     ArticleCard(
                         articleWithFeed = articleWithFeed,
-                        onClick = { onArticleClick(articleWithFeed.article.id) })
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        onClick = { onArticleClick(articleWithFeed.article.id) }
+                    )
                 }
             }
         }
@@ -88,6 +125,9 @@ fun DiscoverScreenPreview() {
                     )
                 )
             ),
+            categories = listOf("Category 1", "Category 2"),
+            selectedCategory = null,
+            onCategorySelected = {},
             isRefreshing = false,
             onRefresh = {},
             onArticleClick = {}

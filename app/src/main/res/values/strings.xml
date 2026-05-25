@@ -36,4 +36,5 @@
     <string name="view_license_information">View license information</string>
     <string name="support_label">Support</string>
     <string name="about_label">About</string>
+    <string name="category_all">All</string>
 </resources>

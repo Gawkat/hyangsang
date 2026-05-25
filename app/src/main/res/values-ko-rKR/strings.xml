@@ -36,4 +36,5 @@
     <string name="support_label">앱 소개</string>
     <string name="about_label">고객지원</string>
     <string name="dictionary_attribution_label">사전 출처</string>
+    <string name="category_all">전체</string>
 </resources>

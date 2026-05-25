@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.remember
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -130,6 +131,11 @@ fun MainApp(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
+    val filterCriteria by articleViewModel.filterCriteria.collectAsState()
+    val feeds by rssFeedViewModel.feeds.collectAsState()
+    val categories = remember(feeds) {
+        feeds.map { it.category }.distinct().sorted()
+    }
     val isRefreshing by rssFeedViewModel.isRefreshing.collectAsState()
 
     val navItems = listOf(
@@ -173,6 +179,9 @@ fun MainApp(
             composable("discover") {
                 DiscoverScreen(
                     articlesWithFeed = articlesWithFeed,
+                    categories = categories,
+                    selectedCategory = filterCriteria.selectedCategory,
+                    onCategorySelected = { articleViewModel.setCategory(it) },
                     isRefreshing = isRefreshing,
                     onRefresh = { rssFeedViewModel.refreshFeeds() },
                     onArticleClick = { articleId ->

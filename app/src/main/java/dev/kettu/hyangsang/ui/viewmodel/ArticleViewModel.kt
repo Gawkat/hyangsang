@@ -9,8 +9,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class ArticleFilterCriteria(
+    val selectedCategory: String? = null,
+    val searchQuery: String = "",
+    val showUnreadOnly: Boolean = false
+)
 
 sealed class ArticleUiState {
     object Loading : ArticleUiState()
@@ -22,6 +29,9 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
     private val _currentArticleState = MutableStateFlow<ArticleUiState>(ArticleUiState.Loading)
     val currentArticleState: StateFlow<ArticleUiState> = _currentArticleState.asStateFlow()
 
+    private val _filterCriteria = MutableStateFlow(ArticleFilterCriteria())
+    val filterCriteria: StateFlow<ArticleFilterCriteria> = _filterCriteria.asStateFlow()
+
     val allArticles: StateFlow<List<Article>> = articleRepository.getAllArticles()
         .stateIn(
             scope = viewModelScope,
@@ -30,12 +40,41 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
         )
 
     val allArticlesWithFeed: StateFlow<List<ArticleWithFeed>> =
-        articleRepository.getAllArticlesWithFeed()
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
+        combine(
+            articleRepository.getAllArticlesWithFeed(),
+            _filterCriteria
+        ) { articles, criteria ->
+            articles.filter { articleWithFeed ->
+                val matchesCategory = criteria.selectedCategory == null ||
+                        articleWithFeed.feed.category == criteria.selectedCategory
+                val matchesSearch = criteria.searchQuery.isBlank() ||
+                        articleWithFeed.article.title.contains(criteria.searchQuery, ignoreCase = true) ||
+                        articleWithFeed.article.description.contains(criteria.searchQuery, ignoreCase = true)
+                val matchesUnread = !criteria.showUnreadOnly || articleWithFeed.article.lastReadDate == null
+
+                matchesCategory && matchesSearch && matchesUnread
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun updateFilter(criteria: ArticleFilterCriteria) {
+        _filterCriteria.value = criteria
+    }
+
+    fun setCategory(category: String?) {
+        _filterCriteria.value = _filterCriteria.value.copy(selectedCategory = category)
+    }
+
+    fun setSearchQuery(query: String) {
+        _filterCriteria.value = _filterCriteria.value.copy(searchQuery = query)
+    }
+
+    fun setShowUnreadOnly(showUnread: Boolean) {
+        _filterCriteria.value = _filterCriteria.value.copy(showUnreadOnly = showUnread)
+    }
 
     fun insertArticle(article: Article) {
         viewModelScope.launch {
