@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -130,6 +131,7 @@ fun MainApp(
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    val discoverListState = rememberLazyListState()
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
     val filterCriteria by articleViewModel.filterCriteria.collectAsState()
     val feeds by rssFeedViewModel.feeds.collectAsState()
@@ -157,12 +159,21 @@ fun MainApp(
                             label = { Text(stringResource(labelRes)) },
                             selected = currentDestination?.hierarchy?.any { it.route == route } == true,
                             onClick = {
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                                if (currentDestination?.hierarchy?.any { it.route == route } == true) {
+                                    // Re-tap logic
+                                    if (route == "discover") {
+                                        scope.launch {
+                                            discoverListState.animateScrollToItem(0)
+                                        }
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                } else {
+                                    navController.navigate(route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             }
                         )
@@ -186,7 +197,8 @@ fun MainApp(
                     onRefresh = { rssFeedViewModel.refreshFeeds() },
                     onArticleClick = { articleId ->
                         navController.navigate("reader/$articleId")
-                    }
+                    },
+                    listState = discoverListState
                 )
             }
             composable("manage_feeds") {

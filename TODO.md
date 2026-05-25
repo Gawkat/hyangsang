@@ -36,7 +36,6 @@
 
 * Add a search bar in the TopAppBar that updates searchQuery.
 * Add an "Unread only" toggle in a filter menu that updates showUnreadOnly.
-* Add scroll-to-top thing
 
 ## Feeds
 
