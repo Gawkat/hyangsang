@@ -12,12 +12,11 @@
 
 ## Parser
 
-* Update parsers to handle subheadings
-* Improve parsers
+* Research other extraction techniques for generic sources
+* Add parsers for other sources
 
 ## Reader
 
-* Add basic formatting for subheadings
 * Track reading progress by saving scroll position or last visible paragraph index to Room
 * Text and layout settings:
     * text size (update from current implementation)
@@ -25,7 +24,6 @@
     * font weight
     * line spacing
 * Investigate performance issues
-* Support images?
 * Consider hiding examples from dictionary overlay (currently only showing 2, move somewhere else?)
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"
@@ -36,6 +34,8 @@
 
 * Add a search bar in the TopAppBar that updates searchQuery.
 * Add an "Unread only" toggle in a filter menu that updates showUnreadOnly.
+* Add by-feed filtering
+* Fix some character entities (&quot, &apos, etc.) from showing up in article descriptions
 
 ## Feeds
 

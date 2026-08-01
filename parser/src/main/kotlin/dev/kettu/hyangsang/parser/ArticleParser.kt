@@ -8,10 +8,11 @@ class ArticleParser {
 
     private val parsers = mapOf(
         "feeds.bbci.co.uk" to BbcNewsParser(),
+        "bbc.com" to BbcNewsParser(),
         "yna.co.kr" to YonhapNewsParser()
     )
 
-    fun parse(url: String, document: Document): String {
+    fun parse(url: String, document: Document): List<ContentBlock> {
         val host = try {
             URI(url).host.removePrefix("www.")
         } catch (_: Exception) {

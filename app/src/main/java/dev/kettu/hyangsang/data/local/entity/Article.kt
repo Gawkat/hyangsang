@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import dev.kettu.hyangsang.parser.ContentBlock
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -30,7 +31,7 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val feedId: Long,
     val title: String,
     val description: String,
-    val content: String? = null,
+    val content: List<ContentBlock>? = null,
     val sourceUrl: String,
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,

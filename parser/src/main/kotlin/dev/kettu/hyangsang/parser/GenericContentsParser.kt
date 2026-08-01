@@ -3,7 +3,7 @@ package dev.kettu.hyangsang.parser
 import org.jsoup.nodes.Document
 
 class GenericContentsParser : ContentsParser {
-    override fun extractContents(document: Document): String {
+    override fun extractContents(document: Document): List<ContentBlock> {
         /*
          look at these:
          https://www.ccs.neu.edu/home/vip/teach/IRcourse/6_ML/other_notes/Boilerplate%20Detection%20using%20Shallow%20Text%20Features.pdf
@@ -23,17 +23,16 @@ class GenericContentsParser : ContentsParser {
             ?: document.select("div").maxByOrNull { it.select("p").size }
             ?: document.body()
 
-        // Select all paragraphs, headers, and list items
-        val contentElements = articleBody.select("p, h1, h2, h3, h4, li, blockquote")
+        val blocks = articleBody.parseBlocks()
 
-        val sb = StringBuilder()
-        for (el in contentElements) {
-            val text = el.text().trim()
+        // If no blocks were found, fallback to the old behavior but returning a single text block
+        if (blocks.isEmpty()) {
+            val text = articleBody.text().trim()
             if (text.isNotEmpty()) {
-                sb.append(text).append("\n\n") // Double newline for paragraph spacing
+                return listOf(ContentBlock.Text(text))
             }
         }
 
-        return sb.toString().trim()
+        return blocks
     }
 }

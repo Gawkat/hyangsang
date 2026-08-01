@@ -1,6 +1,7 @@
 package dev.kettu.hyangsang.parser
 
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import org.jsoup.Jsoup
 import org.junit.Test
 
@@ -13,7 +14,7 @@ class ArticleParserTest {
         val doc = Jsoup.parse("<html><body><main><p>BBC Contents</p></main></body></html>")
 
         val result = articleParser.parse(url, doc)
-        assertEquals("BBC Contents", result)
+        assertTrue(result.any { it is ContentBlock.Text && it.text == "BBC Contents" })
     }
 
     @Test
@@ -22,15 +23,121 @@ class ArticleParserTest {
         val doc = Jsoup.parse("<html><body><article><p>Yonhap Contents</p></article></body></html>")
 
         val result = articleParser.parse(url, doc)
-        assertEquals("Yonhap Contents", result)
+        assertTrue(result.any { it is ContentBlock.Text && it.text == "Yonhap Contents" })
     }
 
     @Test
     fun `should use GenericContentsParser for unknown URLs`() {
         val url = "https://example.com/article"
-        val doc = Jsoup.parse("<html><body><article><p>Hello</p></article></body></html>")
+        val doc =
+            Jsoup.parse("<html><body><article><p>Hello <b>World</b></p></article></body></html>")
 
         val result = articleParser.parse(url, doc)
-        assertEquals("Hello", result)
+        val textBlock = result.first() as ContentBlock.Text
+        assertEquals("Hello World", textBlock.text)
+        assertEquals(1, textBlock.spans.size)
+        assertEquals(SpanType.BOLD, textBlock.spans.first().type)
+        assertEquals(6, textBlock.spans.first().start)
+        assertEquals(11, textBlock.spans.first().end)
+    }
+
+    @Test
+    fun `should parse images and headings`() {
+        val url = "https://example.com/article"
+        val html = """
+            <html>
+            <body>
+                <article>
+                    <h1>Main Title</h1>
+                    <p>Paragraph 1</p>
+                    <figure>
+                        <img src="https://example.com/img.jpg" alt="Alt Text">
+                        <figcaption>Image <b>Caption</b></figcaption>
+                    </figure>
+                </article>
+            </body>
+            </html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        doc.setBaseUri("https://example.com")
+
+        val result = articleParser.parse(url, doc)
+
+        assertEquals(3, result.size)
+        assertTrue(result[0] is ContentBlock.Heading)
+        assertEquals("Main Title", (result[0] as ContentBlock.Heading).text)
+
+        assertTrue(result[1] is ContentBlock.Text)
+        assertEquals("Paragraph 1", (result[1] as ContentBlock.Text).text)
+
+        assertTrue(result[2] is ContentBlock.Image)
+        val imageBlock = result[2] as ContentBlock.Image
+        assertEquals("https://example.com/img.jpg", imageBlock.url)
+        assertEquals("Image Caption", imageBlock.caption)
+        assertEquals(1, imageBlock.captionSpans.size)
+        assertEquals(SpanType.BOLD, imageBlock.captionSpans.first().type)
+        assertEquals(6, imageBlock.captionSpans.first().start)
+        assertEquals(13, imageBlock.captionSpans.first().end)
+    }
+
+    @Test
+    fun `should extract Yonhap dateline`() {
+        val html = """
+            <html>
+            <body>
+                <div class="story-news article">
+                    <p>(파리=연합뉴스) 송진원 특파원 = 프랑스 파리에서...</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+
+        val parser = YonhapNewsParser()
+        val result = parser.extractContents(doc)
+
+        assertEquals(2, result.size)
+        assertTrue(result[0] is ContentBlock.Dateline)
+        assertEquals("(파리=연합뉴스) 송진원 특파원", (result[0] as ContentBlock.Dateline).text)
+
+        assertTrue(result[1] is ContentBlock.Text)
+        assertEquals("프랑스 파리에서...", (result[1] as ContentBlock.Text).text)
+    }
+
+    @Test
+    fun `should extract BBC byline`() {
+        val html = """
+            <html>
+            <body>
+                <main>
+                    <section data-testid="byline">
+                        <strong id="article-byline">기사 관련 정보</strong>
+                        <ul>
+                            <li>
+                                <span>기자, </span><span>소피아 페헤이라 산투스</span>
+                            </li>
+                            <li>
+                                <div><span>게재 시간 </span><time datetime="2026-08-01">8시간 전</time></div>
+                            </li>
+                            <li>
+                                <div data-testid="read-time"><span>읽는 시간: 4 분</span></div>
+                            </li>
+                        </ul>
+                    </section>
+                    <p>Main content start.</p>
+                </main>
+            </body>
+            </html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val parser = BbcNewsParser()
+        val result = parser.extractContents(doc)
+
+        assertEquals(2, result.size)
+        assertTrue(result[0] is ContentBlock.Dateline)
+        assertEquals("기자, 소피아 페헤이라 산투스", (result[0] as ContentBlock.Dateline).text)
+
+        assertTrue(result[1] is ContentBlock.Text)
+        assertEquals("Main content start.", (result[1] as ContentBlock.Text).text)
     }
 }

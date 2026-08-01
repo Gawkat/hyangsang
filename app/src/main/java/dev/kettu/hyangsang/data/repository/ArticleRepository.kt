@@ -4,6 +4,7 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.parser.ArticleParser
+import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -16,7 +17,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
     suspend fun getArticleById(id: Long): Article? = articleDao.getArticleById(id)
 
-    suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed? = articleDao.getArticleWithFeedById(id)
+    suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed? =
+        articleDao.getArticleWithFeedById(id)
 
     suspend fun insertArticle(article: Article): Long = articleDao.insertArticle(article)
 
@@ -26,9 +28,16 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
     suspend fun updateProgress(id: Long, position: Int) = articleDao.updateProgress(id, position)
 
-    suspend fun fetchAndSaveArticleContent(article: Article): Article {
-        if (!article.content.isNullOrBlank()) return article
-        val url = article.sourceUrl ?: return article
+    suspend fun fetchAndSaveArticleContent(
+        article: Article,
+        forceRefresh: Boolean = false
+    ): Article {
+        if (!forceRefresh && !article.content.isNullOrEmpty()) {
+            // Check if it's legacy content
+            val isLegacy = article.content.any { it is ContentBlock.Legacy }
+            if (!isLegacy) return article
+        }
+        val url = article.sourceUrl
 
         return withContext(Dispatchers.IO) {
             try {

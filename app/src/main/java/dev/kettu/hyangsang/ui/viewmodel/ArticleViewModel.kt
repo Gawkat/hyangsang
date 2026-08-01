@@ -48,9 +48,16 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 val matchesCategory = criteria.selectedCategory == null ||
                         articleWithFeed.feed.category == criteria.selectedCategory
                 val matchesSearch = criteria.searchQuery.isBlank() ||
-                        articleWithFeed.article.title.contains(criteria.searchQuery, ignoreCase = true) ||
-                        articleWithFeed.article.description.contains(criteria.searchQuery, ignoreCase = true)
-                val matchesUnread = !criteria.showUnreadOnly || articleWithFeed.article.lastReadDate == null
+                        articleWithFeed.article.title.contains(
+                            criteria.searchQuery,
+                            ignoreCase = true
+                        ) ||
+                        articleWithFeed.article.description.contains(
+                            criteria.searchQuery,
+                            ignoreCase = true
+                        )
+                val matchesUnread =
+                    !criteria.showUnreadOnly || articleWithFeed.article.lastReadDate == null
 
                 matchesCategory && matchesSearch && matchesUnread
             }
@@ -94,7 +101,7 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 return@launch
             }
 
-            if (articleWithFeed.article.content.isNullOrBlank()) {
+            if (articleWithFeed.article.content.isNullOrEmpty()) {
                 val updatedArticle =
                     articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
                 articleWithFeed = articleWithFeed.copy(article = updatedArticle)

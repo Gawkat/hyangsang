@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -31,6 +32,7 @@ fun ArticleHeader(
     Column(modifier = modifier.padding(bottom = 24.dp)) {
         ClickableText(
             text = articleWithFeed.feed.title,
+            spans = emptyList(),
             selectedWord = selectedWord,
             onWordClick = onWordClick,
             style = MaterialTheme.typography.labelMedium.copy(
@@ -41,6 +43,7 @@ fun ArticleHeader(
 
         ClickableText(
             text = articleWithFeed.article.title,
+            spans = emptyList(),
             selectedWord = selectedWord,
             onWordClick = onWordClick,
             style = MaterialTheme.typography.headlineMedium.copy(
@@ -62,9 +65,20 @@ fun ArticleHeader(
             }
         }
 
-        val wordCount =
-            articleWithFeed.article.content?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.size
-                ?: 0
+        val wordCount = articleWithFeed.article.content?.sumOf { block ->
+            when (block) {
+                is ContentBlock.Text -> block.text.split(Regex("\\s+"))
+                    .filter { it.isNotBlank() }.size
+
+                is ContentBlock.Legacy -> block.text.split(Regex("\\s+"))
+                    .filter { it.isNotBlank() }.size
+
+                is ContentBlock.Dateline -> block.text.split(Regex("\\s+"))
+                    .filter { it.isNotBlank() }.size
+
+                else -> 0
+            }
+        } ?: 0
         val readingTime = maxOf(1, wordCount / wordsPerMinute)
 
         val durationLabel = if (readingTime <= 1) "minute" else "minutes"
@@ -91,7 +105,7 @@ fun ArticleHeaderPreview() {
                     0,
                     "Article Title",
                     "Article Description",
-                    "Article Content",
+                    listOf(ContentBlock.Text("Article Content")),
                     "Source URL",
                     Clock.System.now().toString(),
                     Clock.System.now().toString()

@@ -1,10 +1,7 @@
 package dev.kettu.hyangsang.ui.reader
 
 import android.content.Intent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,10 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -50,6 +45,7 @@ import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import kotlin.time.Clock
@@ -89,7 +85,7 @@ fun ReaderContent(
     fontSize: String = "Medium (Default)"
 ) {
     val article = articleWithFeed.article
-    val content = article.content ?: ""
+    val contentBlocks = article.content ?: emptyList()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     var selectedWord by remember { mutableStateOf<String?>(null) }
@@ -105,10 +101,6 @@ fun ReaderContent(
             "Large" -> 24.sp
             else -> 20.sp
         }
-    }
-
-    val paragraphs = remember(content) {
-        content.split("\n")
     }
 
     Scaffold(
@@ -174,21 +166,87 @@ fun ReaderContent(
                     }
                 )
             }
-            items(paragraphs) { paragraph ->
-                if (paragraph.isNotBlank()) {
-                    ParagraphContent(
-                        paragraph = paragraph,
-                        selectedWord = selectedWord,
-                        baseFontSize = baseFontSize,
-                        onWordClick = { word, token ->
-                            selectedWord = token
-                            onLookupWord(word)
-                            showBottomSheet = true
+            items(contentBlocks) { block ->
+                when (block) {
+                    is ContentBlock.Text -> {
+                        ParagraphContent(
+                            textBlock = block,
+                            selectedWord = selectedWord,
+                            baseFontSize = baseFontSize,
+                            onWordClick = { word, token ->
+                                selectedWord = token
+                                onLookupWord(word)
+                                showBottomSheet = true
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    is ContentBlock.Legacy -> {
+                        // Handle legacy content by splitting into paragraphs
+                        block.text.split("\n").forEach { paragraph ->
+                            if (paragraph.isNotBlank()) {
+                                ParagraphContent(
+                                    textBlock = ContentBlock.Text(paragraph),
+                                    selectedWord = selectedWord,
+                                    baseFontSize = baseFontSize,
+                                    onWordClick = { word, token ->
+                                        selectedWord = token
+                                        onLookupWord(word)
+                                        showBottomSheet = true
+                                    }
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                         }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    is ContentBlock.Image -> {
+                        ArticleImage(
+                            url = block.url,
+                            caption = block.caption,
+                            captionSpans = block.captionSpans,
+                            selectedWord = selectedWord,
+                            onWordClick = { word, token ->
+                                selectedWord = token
+                                onLookupWord(word)
+                                showBottomSheet = true
+                            },
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    is ContentBlock.Heading -> {
+                        ArticleHeading(
+                            text = block.text,
+                            level = block.level,
+                            selectedWord = selectedWord,
+                            onWordClick = { word, token ->
+                                selectedWord = token
+                                onLookupWord(word)
+                                showBottomSheet = true
+                            }
+                        )
+                    }
+
+                    is ContentBlock.Dateline -> {
+                        ClickableText(
+                            text = block.text,
+                            selectedWord = selectedWord,
+                            onWordClick = { word, token ->
+                                selectedWord = token
+                                onLookupWord(word)
+                                showBottomSheet = true
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.outline,
+                                fontStyle = FontStyle.Italic
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -212,74 +270,6 @@ fun ReaderContent(
     }
 }
 
-@Composable
-fun ClickableWord(
-    word: String,
-    isSelected: Boolean,
-    style: TextStyle,
-    onClick: () -> Unit
-) {
-    Text(
-        text = word,
-        style = style.copy(
-            color = if (isSelected) MaterialTheme.colorScheme.primary else style.color,
-            fontWeight = if (isSelected) FontWeight.Bold else style.fontWeight
-        ),
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 1.dp)
-    )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun ClickableText(
-    text: String,
-    selectedWord: String?,
-    onWordClick: (String, String) -> Unit,
-    style: TextStyle,
-    modifier: Modifier = Modifier
-) {
-    val tokens = remember(text) { text.split(Regex("(?<=\\s)|(?=\\s)")) }
-
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Start
-    ) {
-        tokens.forEach { token ->
-            if (token.isBlank()) {
-                Text(text = token, style = style)
-            } else {
-                ClickableWord(
-                    word = token,
-                    isSelected = selectedWord == token,
-                    style = style,
-                    onClick = {
-                        val wordToLookup = token.trim { it in "!.?,\"'" }
-                        onWordClick(wordToLookup, token)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ParagraphContent(
-    paragraph: String,
-    selectedWord: String?,
-    baseFontSize: TextUnit,
-    onWordClick: (String, String) -> Unit
-) {
-    ClickableText(
-        text = paragraph,
-        selectedWord = selectedWord,
-        onWordClick = onWordClick,
-        style = MaterialTheme.typography.bodyLarge.copy(fontSize = baseFontSize),
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
 @OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
 @Composable
@@ -292,15 +282,14 @@ fun ReaderScreenPreview() {
                     feedId = 1,
                     title = "스타크래프트 2: 자유의 날개 다시 보기",
                     description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
-                    content = "스타크래프트 II의 이야기는 오리지널 스타크래프트 출시작의 이야기를 이어가며, 스타크래프트의 종족과 스타크래프트 시리즈의 등장인물 목록을 다룬다.\n" +
-                            "\n" +
-                            "자유의 날개는 스타크래프트: 브루드 워 사건으로부터 4년 후를 배경으로 하며, 짐 레이너의 반란군과 황제 아크튜러스 멩스크가 이끄는 테란 자치령 간의 갈등에 초점을 맞춘다. 저그는 자주 위협으로 다시 나타나지만, 레이너는 결국 저그 모행성에서 무력화된 그들의 여왕 사라 케리건을 회수한다.\n" +
-                            "\n" +
-                            "군단의 심장에서는 자치령이 레이너와 케리건을 공격하고, 이야기는 주로 멩스크의 병력과 새로 나타난 프로토스-저그 혼종에 맞서는 케리건의 활약을 따라간다.\n" +
-                            "\n" +
-                            "공허의 유산에서는 프로토스가 주인공이며, 제라툴과 아르타니스가 이끄는 프로토스-저그 혼종의 창조자인 악한 존재 아몬에 맞서 싸운다. 공허의 유산이 끝난 후 짧은 에필로그에서 세 진영 모두 공허 속에서 아몬에 맞서기 위해 합류한다.\n" +
-                            "\n" +
-                            "노바 비밀 작전은 아몬의 최종 패배 후 어느 시점을 배경으로 하며, 유령 요원 노바가 재편성된 테란 자치령을 위협하는 음모를 밝혀내는 과정을 따라간다.",
+                    content = listOf(
+                        ContentBlock.Text(
+                            "스타크래프트 II의 이야기는 오리지널 스타크래프트 출시작의 이야기를 이어가며, 스타크래프트의 종족과 스타크래프트 시리즈의 등장인물 목록을 다룬다."
+                        ),
+                        ContentBlock.Text(
+                            "자유의 날개는 스타크래프트: 브루드 워 사건으로부터 4년 후를 배경으로 하며, 짐 레이너의 반란군과 황제 아크튜러스 멩스크가 이끄는 테란 자치령 간의 갈등에 초점을 맞춘다. 저그는 자주 위협으로 다시 나타나지만, 레이너는 결국 저그 모행성에서 무력화된 그들의 여왕 사라 케리건을 회수한다."
+                        )
+                    ),
                     pubDate = Clock.System.now().toString(),
                     sourceUrl = "https://www.source.url/article"
                 ),

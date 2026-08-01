@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
     version = 13,
     exportSchema = false
 )
+@TypeConverters(ContentBlockTypeConverter::class)
 abstract class HyangsangDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun vocabularyDao(): VocabularyDao
