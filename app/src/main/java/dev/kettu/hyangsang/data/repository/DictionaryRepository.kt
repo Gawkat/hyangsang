@@ -24,7 +24,7 @@ class DictionaryRepository(
                 // Handle compound nouns by generating all sub-strings (Length >= 2)
                 // This lets the dictionary decide which parts are "real" words.
                 if (token.pos.toString() == "Noun" && stem.length >= 3) {
-                    for (i in 0 until stem.length) {
+                    for (i in stem.indices) {
                         for (j in i + 2..stem.length) {
                             val sub = stem.substring(i, j)
                             if (sub.length < stem.length) list.add(sub)
@@ -55,13 +55,39 @@ class DictionaryRepository(
         return dictionaryDao.getEntriesForTerms(terms).map { entries ->
             entries.groupBy { it.entry.word }
                 .toList()
-                // Sort: 1. Exact match first, 2. Longest sub-strings next
-                .sortedWith(compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
-                    it.first == word
-                }.thenByDescending {
-                    it.first.length
-                })
+                // Sort:
+                // 1. Exact match first
+                // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
+                // 3. Longest sub-strings next
+                .sortedWith(
+                    compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
+                        it.first == word
+                    }.thenBy {
+                        getPosPriority(it.second)
+                    }.thenByDescending {
+                        it.first.length
+                    }
+                )
                 .toMap()
+        }
+    }
+
+    private fun getPosPriority(entries: List<DictionaryWithSenses>): Int {
+        val poses = entries.mapNotNull { it.entry.partOfSpeech }.distinct()
+        if (poses.isEmpty()) return 10 // Default low priority
+
+        return poses.minOf { pos ->
+            when (pos) {
+                // Nominals / Core semantic units
+                "Noun", "Pronoun", "Numeral", "Bound Noun" -> 1
+                // Predicates (Unsure if auxiliary verb/adjective POS are present in db)
+                "Verb", "Adjective", "Auxiliary Verb", "Auxiliary Adjective" -> 2
+                // Modifiers
+                "Adverb", "Determiner", "Interjection" -> 3
+                // Functional / Grammatical markers (Unsure if ending is present in db)
+                "Affix", "Particle", "Ending", "Postpositional Particle" -> 4
+                else -> 5
+            }
         }
     }
 }
