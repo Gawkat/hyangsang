@@ -28,14 +28,12 @@
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"
 * If no definitions found, allow user to look up word themselves (search in browser or something)
-* Improve word lookup order, (e.g. nouns before verbs... other things?)
 
 ## Discover/Start
 
 * Add a search bar in the TopAppBar that updates searchQuery.
 * Add an "Unread only" toggle in a filter menu that updates showUnreadOnly.
 * Add by-feed filtering
-* Fix some character entities (&quot, &apos, etc.) from showing up in article descriptions
 
 ## Feeds
 

@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.ExperimentalTime
@@ -84,9 +86,13 @@ class RssFeedRepository(
                             return@forEach
                         }
 
+                        // Clean title and description from HTML tags and entities
+                        val cleanTitle = Parser.unescapeEntities(item.title, false)
+                        val cleanDescription = Jsoup.parse(item.description).text()
+
                         val article = Article(
-                            title = item.title,
-                            description = item.description,
+                            title = cleanTitle,
+                            description = cleanDescription,
                             sourceUrl = item.link,
                             feedId = feed.id,
                             pubDate = parseToIso8601(item.pubDate)
