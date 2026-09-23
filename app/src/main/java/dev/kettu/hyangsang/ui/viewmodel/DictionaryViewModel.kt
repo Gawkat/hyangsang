@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,8 +19,14 @@ class DictionaryViewModel(
     val lookupResult: StateFlow<Map<String, List<DictionaryWithSenses>>> =
         _lookupResult.asStateFlow()
 
+    private var lookupJob: Job? = null
+
     fun lookupWord(word: String) {
-        viewModelScope.launch {
+        // Each lookup collects a Room Flow that never completes on its own. Without cancelling
+        // the previous one, every tapped word left a collector running for the rest of the
+        // session, and a slow earlier lookup could overwrite the result of a newer one.
+        lookupJob?.cancel()
+        lookupJob = viewModelScope.launch {
             dictionaryRepository.getDefinitionsForWord(word).collect { result ->
                 _lookupResult.value = result
             }
@@ -27,6 +34,8 @@ class DictionaryViewModel(
     }
 
     fun clearLookup() {
+        lookupJob?.cancel()
+        lookupJob = null
         _lookupResult.value = emptyMap()
     }
 }

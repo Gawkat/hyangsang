@@ -9,6 +9,7 @@
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
+* Remove the legacy article compatibility and all references to the legacy format
 
 ## Parser
 
@@ -23,7 +24,6 @@
     * font
     * font weight
     * line spacing
-* Investigate performance issues
 * Consider hiding examples from dictionary overlay (currently only showing 2, move somewhere else?)
 * Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
   placeholder while this happens instead of current "No definitions found"

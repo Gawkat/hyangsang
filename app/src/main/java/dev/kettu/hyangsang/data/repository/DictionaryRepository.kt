@@ -2,7 +2,12 @@ package dev.kettu.hyangsang.data.repository
 
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 
@@ -49,28 +54,32 @@ class DictionaryRepository(
             .filter { term -> term.any { !it.isDigit() } || term == word }
     }
 
-    fun getDefinitionsForWord(word: String): Flow<Map<String, List<DictionaryWithSenses>>> {
-        val terms = getAllSearchTerms(word)
-
-        return dictionaryDao.getEntriesForTerms(terms).map { entries ->
-            entries.groupBy { it.entry.word }
-                .toList()
-                // Sort:
-                // 1. Exact match first
-                // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
-                // 3. Longest sub-strings next
-                .sortedWith(
-                    compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
-                        it.first == word
-                    }.thenBy {
-                        getPosPriority(it.second)
-                    }.thenByDescending {
-                        it.first.length
-                    }
-                )
-                .toMap()
-        }
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getDefinitionsForWord(word: String): Flow<Map<String, List<DictionaryWithSenses>>> =
+        // Tokenizing with Open Korean Text is CPU-heavy (and the first call loads its
+        // dictionaries), so it must not run on the main thread.
+        flow { emit(getAllSearchTerms(word)) }
+            .flowOn(Dispatchers.Default)
+            .flatMapLatest { terms -> dictionaryDao.getEntriesForTerms(terms) }
+            .map { entries ->
+                entries.groupBy { it.entry.word }
+                    .toList()
+                    // Sort:
+                    // 1. Exact match first
+                    // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
+                    // 3. Longest sub-strings next
+                    .sortedWith(
+                        compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
+                            it.first == word
+                        }.thenBy {
+                            getPosPriority(it.second)
+                        }.thenByDescending {
+                            it.first.length
+                        }
+                    )
+                    .toMap()
+            }
+            .flowOn(Dispatchers.Default)
 
     private fun getPosPriority(entries: List<DictionaryWithSenses>): Int {
         val poses = entries.mapNotNull { it.entry.partOfSpeech }.distinct()

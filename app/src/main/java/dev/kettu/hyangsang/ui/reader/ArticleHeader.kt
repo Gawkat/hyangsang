@@ -7,6 +7,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,15 +26,15 @@ private const val wordsPerMinute = 200
 @Composable
 fun ArticleHeader(
     articleWithFeed: ArticleWithFeed,
-    selectedWord: String?,
-    onWordClick: (String, String) -> Unit,
+    selection: WordSelection?,
+    onWordClick: (WordSelection, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(bottom = 24.dp)) {
         ClickableText(
             text = articleWithFeed.feed.title,
-            spans = emptyList(),
-            selectedWord = selectedWord,
+            textId = "feed-title",
+            selectedRange = selection.rangeIn("feed-title"),
             onWordClick = onWordClick,
             style = MaterialTheme.typography.labelMedium.copy(
                 color = MaterialTheme.colorScheme.primary,
@@ -43,8 +44,8 @@ fun ArticleHeader(
 
         ClickableText(
             text = articleWithFeed.article.title,
-            spans = emptyList(),
-            selectedWord = selectedWord,
+            textId = "article-title",
+            selectedRange = selection.rangeIn("article-title"),
             onWordClick = onWordClick,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold
@@ -65,20 +66,8 @@ fun ArticleHeader(
             }
         }
 
-        val wordCount = articleWithFeed.article.content?.sumOf { block ->
-            when (block) {
-                is ContentBlock.Text -> block.text.split(Regex("\\s+"))
-                    .filter { it.isNotBlank() }.size
-
-                is ContentBlock.Legacy -> block.text.split(Regex("\\s+"))
-                    .filter { it.isNotBlank() }.size
-
-                is ContentBlock.Dateline -> block.text.split(Regex("\\s+"))
-                    .filter { it.isNotBlank() }.size
-
-                else -> 0
-            }
-        } ?: 0
+        val content = articleWithFeed.article.content
+        val wordCount = remember(content) { countWords(content) }
         val readingTime = maxOf(1, wordCount / wordsPerMinute)
 
         val durationLabel = if (readingTime <= 1) "minute" else "minutes"
@@ -92,6 +81,19 @@ fun ArticleHeader(
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
     }
 }
+
+private val WhitespaceRegex = Regex("\\s+")
+
+private fun countWords(content: List<ContentBlock>?): Int =
+    content?.sumOf { block ->
+        val text = when (block) {
+            is ContentBlock.Text -> block.text
+            is ContentBlock.Legacy -> block.text
+            is ContentBlock.Dateline -> block.text
+            else -> return@sumOf 0
+        }
+        text.split(WhitespaceRegex).count { it.isNotBlank() }
+    } ?: 0
 
 @OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)
@@ -117,7 +119,7 @@ fun ArticleHeaderPreview() {
                     "Feed Category"
                 )
             ),
-            selectedWord = null,
+            selection = null,
             onWordClick = { _, _ -> }
         )
     }

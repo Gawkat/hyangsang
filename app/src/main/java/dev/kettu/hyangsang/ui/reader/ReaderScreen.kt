@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -85,13 +86,23 @@ fun ReaderContent(
     fontSize: String = "Medium (Default)"
 ) {
     val article = articleWithFeed.article
-    val contentBlocks = article.content ?: emptyList()
+    // Legacy blocks are split into paragraphs once, up front, so that every paragraph becomes
+    // its own lazy item instead of one giant item that is composed all at once.
+    val contentBlocks = remember(article.content) { flattenContentBlocks(article.content) }
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    var selectedWord by remember { mutableStateOf<String?>(null) }
+    var selection by remember { mutableStateOf<WordSelection?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val currentOnLookupWord by rememberUpdatedState(onLookupWord)
+    val onWordClick: (WordSelection, String) -> Unit = remember {
+        { wordSelection, lookupWord ->
+            selection = wordSelection
+            currentOnLookupWord(lookupWord)
+            showBottomSheet = true
+        }
+    }
 
     // TODO: use enum or something
     val baseFontSize = remember(fontSize) {
@@ -155,63 +166,42 @@ fun ReaderContent(
                 .fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            item {
+            item(key = "header", contentType = "header") {
                 ArticleHeader(
                     articleWithFeed = articleWithFeed,
-                    selectedWord = selectedWord,
-                    onWordClick = { word, token ->
-                        selectedWord = token
-                        onLookupWord(word)
-                        showBottomSheet = true
-                    }
+                    selection = selection,
+                    onWordClick = onWordClick
                 )
             }
-            items(contentBlocks) { block ->
+            itemsIndexed(
+                items = contentBlocks,
+                contentType = { _, block -> block::class }
+            ) { index, block ->
+                val textId = "block-$index"
+                val selectedRange = selection.rangeIn(textId)
                 when (block) {
                     is ContentBlock.Text -> {
                         ParagraphContent(
                             textBlock = block,
-                            selectedWord = selectedWord,
+                            textId = textId,
+                            selectedRange = selectedRange,
                             baseFontSize = baseFontSize,
-                            onWordClick = { word, token ->
-                                selectedWord = token
-                                onLookupWord(word)
-                                showBottomSheet = true
-                            }
+                            onWordClick = onWordClick
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    is ContentBlock.Legacy -> {
-                        // Handle legacy content by splitting into paragraphs
-                        block.text.split("\n").forEach { paragraph ->
-                            if (paragraph.isNotBlank()) {
-                                ParagraphContent(
-                                    textBlock = ContentBlock.Text(paragraph),
-                                    selectedWord = selectedWord,
-                                    baseFontSize = baseFontSize,
-                                    onWordClick = { word, token ->
-                                        selectedWord = token
-                                        onLookupWord(word)
-                                        showBottomSheet = true
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                            }
-                        }
-                    }
+                    // Already flattened into Text blocks by flattenContentBlocks()
+                    is ContentBlock.Legacy -> Unit
 
                     is ContentBlock.Image -> {
                         ArticleImage(
                             url = block.url,
                             caption = block.caption,
                             captionSpans = block.captionSpans,
-                            selectedWord = selectedWord,
-                            onWordClick = { word, token ->
-                                selectedWord = token
-                                onLookupWord(word)
-                                showBottomSheet = true
-                            },
+                            textId = textId,
+                            selectedRange = selectedRange,
+                            onWordClick = onWordClick,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
@@ -220,24 +210,18 @@ fun ReaderContent(
                         ArticleHeading(
                             text = block.text,
                             level = block.level,
-                            selectedWord = selectedWord,
-                            onWordClick = { word, token ->
-                                selectedWord = token
-                                onLookupWord(word)
-                                showBottomSheet = true
-                            }
+                            textId = textId,
+                            selectedRange = selectedRange,
+                            onWordClick = onWordClick
                         )
                     }
 
                     is ContentBlock.Dateline -> {
                         ClickableText(
                             text = block.text,
-                            selectedWord = selectedWord,
-                            onWordClick = { word, token ->
-                                selectedWord = token
-                                onLookupWord(word)
-                                showBottomSheet = true
-                            },
+                            textId = textId,
+                            selectedRange = selectedRange,
+                            onWordClick = onWordClick,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.outline,
                                 fontStyle = FontStyle.Italic
@@ -249,26 +233,35 @@ fun ReaderContent(
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item(key = "bottom-spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
 
         if (showBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = {
                     showBottomSheet = false
-                    selectedWord = null
+                    selection = null
                     onClearLookup()
                 },
                 sheetState = sheetState
             ) {
                 DefinitionOverlay(
-                    selectedWord = selectedWord ?: "",
+                    selectedWord = selection?.token ?: "",
                     lookupResults = lookupResult
                 )
             }
         }
     }
 }
+
+private fun flattenContentBlocks(blocks: List<ContentBlock>?): List<ContentBlock> =
+    blocks.orEmpty().flatMap { block ->
+        if (block is ContentBlock.Legacy) {
+            block.text.split("\n").filter { it.isNotBlank() }.map { ContentBlock.Text(it) }
+        } else {
+            listOf(block)
+        }
+    }
 
 @OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)

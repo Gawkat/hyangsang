@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import dev.kettu.hyangsang.parser.ContentSpan
@@ -16,8 +17,9 @@ import dev.kettu.hyangsang.parser.ContentSpan
 fun ArticleImage(
     url: String,
     caption: String?,
-    selectedWord: String?,
-    onWordClick: (String, String) -> Unit,
+    textId: String,
+    selectedRange: TextRange?,
+    onWordClick: (WordSelection, String) -> Unit,
     modifier: Modifier = Modifier,
     captionSpans: List<ContentSpan> = emptyList()
 ) {
@@ -34,8 +36,9 @@ fun ArticleImage(
         if (!caption.isNullOrBlank()) {
             ClickableText(
                 text = caption,
+                textId = textId,
                 spans = captionSpans,
-                selectedWord = selectedWord,
+                selectedRange = selectedRange,
                 onWordClick = onWordClick,
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant

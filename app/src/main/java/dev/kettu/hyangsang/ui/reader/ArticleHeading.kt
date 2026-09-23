@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -12,8 +13,9 @@ import androidx.compose.ui.unit.dp
 fun ArticleHeading(
     text: String,
     level: Int,
-    selectedWord: String?,
-    onWordClick: (String, String) -> Unit,
+    textId: String,
+    selectedRange: TextRange?,
+    onWordClick: (WordSelection, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val style = when (level) {
@@ -25,7 +27,8 @@ fun ArticleHeading(
 
     ClickableText(
         text = text,
-        selectedWord = selectedWord,
+        textId = textId,
+        selectedRange = selectedRange,
         onWordClick = onWordClick,
         style = style.copy(fontWeight = FontWeight.Bold),
         modifier = modifier
