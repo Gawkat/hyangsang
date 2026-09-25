@@ -199,6 +199,8 @@ fun ReaderContent(
                             url = block.url,
                             caption = block.caption,
                             captionSpans = block.captionSpans,
+                            width = block.width,
+                            height = block.height,
                             textId = textId,
                             selectedRange = selectedRange,
                             onWordClick = onWordClick,
@@ -294,7 +296,7 @@ fun ReaderScreenPreview() {
                 )
             ),
             onBackClick = {},
-            lookupResult = emptyMap<String, List<DictionaryWithSenses>>(),
+            lookupResult = emptyMap(),
             onLookupWord = {},
             onClearLookup = {}
         )

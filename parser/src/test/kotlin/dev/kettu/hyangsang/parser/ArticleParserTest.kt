@@ -81,6 +81,38 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `should parse image dimensions and skip tracking pixels`() {
+        val url = "https://example.com/article"
+        val html = """
+            <html>
+            <body>
+                <article>
+                    <figure>
+                        <img src="https://example.com/sized.jpg" width="640px" height="360">
+                    </figure>
+                    <img src="https://example.com/unsized.jpg" width="100%">
+                    <img src="https://example.com/pixel.gif" width="1" height="1">
+                </article>
+            </body>
+            </html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        doc.setBaseUri("https://example.com")
+
+        val result = articleParser.parse(url, doc)
+
+        assertEquals(2, result.size)
+        val sized = result[0] as ContentBlock.Image
+        assertEquals(640, sized.width)
+        assertEquals(360, sized.height)
+
+        val unsized = result[1] as ContentBlock.Image
+        assertEquals("https://example.com/unsized.jpg", unsized.url)
+        assertEquals(null, unsized.width)
+        assertEquals(null, unsized.height)
+    }
+
+    @Test
     fun `should extract Yonhap dateline`() {
         val html = """
             <html>

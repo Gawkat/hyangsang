@@ -29,11 +29,14 @@ fun Element.parseBlocks(): List<ContentBlock> {
 
             "img" -> {
                 val url = element.absUrl("src")
-                if (url.isNotEmpty()) {
+                if (url.isNotEmpty() && !element.isTrackingPixel()) {
                     blocks.add(
                         ContentBlock.Image(
-                            url,
-                            element.attr("alt").takeIf { it.isNotBlank() })
+                            url = url,
+                            caption = element.attr("alt").takeIf { it.isNotBlank() },
+                            width = element.dimensionAttr("width"),
+                            height = element.dimensionAttr("height")
+                        )
                     )
                 }
             }
@@ -46,12 +49,14 @@ fun Element.parseBlocks(): List<ContentBlock> {
                     ?: (img?.attr("alt") to emptyList())
 
                 val url = img?.absUrl("src") ?: ""
-                if (url.isNotEmpty()) {
+                if (img != null && url.isNotEmpty() && !img.isTrackingPixel()) {
                     blocks.add(
                         ContentBlock.Image(
                             url = url,
                             caption = captionText?.takeIf { it.isNotBlank() },
-                            captionSpans = captionSpans
+                            captionSpans = captionSpans,
+                            width = img.dimensionAttr("width"),
+                            height = img.dimensionAttr("height")
                         )
                     )
                 }
@@ -65,6 +70,13 @@ fun Element.parseBlocks(): List<ContentBlock> {
     }
     return blocks
 }
+
+// Only plain pixel values are usable; things like "100%" are ignored
+private fun Element.dimensionAttr(name: String): Int? =
+    attr(name).trim().removeSuffix("px").toIntOrNull()?.takeIf { it > 0 }
+
+private fun Element.isTrackingPixel(): Boolean =
+    attr("width").trim() in setOf("0", "1") || attr("height").trim() in setOf("0", "1")
 
 fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
     val sb = StringBuilder()
@@ -100,4 +112,4 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
         traverse(child)
     }
     return sb.toString().trim() to spans
-}
+}

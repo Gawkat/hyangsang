@@ -14,7 +14,10 @@ sealed class ContentBlock {
     data class Image(
         val url: String,
         val caption: String? = null,
-        val captionSpans: List<ContentSpan> = emptyList()
+        val captionSpans: List<ContentSpan> = emptyList(),
+        // Intrinsic size from the HTML attributes, used to reserve layout space before loading
+        val width: Int? = null,
+        val height: Int? = null
     ) : ContentBlock()
 
     @Serializable
