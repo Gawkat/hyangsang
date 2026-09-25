@@ -16,7 +16,9 @@ data class RssFeed @OptIn(ExperimentalTime::class) constructor(
     val url: String,
     val category: String,
     val isEnabled: Boolean = true,
-    val lastSynced: String = Instant.fromEpochMilliseconds(0).toString()
+    val lastSynced: String = Instant.fromEpochMilliseconds(0).toString(), // Last successful sync
+    val lastSyncAttempt: String? = null,
+    val lastSyncError: String? = null // Null when the last attempt succeeded
 )
 
 data class RssItem(
@@ -24,4 +26,4 @@ data class RssItem(
     val link: String,
     val pubDate: String?,
     val description: String
-)
+)

@@ -58,6 +58,14 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    sourceSets {
+        // Exported Room schemas are needed by MigrationTestHelper
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -84,6 +92,7 @@ dependencies {
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -105,4 +114,4 @@ dependencies {
 
     // For OSS licensing
     implementation(libs.play.services.oss.licenses)
-}
+}

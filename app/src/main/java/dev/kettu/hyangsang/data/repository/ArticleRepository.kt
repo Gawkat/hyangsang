@@ -9,11 +9,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class ArticleRepository(private val articleDao: ArticleDao) {
     fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
 
     fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>> = articleDao.getAllArticlesWithFeed()
+
+    fun getSavedArticlesWithFeed(): Flow<List<ArticleWithFeed>> =
+        articleDao.getSavedArticlesWithFeed()
 
     suspend fun getArticleById(id: Long): Article? = articleDao.getArticleById(id)
 
@@ -27,6 +32,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     suspend fun deleteArticle(article: Article) = articleDao.deleteArticle(article)
 
     suspend fun updateProgress(id: Long, position: Int) = articleDao.updateProgress(id, position)
+
+    @OptIn(ExperimentalTime::class)
+    suspend fun setSaved(id: Long, saved: Boolean) =
+        articleDao.updateSavedDate(id, if (saved) Clock.System.now().toString() else null)
 
     suspend fun fetchAndSaveArticleContent(
         article: Article,
@@ -44,10 +53,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
                 val doc = Jsoup.connect(url).get()
 
                 val content = ArticleParser().parse(url, doc)
-                val updatedArticle = article.copy(content = content)
-
-                updateArticle(updatedArticle)
-                updatedArticle
+                articleDao.updateContent(article.id, content)
+                article.copy(content = content)
             } catch (_: Exception) {
                 article // Return original on failure
             }

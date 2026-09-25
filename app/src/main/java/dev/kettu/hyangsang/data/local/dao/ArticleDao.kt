@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -34,6 +35,10 @@ interface ArticleDao {
     )
     fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
+    @Query("SELECT * FROM articles WHERE savedDate IS NOT NULL ORDER BY savedDate DESC")
+    fun getSavedArticlesWithFeed(): Flow<List<ArticleWithFeed>>
+
     @Query("SELECT * FROM articles WHERE feedId = :feedId")
     fun getArticlesByFeed(feedId: Long): Flow<List<Article>>
 
@@ -45,6 +50,13 @@ interface ArticleDao {
 
     @Delete
     suspend fun deleteArticle(article: Article)
+
+    // Targeted updates, so a stale Article copy can't overwrite columns changed elsewhere
+    @Query("UPDATE articles SET content = :content WHERE id = :id")
+    suspend fun updateContent(id: Long, content: List<ContentBlock>?)
+
+    @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id")
+    suspend fun updateSavedDate(id: Long, savedDate: String?)
 
     @OptIn(ExperimentalTime::class)
     @Query("UPDATE articles SET scrollPosition = :position, lastReadDate = :timestamp WHERE id = :id")

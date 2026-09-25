@@ -25,4 +25,13 @@ interface RssFeedDao {
 
     @Delete
     suspend fun deleteFeed(feed: RssFeed)
+
+    @Query("UPDATE rss_feeds SET isEnabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE rss_feeds SET lastSynced = :timestamp, lastSyncAttempt = :timestamp, lastSyncError = NULL WHERE id = :id")
+    suspend fun markSyncSucceeded(id: Long, timestamp: String)
+
+    @Query("UPDATE rss_feeds SET lastSyncAttempt = :timestamp, lastSyncError = :error WHERE id = :id")
+    suspend fun markSyncFailed(id: Long, timestamp: String, error: String)
 }

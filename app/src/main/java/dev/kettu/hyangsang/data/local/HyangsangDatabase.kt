@@ -30,8 +30,8 @@ import kotlinx.coroutines.launch
         DictionaryExample::class,
         RssFeed::class
     ],
-    version = 13,
-    exportSchema = false
+    version = 14,
+    exportSchema = true
 )
 @TypeConverters(ContentBlockTypeConverter::class)
 abstract class HyangsangDatabase : RoomDatabase() {
@@ -52,7 +52,10 @@ abstract class HyangsangDatabase : RoomDatabase() {
                     "hyangsang_database"
                 )
                     .createFromAsset("dictionary.db")
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(*ALL_MIGRATIONS)
+                    // No migrations exist from before v13, and saved articles didn't exist yet either
+                    .fallbackToDestructiveMigrationFrom(dropAllTables = true, *(1..12).toList().toIntArray())
+                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

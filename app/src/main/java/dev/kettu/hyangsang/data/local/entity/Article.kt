@@ -22,7 +22,8 @@ import kotlin.time.ExperimentalTime
         Index(value = ["feedId"]),
         Index(value = ["pubDate"]),
         Index(value = ["addedDate"]),
-        Index(value = ["sourceUrl"], unique = true)
+        Index(value = ["sourceUrl"], unique = true),
+        Index(value = ["savedDate"])
     ]
 )
 data class Article @OptIn(ExperimentalTime::class) constructor(
@@ -36,5 +37,6 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
     val lastReadDate: String? = null,
-    val scrollPosition: Int = 0
-)
+    val scrollPosition: Int = 0,
+    val savedDate: String? = null // Null when not saved; saved articles must survive pruning
+)

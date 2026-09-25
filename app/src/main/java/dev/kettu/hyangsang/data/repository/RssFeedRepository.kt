@@ -7,6 +7,7 @@ import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.network.RssFeedService
 import dev.kettu.hyangsang.parser.RssFeedParser
 import dev.kettu.hyangsang.parser.parseToIso8601
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -36,7 +37,7 @@ class RssFeedRepository(
 
     // Toggle feed status
     suspend fun toggleFeed(feed: RssFeed) {
-        rssFeedDao.updateFeed(feed.copy(isEnabled = !feed.isEnabled))
+        rssFeedDao.setEnabled(feed.id, !feed.isEnabled)
     }
 
     // Only fetch for enabled feeds
@@ -45,14 +46,15 @@ class RssFeedRepository(
         val enabledFeeds = rssFeedDao.getEnabledFeeds().first()
 
         enabledFeeds.forEach { feed ->
-            val lastSynced = try {
-                Instant.parse(feed.lastSynced)
+            // Rate limit on attempts rather than successes, so a broken feed isn't retried constantly
+            val lastAttempt = try {
+                Instant.parse(feed.lastSyncAttempt ?: feed.lastSynced)
             } catch (_: Exception) {
                 Instant.DISTANT_PAST
             }
 
-            // Skip if forceRefresh is false and lastSynced is within the last 5 minutes
-            if (!forceRefresh && ((Clock.System.now() - lastSynced) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
+            // Skip if forceRefresh is false and the last attempt is within the last 5 minutes
+            if (!forceRefresh && ((Clock.System.now() - lastAttempt) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
                 return@forEach
             }
 
@@ -75,6 +77,7 @@ class RssFeedRepository(
     @OptIn(ExperimentalTime::class)
     suspend fun fetchAndSaveRss(feed: RssFeed) {
         withContext(Dispatchers.IO) {
+            val attemptTime = Clock.System.now().toString()
             try {
                 val response = rssService.getRssFeed(feed.url)
                 if (response.isSuccessful) {
@@ -100,12 +103,19 @@ class RssFeedRepository(
                         articleDao.insertArticle(article)
                     }
 
-                    val syncedFeed = feed.copy(lastSynced = Clock.System.now().toString())
-                    rssFeedDao.updateFeed(syncedFeed)
+                    rssFeedDao.markSyncSucceeded(feed.id, attemptTime)
+                } else {
+                    rssFeedDao.markSyncFailed(feed.id, attemptTime, "HTTP ${response.code()}")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                // TODO: Probably note that this feed failed to sync
                 e.printStackTrace()
+                rssFeedDao.markSyncFailed(
+                    feed.id,
+                    attemptTime,
+                    e.message ?: e::class.simpleName ?: "Unknown error"
+                )
             }
         }
     }
