@@ -43,6 +43,7 @@ import dev.kettu.hyangsang.ui.menu.MenuScreen
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
+import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
 import dev.kettu.hyangsang.ui.viewmodel.ArticleUiState
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
@@ -60,6 +61,8 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val theme by prefsRepository.themeFlow.collectAsState(initial = "System default")
+            val paletteKey by prefsRepository.paletteFlow.collectAsState(initial = "hyangsang")
+            val palette = ThemePalette.fromKey(paletteKey)
             val fontSize by prefsRepository.fontSizeFlow.collectAsState(initial = "Medium (Default)")
 
             val darkTheme = when (theme) {
@@ -104,7 +107,7 @@ class MainActivity : AppCompatActivity() {
                 )
             )
 
-            HyangsangTheme(darkTheme = darkTheme) {
+            HyangsangTheme(darkTheme = darkTheme, palette = palette) {
                 MainApp(
                     prefsRepository = prefsRepository,
                     articleViewModel = articleViewModel,
@@ -112,6 +115,7 @@ class MainActivity : AppCompatActivity() {
                     vocabularyViewModel = vocabularyViewModel,
                     rssFeedViewModel = feedViewModel,
                     currentTheme = theme,
+                    currentPalette = palette,
                     currentFontSize = fontSize
                 )
             }
@@ -127,6 +131,7 @@ fun MainApp(
     vocabularyViewModel: VocabularyViewModel,
     rssFeedViewModel: RssFeedViewModel,
     currentTheme: String,
+    currentPalette: ThemePalette,
     currentFontSize: String
 ) {
     val navController = rememberNavController()
@@ -235,6 +240,8 @@ fun MainApp(
                 SettingsScreen(
                     currentTheme = currentTheme,
                     onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
+                    currentPalette = currentPalette,
+                    onPaletteChange = { scope.launch { prefsRepository.setPalette(it.key) } },
                     currentFontSize = currentFontSize,
                     onFontSizeChange = { scope.launch { prefsRepository.setFontSize(it) } },
                     onBackClick = { navController.popBackStack() }

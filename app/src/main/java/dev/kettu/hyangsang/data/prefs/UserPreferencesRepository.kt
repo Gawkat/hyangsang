@@ -15,11 +15,17 @@ class UserPreferencesRepository(private val context: Context) {
 
     private object Keys {
         val THEME = stringPreferencesKey("theme")
+        val PALETTE = stringPreferencesKey("palette")
         val FONT_SIZE = stringPreferencesKey("font_size")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[Keys.THEME] ?: "System default"
+    }
+
+    // Stored as ThemePalette.key
+    val paletteFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[Keys.PALETTE] ?: "hyangsang"
     }
 
     val fontSizeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -29,6 +35,10 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setTheme(theme: String) {
         println("Setting theme to $theme")
         context.dataStore.edit { it[Keys.THEME] = theme }
+    }
+
+    suspend fun setPalette(palette: String) {
+        context.dataStore.edit { it[Keys.PALETTE] = palette }
     }
 
     suspend fun setFontSize(fontSize: String) {

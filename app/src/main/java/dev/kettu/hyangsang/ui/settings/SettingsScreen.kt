@@ -30,12 +30,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.ui.theme.ThemePalette
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     currentTheme: String,
     onThemeChange: (String) -> Unit,
+    currentPalette: ThemePalette,
+    onPaletteChange: (ThemePalette) -> Unit,
     currentFontSize: String,
     onFontSizeChange: (String) -> Unit,
     onBackClick: () -> Unit,
@@ -73,6 +76,10 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             ThemeSetting(currentTheme, onThemeChange)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            PaletteSetting(currentPalette, onPaletteChange)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -128,6 +135,46 @@ fun ThemeSetting(currentTheme: String, onThemeChange: (String) -> Unit) {
 }
 
 @Composable
+fun PaletteSetting(currentPalette: ThemePalette, onPaletteChange: (ThemePalette) -> Unit) {
+    val options = buildList {
+        add(ThemePalette.HYANGSANG to stringResource(R.string.palette_hyangsang))
+        add(ThemePalette.SOLARIZED to stringResource(R.string.palette_solarized))
+        add(ThemePalette.GRUVBOX to stringResource(R.string.palette_gruvbox))
+        if (ThemePalette.isDynamicAvailable) {
+            add(ThemePalette.DYNAMIC to stringResource(R.string.palette_dynamic))
+        }
+    }
+
+    Column(Modifier.selectableGroup()) {
+        Text(stringResource(R.string.palette_setting), style = MaterialTheme.typography.bodyLarge)
+        options.forEach { (palette, label) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .selectable(
+                        selected = (palette == currentPalette),
+                        onClick = { onPaletteChange(palette) },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (palette == currentPalette),
+                    onClick = null
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun FontSizeSetting(currentFontSize: String, onFontSizeChange: (String) -> Unit) {
     val options = listOf(
         stringResource(R.string.font_small),
@@ -173,6 +220,8 @@ fun SettingsScreenPreview() {
         SettingsScreen(
             currentTheme = "System default",
             onThemeChange = {},
+            currentPalette = ThemePalette.HYANGSANG,
+            onPaletteChange = {},
             currentFontSize = "Medium (Default)",
             onFontSizeChange = {},
             onBackClick = {}

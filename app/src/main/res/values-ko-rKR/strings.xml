@@ -14,6 +14,11 @@
     <string name="theme_light">밝게</string>
     <string name="theme_dark">어둡게</string>
     <string name="theme_system">시스템 기본값</string>
+    <string name="palette_setting">색상 팔레트</string>
+    <string name="palette_hyangsang">향상</string>
+    <string name="palette_solarized">Solarized</string>
+    <string name="palette_gruvbox">Gruvbox</string>
+    <string name="palette_dynamic">배경화면 색상</string>
     <string name="font_small">작게</string>
     <string name="font_medium">중간 (기본값)</string>
     <string name="font_large">크게</string>
@@ -37,4 +42,4 @@
     <string name="about_label">고객지원</string>
     <string name="dictionary_attribution_label">사전 출처</string>
     <string name="category_all">전체</string>
-</resources>
+</resources>
