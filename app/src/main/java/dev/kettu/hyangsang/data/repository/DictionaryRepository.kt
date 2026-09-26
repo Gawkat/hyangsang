@@ -22,12 +22,14 @@ class DictionaryRepository(
      *   words: single syllables, and affixes as the dictionary writes them (-부, 외-)
      * @param affixFallbacks tokens that look like affixes, mapped to their affix form; the token
      *   itself is only shown if the dictionary doesn't have the affix
+     * @param counters terms right after a number, like 명 in 3명 or 일 in 26일
      */
     private class SearchTerms(
         val terms: Map<String, String?>,
         val compounds: List<String>,
         val splitParts: Set<String>,
-        val affixFallbacks: Map<String, String>
+        val affixFallbacks: Map<String, String>,
+        val counters: Set<String>
     )
 
     private fun getSearchTerms(word: String): SearchTerms {
@@ -36,6 +38,7 @@ class DictionaryRepository(
         val compounds = mutableListOf<String>()
         val splitParts = mutableSetOf<String>()
         val affixFallbacks = mutableMapOf<String, String>()
+        val counters = mutableSetOf<String>()
         terms[word] = javaTokens.singleOrNull()?.pos?.toString()
 
         javaTokens.forEachIndexed { index, token ->
@@ -43,13 +46,22 @@ class DictionaryRepository(
             val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
             terms.putIfAbsent(stem, pos)
 
+            // A word after a number is almost always a counter (3명, 134개), possibly after a unit
+            // (16t급). Its own text is used since Open Korean Text can misread it (60대 -> 대다).
+            val previous = javaTokens.subList(0, index).lastOrNull { it.pos.toString() != "Alpha" }
+            val isCounter = previous?.pos?.toString() == "Number" && pos in listOf("Noun", "Verb", "Adjective")
+            if (isCounter) {
+                terms.putIfAbsent(token.text, "Noun")
+                counters += token.text
+            }
+
             // Open Korean Text splits off common suffixes (후보군 -> 후보 + 군/Suffix) and some
             // prefixes, as one-syllable nouns (초고속 -> 초 + 고속). The dictionary writes these
             // as -군 and 초-.
             val nextPos = javaTokens.getOrNull(index + 1)?.pos?.toString()
             val affix = when (pos) {
                 "Suffix" -> "-$stem"
-                "Noun" if stem.length == 1 && nextPos == "Noun" -> "$stem-"
+                "Noun" if stem.length == 1 && nextPos == "Noun" && !isCounter -> "$stem-"
                 else -> null
             }
             if (affix != null && affix !in terms) {
@@ -62,6 +74,7 @@ class DictionaryRepository(
             val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
             numericSuffixMatch?.let {
                 terms.putIfAbsent(it.groupValues[1], null)
+                counters += it.groupValues[1]
             }
 
             // Handle compound nouns by generating all sub-strings. This lets the dictionary
@@ -94,7 +107,8 @@ class DictionaryRepository(
             terms = terms.filterKeys { term -> term.any { !it.isDigit() } || term == word },
             compounds = compounds,
             splitParts = splitParts,
-            affixFallbacks = affixFallbacks
+            affixFallbacks = affixFallbacks,
+            counters = counters
         )
     }
 
@@ -180,18 +194,26 @@ class DictionaryRepository(
                             val ranking = HomonymRanking(
                                 tokenPos = terms[term],
                                 contextNouns = lookup.contextNouns,
-                                categoryPrefixes = categoryPrefixes
+                                categoryPrefixes = categoryPrefixes,
+                                isCounter = term in lookup.searchTerms.counters
                             )
                             homonyms.sortedWith(ranking.comparator)
                         }
                         .toList()
                         // Sort:
                         // 1. Exact match first
-                        // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
-                        // 3. Longest sub-strings next
+                        // 2. Particles and endings last. Many have noun homonyms (과, 이), so
+                        //    the entries' POS alone would put them first.
+                        // 3. Counters first, as the word after a number is what's being counted
+                        // 4. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
+                        // 5. Longest sub-strings next
                         .sortedWith(
                             compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
                                 it.first == word
+                            }.thenBy {
+                                terms[it.first] in GRAMMATICAL_POS
+                            }.thenByDescending {
+                                it.first in lookup.searchTerms.counters
                             }.thenBy {
                                 getPosPriority(it.second)
                             }.thenByDescending {
@@ -221,5 +243,11 @@ class DictionaryRepository(
                 else -> 5
             }
         }
+    }
+
+    private companion object {
+        // Open Korean Text POS of particles and endings. It also tags particles after numbers as
+        // Foreign (5조원에 -> 에/Foreign).
+        val GRAMMATICAL_POS = setOf("Josa", "Eomi", "PreEomi", "Foreign")
     }
 }

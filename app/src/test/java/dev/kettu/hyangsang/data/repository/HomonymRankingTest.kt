@@ -71,6 +71,23 @@ class HomonymRankingTest {
     }
 
     @Test
+    fun `after a number counters come first`() {
+        val work = homonym("일", 1, "Noun", "Beginner", "삶 > 일상 행위", "무엇을 이루려고 하는 활동.")
+        val sunday = homonym("일", 2, "Noun", "Beginner", "개념 > 시간", "일주일의 마지막 날.")
+        val date = homonym("일", 4, "Bound Noun", "Beginner", "개념 > 세는 말", "날이나 날짜를 세는 단위.")
+        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), isCounter = true)
+        assertEquals(4, listOf(work, sunday, date).sortedWith(ranking.comparator).first().entry.homonymNumber)
+    }
+
+    @Test
+    fun `after a number large number words are numerals`() {
+        val group = homonym("조", 4, "Bound Noun", "Advanced", "개념 > 세는 말", "무리를 세는 단위.")
+        val trillion = homonym("조", 6, "Numeral", "Intermediate", "개념 > 수", "억의 만 배가 되는 수.")
+        val ranking = HomonymRanking(null, emptySet(), emptyList(), isCounter = true)
+        assertEquals(6, listOf(group, trillion).sortedWith(ranking.comparator).first().entry.homonymNumber)
+    }
+
+    @Test
     fun `homonym number breaks remaining ties`() {
         val first = homonym("배", 1, "Noun", "Beginner", "인간 > 신체 부위")
         val second = homonym("배", 2, "Noun", "Beginner", "사회 생활 > 교통 수단")

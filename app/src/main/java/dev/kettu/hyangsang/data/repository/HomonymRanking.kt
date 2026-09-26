@@ -20,23 +20,42 @@ data class LookupContext(
  * @param tokenPos the Open Korean Text POS of the token the term came from, or null if unknown
  * @param contextNouns nouns from the surrounding sentence
  * @param categoryPrefixes semantic categories that fit the feed, matched as prefixes
+ * @param isCounter whether the term follows a number, as in 3명 or 26일
  */
 internal class HomonymRanking(
     private val tokenPos: String?,
     private val contextNouns: Set<String>,
-    private val categoryPrefixes: List<String>
+    private val categoryPrefixes: List<String>,
+    private val isCounter: Boolean = false
 ) {
     /**
-     * Ranks by, in order: POS matching the tapped token, nouns shared between the sentence and
-     * the entry's definitions and examples, a semantic category fitting the feed, vocabulary
-     * level (easier words are more likely the common meaning), and homonym number.
+     * Ranks by, in order: being a counter when the term follows a number, POS matching the
+     * tapped token, nouns shared between the sentence and the entry's definitions and examples,
+     * a semantic category fitting the feed, vocabulary level (easier words are more likely the
+     * common meaning), and homonym number.
      */
     val comparator: Comparator<DictionaryWithSenses> =
-        compareBy<DictionaryWithSenses> { posMismatch(it) }
+        compareBy<DictionaryWithSenses> { counterRank(it) }
+            .thenBy { posMismatch(it) }
             .thenByDescending { contextOverlap(it) }
             .thenBy { categoryMismatch(it) }
             .thenBy { levelRank(it.entry.vocabularyLevel) }
             .thenBy { it.entry.homonymNumber }
+
+    // Counters are bound nouns defined as a unit for counting (명: 사람을 세는 단위). After a
+    // number, the large number words (천, 만, 억, 조) are numerals instead.
+    private fun counterRank(entry: DictionaryWithSenses): Int {
+        if (!isCounter) return 0
+        val pos = entry.entry.partOfSpeech
+        if (entry.entry.word in NUMBER_WORDS) return if (pos == "Numeral") 0 else 1
+        val isUnit = entry.senses.any { "단위" in it.sense.definitionKo }
+        return when {
+            pos == "Bound Noun" && isUnit -> 0
+            pos == "Bound Noun" -> 1
+            isUnit -> 2
+            else -> 3
+        }
+    }
 
     private fun posMismatch(entry: DictionaryWithSenses): Int {
         val expected = tokenPos?.let { OKT_TO_DICTIONARY_POS[it] } ?: return 0
@@ -67,6 +86,8 @@ internal class HomonymRanking(
     }
 
     companion object {
+        private val NUMBER_WORDS = setOf("십", "백", "천", "만", "억", "조")
+
         // Open Korean Text POS names to the dictionary's (translated) POS names
         private val OKT_TO_DICTIONARY_POS = mapOf(
             "Noun" to setOf("Noun", "Pronoun", "Numeral", "Bound Noun"),

@@ -137,6 +137,26 @@ class DictionaryRepositoryTest {
         assertEquals(setOf("정부"), lookUp("정부는", listOf("정부", "정-", "-부")))
     }
 
+    @Test
+    fun `particles come after the words they attach to`() = runBlocking {
+        // 과 and 이 are also nouns (課, 李), which used to put them first
+        val keys = lookUp("50발과", listOf("과", "발"))
+        assertEquals(listOf("발", "과"), keys.toList())
+    }
+
+    @Test
+    fun `the word after a number is looked up as written`() = runBlocking {
+        // Open Korean Text reads 60대 as the verb 대다
+        val keys = lookUp("60대", listOf("대", "대다"))
+        assertEquals("대", keys.first())
+    }
+
+    @Test
+    fun `a counter before a noun is not a prefix`() = runBlocking {
+        val keys = lookUp("88세)씨", listOf("세", "세-", "씨"))
+        assertEquals(listOf("세", "씨"), keys.toList())
+    }
+
     private fun createEntry(word: String, pos: String): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
