@@ -105,6 +105,12 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             _filterCriteria.value.copy(selectedCategory = null, selectedFeedId = feedId)
     }
 
+    fun restoreSavedDate(articleId: Long, savedDate: String) {
+        viewModelScope.launch {
+            articleRepository.restoreSavedDate(articleId, savedDate)
+        }
+    }
+
     fun setSaved(articleId: Long, saved: Boolean) {
         viewModelScope.launch {
             articleRepository.setSaved(articleId, saved)

@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
@@ -22,6 +23,18 @@ import kotlin.time.Instant
 
 private val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5.minutes
 
+enum class FeedCheckError { UNREACHABLE, HTTP_ERROR, NOT_A_FEED, ALREADY_ADDED }
+
+sealed interface FeedCheckResult {
+    data class Valid(
+        val url: String,
+        val title: String?,
+        val articleCount: Int
+    ) : FeedCheckResult
+
+    data class Invalid(val error: FeedCheckError, val httpCode: Int? = null) : FeedCheckResult
+}
+
 class RssFeedRepository(
     private val rssFeedDao: RssFeedDao,
     private val articleDao: ArticleDao,
@@ -34,6 +47,70 @@ class RssFeedRepository(
         rssFeedDao.getAllFeeds().map { feeds ->
             feeds.groupBy { it.category }
         }
+
+    // Adds https:// when no scheme is given, since most people paste or type bare domains
+    fun normalizeFeedUrl(input: String): String {
+        val trimmed = input.trim()
+        return if (trimmed.contains("://")) trimmed else "https://$trimmed"
+    }
+
+    // Fetches and parses the feed without saving anything, so the user can confirm it works
+    suspend fun checkFeed(input: String): FeedCheckResult = withContext(Dispatchers.IO) {
+        val url = normalizeFeedUrl(input)
+        if (rssFeedDao.getFeedByUrl(url) != null) {
+            return@withContext FeedCheckResult.Invalid(FeedCheckError.ALREADY_ADDED)
+        }
+        try {
+            val response = rssService.getRssFeed(url)
+            if (!response.isSuccessful) {
+                return@withContext FeedCheckResult.Invalid(
+                    FeedCheckError.HTTP_ERROR,
+                    response.code()
+                )
+            }
+            val xmlString = response.body()?.string() ?: ""
+            val items = try {
+                RssFeedParser().parse(xmlString)
+            } catch (_: Exception) {
+                return@withContext FeedCheckResult.Invalid(FeedCheckError.NOT_A_FEED)
+            }
+            val title = Jsoup.parse(xmlString, "", Parser.xmlParser())
+                .selectFirst("channel > title")
+                ?.text()
+                ?.let { Parser.unescapeEntities(it, false).trim() }
+                ?.takeIf { it.isNotEmpty() }
+            FeedCheckResult.Valid(url = url, title = title, articleCount = items.size)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            FeedCheckResult.Invalid(FeedCheckError.UNREACHABLE)
+        }
+    }
+
+    // Inserts the feed and fetches it right away, so it has articles and a sync status
+    suspend fun addFeed(url: String, title: String, category: String) {
+        val feed = RssFeed(title = title, url = url, category = category)
+        val id = rssFeedDao.insertFeed(feed)
+        if (id != -1L) {
+            fetchAndSaveRss(feed.copy(id = id))
+        }
+    }
+
+    suspend fun updateFeedDetails(feed: RssFeed, title: String, category: String) {
+        rssFeedDao.updateFeedDetails(feed.id, title, category)
+    }
+
+    suspend fun countSavedArticles(feed: RssFeed): Int = articleDao.countSavedInFeed(feed.id)
+
+    // Re-adds built-in feeds the user removed; existing ones are left as they are
+    suspend fun restoreDefaultFeeds(): Int {
+        val restored = DefaultData.defaultFeeds.mapNotNull { feed ->
+            val id = rssFeedDao.insertFeed(feed)
+            if (id != -1L) feed.copy(id = id) else null
+        }
+        restored.forEach { fetchAndSaveRss(it) }
+        return restored.size
+    }
 
     // Toggle feed status
     suspend fun toggleFeed(feed: RssFeed) {
@@ -60,14 +137,6 @@ class RssFeedRepository(
 
             fetchAndSaveRss(feed)
         }
-    }
-
-    suspend fun insertFeed(feed: RssFeed) {
-        rssFeedDao.insertFeed(feed)
-    }
-
-    suspend fun updateFeed(feed: RssFeed) {
-        rssFeedDao.updateFeed(feed)
     }
 
     suspend fun deleteFeed(feed: RssFeed) {

@@ -62,4 +62,51 @@
         <item quantity="other">%1$d개 업데이트 실패</item>
     </plurals>
     <string name="report_issue_summary">GitHub에서 열기</string>
+    <string name="unread_only">읽지 않은 기사만</string>
+    <string name="no_unread_articles">모든 기사를 읽었습니다.</string>
+    <string name="today">오늘</string>
+    <string name="yesterday">어제</string>
+    <string name="date_unknown">날짜 없음</string>
+    <string name="feeds_updated_ago">%1$s 업데이트됨</string>
+    <plurals name="feeds_failed_count">
+        <item quantity="other">피드 %1$d개 업데이트 실패</item>
+    </plurals>
+    <string name="saved_ago">%1$s 저장됨</string>
+    <string name="removed_from_saved">저장 목록에서 삭제됨</string>
+    <string name="undo">실행 취소</string>
+    <string name="more_options">더보기</string>
+    <string name="feeds_helper">피드를 누르면 이름이나 카테고리를 바꾸거나 삭제할 수 있습니다.</string>
+    <string name="refresh_all_feeds">모든 피드 새로고침</string>
+    <string name="restore_default_feeds">기본 피드 복원</string>
+    <plurals name="restored_feeds">
+        <item quantity="other">피드 %1$d개 복원됨</item>
+    </plurals>
+    <string name="restore_nothing">기본 피드가 모두 추가되어 있습니다</string>
+    <string name="feed_status_off">꺼짐</string>
+    <string name="feed_status_never">아직 업데이트되지 않음</string>
+    <string name="feed_status_updated">%1$s 업데이트됨</string>
+    <string name="feed_status_failed">업데이트 실패 · %1$s</string>
+    <string name="feed_last_error">마지막 오류: %1$s</string>
+    <string name="add_feed">피드 추가</string>
+    <string name="edit_feed">피드 편집</string>
+    <string name="feed_url_label">피드 URL</string>
+    <string name="feed_name_label">이름</string>
+    <string name="category_label">카테고리</string>
+    <string name="check_feed">확인</string>
+    <string name="feed_checking">확인 중…</string>
+    <plurals name="feed_found">
+        <item quantity="other">피드 확인됨 · 기사 %1$d개</item>
+    </plurals>
+    <string name="feed_check_unreachable">이 주소에 연결할 수 없습니다</string>
+    <string name="feed_check_http">서버 오류가 발생했습니다 (%1$d)</string>
+    <string name="feed_check_not_feed">RSS 피드 주소가 아닙니다</string>
+    <string name="feed_check_duplicate">이미 추가된 피드입니다</string>
+    <string name="save">저장</string>
+    <string name="remove">삭제</string>
+    <string name="remove_feed">피드 삭제</string>
+    <string name="remove_feed_title">%1$s 피드를 삭제할까요?</string>
+    <string name="remove_feed_body">이 피드의 기사도 앱에서 삭제됩니다.</string>
+    <plurals name="remove_feed_saved">
+        <item quantity="other">저장된 기사 %1$d개도 포함됩니다.</item>
+    </plurals>
 </resources>

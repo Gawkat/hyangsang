@@ -39,6 +39,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE savedDate IS NOT NULL ORDER BY savedDate DESC")
     fun getSavedArticlesWithFeed(): Flow<List<ArticleWithFeed>>
 
+    @Query("SELECT COUNT(*) FROM articles WHERE feedId = :feedId AND savedDate IS NOT NULL")
+    suspend fun countSavedInFeed(feedId: Long): Int
+
     @Query("SELECT * FROM articles WHERE feedId = :feedId")
     fun getArticlesByFeed(feedId: Long): Flow<List<Article>>
 

@@ -1,6 +1,9 @@
 package dev.kettu.hyangsang.ui.discover
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,10 +27,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
@@ -54,10 +62,12 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
+import dev.kettu.hyangsang.ui.utils.DateTimeUtils
+import java.time.LocalDate
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
     articlesWithFeed: List<ArticleWithFeed>,
@@ -70,9 +80,20 @@ fun DiscoverScreen(
     onSaveClick: (ArticleWithFeed) -> Unit,
     onMenuClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    showUnreadOnly: Boolean,
+    onShowUnreadOnlyChange: (Boolean) -> Unit,
+    feeds: List<RssFeed>,
+    onFeedStatusClick: () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState()
 ) {
+    // The list is sorted newest first, so groupBy keeps the days in order
+    val articlesByDay = remember(articlesWithFeed) {
+        articlesWithFeed.groupBy {
+            DateTimeUtils.localDate(it.article.pubDate ?: it.article.addedDate)
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -95,12 +116,11 @@ fun DiscoverScreen(
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 item(key = "header") {
-                    Text(
-                        text = if (searchQuery.isBlank()) {
+                    DiscoverHeader(
+                        title = if (searchQuery.isBlank()) {
                             filterTitle
                         } else {
                             pluralStringResource(
@@ -109,15 +129,21 @@ fun DiscoverScreen(
                                 articlesWithFeed.size
                             )
                         },
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
+                        showUnreadOnly = showUnreadOnly,
+                        onShowUnreadOnlyChange = onShowUnreadOnlyChange,
+                        feeds = feeds.takeIf { searchQuery.isBlank() },
+                        onFeedStatusClick = onFeedStatusClick
                     )
                 }
                 if (articlesWithFeed.isEmpty()) {
                     item(key = "empty") {
                         Text(
                             text = stringResource(
-                                if (searchQuery.isBlank()) R.string.no_articles else R.string.no_search_results
+                                when {
+                                    searchQuery.isNotBlank() -> R.string.no_search_results
+                                    showUnreadOnly -> R.string.no_unread_articles
+                                    else -> R.string.no_articles
+                                }
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -128,17 +154,124 @@ fun DiscoverScreen(
                         )
                     }
                 }
-                items(articlesWithFeed, key = { it.article.id }) { articleWithFeed ->
-                    ArticleCard(
-                        articleWithFeed = articleWithFeed,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        onClick = { onArticleClick(articleWithFeed.article.id) },
-                        onSaveClick = { onSaveClick(articleWithFeed) }
-                    )
+                articlesByDay.forEach { (date, articles) ->
+                    stickyHeader(key = "day-$date", contentType = "day") {
+                        DayHeader(date)
+                    }
+                    items(
+                        articles,
+                        key = { it.article.id },
+                        contentType = { "article" }
+                    ) { articleWithFeed ->
+                        ArticleRow(
+                            articleWithFeed = articleWithFeed,
+                            onClick = { onArticleClick(articleWithFeed.article.id) },
+                            onSaveClick = { onSaveClick(articleWithFeed) }
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DiscoverHeader(
+    title: String,
+    showUnreadOnly: Boolean,
+    onShowUnreadOnlyChange: (Boolean) -> Unit,
+    feeds: List<RssFeed>?,
+    onFeedStatusClick: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+    ) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        FilterChip(
+            selected = showUnreadOnly,
+            onClick = { onShowUnreadOnlyChange(!showUnreadOnly) },
+            label = { Text(stringResource(R.string.unread_only)) },
+            leadingIcon = if (showUnreadOnly) {
+                { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            } else {
+                null
+            }
+        )
+        if (feeds != null) FeedStatusLine(feeds, onFeedStatusClick)
+    }
+}
+
+// "Updated 2 min. ago · 1 feed couldn't update", linking to feed management
+@Composable
+private fun FeedStatusLine(feeds: List<RssFeed>, onClick: () -> Unit) {
+    val enabledFeeds = feeds.filter { it.isEnabled }
+    val failedCount = enabledFeeds.count { it.lastSyncError != null }
+    // ISO-8601 instants from Instant.toString() sort chronologically as strings
+    val lastUpdated = enabledFeeds.maxOfOrNull { it.lastSynced }
+        ?.takeUnless { it.startsWith("1970-") }
+    if (lastUpdated == null && failedCount == 0) return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        if (lastUpdated != null) {
+            Text(
+                text = stringResource(
+                    R.string.feeds_updated_ago,
+                    DateTimeUtils.formatRelativeTime(lastUpdated)
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (failedCount > 0) {
+            if (lastUpdated != null) {
+                Text(
+                    text = "·",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.Filled.Error,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = pluralStringResource(R.plurals.feeds_failed_count, failedCount, failedCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayHeader(date: LocalDate?) {
+    val today = LocalDate.now()
+    val label = when (date) {
+        null -> stringResource(R.string.date_unknown)
+        today -> stringResource(R.string.today)
+        today.minusDays(1) -> stringResource(R.string.yesterday)
+        else -> DateTimeUtils.formatDate(date)
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+    )
 }
 
 /**
@@ -267,7 +400,11 @@ fun DiscoverScreenPreview() {
             onArticleClick = {},
             onSaveClick = {},
             onMenuClick = {},
-            onSettingsClick = {}
+            onSettingsClick = {},
+            showUnreadOnly = false,
+            onShowUnreadOnlyChange = {},
+            feeds = emptyList(),
+            onFeedStatusClick = {}
         )
     }
 }

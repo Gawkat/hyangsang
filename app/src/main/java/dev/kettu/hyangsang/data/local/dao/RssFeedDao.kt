@@ -17,8 +17,15 @@ interface RssFeedDao {
     @Query("SELECT * FROM rss_feeds WHERE isEnabled = 1 ORDER BY title ASC")
     fun getEnabledFeeds(): Flow<List<RssFeed>>
 
+    @Query("SELECT * FROM rss_feeds WHERE url = :url LIMIT 1")
+    suspend fun getFeedByUrl(url: String): RssFeed?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertFeed(feed: RssFeed): Long
+
+    // Doesn't touch url or sync status
+    @Query("UPDATE rss_feeds SET title = :title, category = :category WHERE id = :id")
+    suspend fun updateFeedDetails(id: Long, title: String, category: String)
 
     @Update
     suspend fun updateFeed(feed: RssFeed)

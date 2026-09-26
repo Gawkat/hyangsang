@@ -3,6 +3,7 @@ package dev.kettu.hyangsang.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.repository.FeedCheckResult
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,17 +22,30 @@ class RssFeedViewModel(private val rssFeedRepository: RssFeedRepository) : ViewM
         initialValue = emptyList()
     )
 
-    fun addFeed(title: String, url: String, category: String) {
+    suspend fun checkFeed(url: String): FeedCheckResult = rssFeedRepository.checkFeed(url)
+
+    fun addFeed(url: String, title: String, category: String) {
         viewModelScope.launch {
-            rssFeedRepository.insertFeed(RssFeed(title = title, url = url, category = category))
+            rssFeedRepository.addFeed(url = url, title = title, category = category)
         }
     }
 
-    fun updateFeed(feed: RssFeed) {
+    fun updateFeedDetails(feed: RssFeed, title: String, category: String) {
         viewModelScope.launch {
-            rssFeedRepository.updateFeed(feed)
+            rssFeedRepository.updateFeedDetails(feed, title, category)
         }
     }
+
+    fun toggleFeed(feed: RssFeed) {
+        viewModelScope.launch {
+            rssFeedRepository.toggleFeed(feed)
+        }
+    }
+
+    suspend fun countSavedArticles(feed: RssFeed): Int = rssFeedRepository.countSavedArticles(feed)
+
+    // Returns how many feeds were re-added
+    suspend fun restoreDefaultFeeds(): Int = rssFeedRepository.restoreDefaultFeeds()
 
     fun deleteFeed(feed: RssFeed) {
         viewModelScope.launch {

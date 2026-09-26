@@ -1,8 +1,6 @@
 package dev.kettu.hyangsang.ui.navigation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
@@ -49,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.ui.components.FeedAvatar
 
 /**
  * Feed and category picker for Discover. Categories with a single feed act as that feed;
@@ -231,24 +229,6 @@ private fun LabelWithError(text: String, hasError: Boolean) {
 @Composable
 private fun CountBadge(count: Int) {
     Text(text = count.toString(), style = MaterialTheme.typography.labelMedium)
-}
-
-// Stand-in for a favicon
-@Composable
-private fun FeedAvatar(title: String) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(24.dp)
-            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-    ) {
-        Text(
-            text = title.take(1),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
-        )
-    }
 }
 
 // Categories are free text, so only the built-in ones get their own icon

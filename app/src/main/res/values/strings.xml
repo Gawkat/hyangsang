@@ -64,4 +64,55 @@
         <item quantity="other">%1$d couldn\'t update</item>
     </plurals>
     <string name="report_issue_summary">Opens GitHub</string>
+    <string name="unread_only">Unread only</string>
+    <string name="no_unread_articles">You\'re all caught up.</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="date_unknown">Undated</string>
+    <string name="feeds_updated_ago">Updated %1$s</string>
+    <plurals name="feeds_failed_count">
+        <item quantity="one">%1$d feed couldn\'t update</item>
+        <item quantity="other">%1$d feeds couldn\'t update</item>
+    </plurals>
+    <string name="saved_ago">Saved %1$s</string>
+    <string name="removed_from_saved">Removed from Saved</string>
+    <string name="undo">Undo</string>
+    <string name="more_options">More options</string>
+    <string name="feeds_helper">Tap a feed to rename it, change its category, or remove it.</string>
+    <string name="refresh_all_feeds">Refresh all feeds</string>
+    <string name="restore_default_feeds">Restore built-in feeds</string>
+    <plurals name="restored_feeds">
+        <item quantity="one">Restored %1$d feed</item>
+        <item quantity="other">Restored %1$d feeds</item>
+    </plurals>
+    <string name="restore_nothing">All built-in feeds are already added</string>
+    <string name="feed_status_off">Off</string>
+    <string name="feed_status_never">Not updated yet</string>
+    <string name="feed_status_updated">Updated %1$s</string>
+    <string name="feed_status_failed">Couldn\'t update · %1$s</string>
+    <string name="feed_last_error">Last error: %1$s</string>
+    <string name="add_feed">Add feed</string>
+    <string name="edit_feed">Edit feed</string>
+    <string name="feed_url_label">Feed URL</string>
+    <string name="feed_name_label">Name</string>
+    <string name="category_label">Category</string>
+    <string name="check_feed">Check</string>
+    <string name="feed_checking">Checking…</string>
+    <plurals name="feed_found">
+        <item quantity="one">Feed found · %1$d article</item>
+        <item quantity="other">Feed found · %1$d articles</item>
+    </plurals>
+    <string name="feed_check_unreachable">Couldn\'t reach this address</string>
+    <string name="feed_check_http">The server responded with an error (%1$d)</string>
+    <string name="feed_check_not_feed">This address isn\'t an RSS feed</string>
+    <string name="feed_check_duplicate">This feed is already added</string>
+    <string name="save">Save</string>
+    <string name="remove">Remove</string>
+    <string name="remove_feed">Remove feed</string>
+    <string name="remove_feed_title">Remove %1$s?</string>
+    <string name="remove_feed_body">Its articles will be removed from the app.</string>
+    <plurals name="remove_feed_saved">
+        <item quantity="one">This includes %1$d saved article.</item>
+        <item quantity="other">This includes %1$d saved articles.</item>
+    </plurals>
 </resources>

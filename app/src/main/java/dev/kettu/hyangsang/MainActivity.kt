@@ -291,6 +291,10 @@ fun MainApp(
                         },
                         onMenuClick = { scope.launch { drawerState.open() } },
                         onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                        showUnreadOnly = filterCriteria.showUnreadOnly,
+                        onShowUnreadOnlyChange = { articleViewModel.setShowUnreadOnly(it) },
+                        feeds = feeds,
+                        onFeedStatusClick = { navController.navigate(Routes.FEEDS) },
                         listState = discoverListState
                     )
                 }
@@ -300,7 +304,10 @@ fun MainApp(
                         onArticleClick = { articleId ->
                             navController.navigate(Routes.reader(articleId))
                         },
-                        onUnsave = { articleId -> articleViewModel.setSaved(articleId, false) }
+                        onUnsave = { articleId -> articleViewModel.setSaved(articleId, false) },
+                        onUndoUnsave = { articleId, savedDate ->
+                            articleViewModel.restoreSavedDate(articleId, savedDate)
+                        }
                     )
                 }
                 composable(Routes.FEEDS) {

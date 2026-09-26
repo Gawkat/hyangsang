@@ -37,6 +37,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     suspend fun setSaved(id: Long, saved: Boolean) =
         articleDao.updateSavedDate(id, if (saved) Clock.System.now().toString() else null)
 
+    // Used to undo an unsave without moving the article in the saved list
+    suspend fun restoreSavedDate(id: Long, savedDate: String) =
+        articleDao.updateSavedDate(id, savedDate)
+
     suspend fun fetchAndSaveArticleContent(
         article: Article,
         forceRefresh: Boolean = false
