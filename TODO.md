@@ -16,12 +16,20 @@
 ## Reader
 
 * Track reading progress by saving scroll position or last visible paragraph index to Room
+* Add setting to toggle between:
+  * Mark as read when opened
+  * Otherwise, mark read at the end of the article
 
 ## Lookup overlay
 
 * Revisit the order of stem chips?
 * Improve the Lesk-style sentence overlap (`contextOverlap` in `HomonymRanking.kt`)?
 * Consider if clicks on new words when overlay is opened should trigger a new lookup instead of closing the overlay
+
+## Saved
+
+* Add search functionality to saved articles
+* Add chip to show unread articles only
 
 ## Feeds
 
