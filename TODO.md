@@ -22,6 +22,7 @@
 
 * Improve dictionary entry ranking
   * Investigate embedding models for sense rankings
+* Consider if clicks on new words when overlay is opened should trigger a new lookup instead of closing the overlay
 
 ## Feeds
 
