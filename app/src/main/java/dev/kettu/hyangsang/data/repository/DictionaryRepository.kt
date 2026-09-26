@@ -14,15 +14,23 @@ import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 class DictionaryRepository(
     private val dictionaryDao: DictionaryDao
 ) {
-    fun getAllSearchTerms(word: String): List<String> = getSearchTermsWithPos(word).keys.toList()
-
     /**
-     * Search terms for [word], each with the Open Korean Text POS of the token it came from, or
-     * null when unknown (such as the whole word when it spans several tokens).
+     * @param terms search terms, each with the Open Korean Text POS of the token it came from, or
+     *   null when unknown (such as the whole word when it spans several tokens)
+     * @param compounds noun stems whose parts were added as terms
+     * @param singleSyllableParts one-syllable terms that only come from splitting [compounds]
      */
-    private fun getSearchTermsWithPos(word: String): Map<String, String?> {
+    private class SearchTerms(
+        val terms: Map<String, String?>,
+        val compounds: List<String>,
+        val singleSyllableParts: Set<String>
+    )
+
+    private fun getSearchTerms(word: String): SearchTerms {
         val javaTokens = tokenize(word)
         val terms = LinkedHashMap<String, String?>()
+        val compounds = mutableListOf<String>()
+        val parts = mutableSetOf<String>()
         terms[word] = javaTokens.singleOrNull()?.pos?.toString()
 
         javaTokens.forEach { token ->
@@ -30,27 +38,66 @@ class DictionaryRepository(
             val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
             terms.putIfAbsent(stem, pos)
 
-            // Handle compound nouns by generating all sub-strings (Length >= 2)
-            // This lets the dictionary decide which parts are "real" words.
-            if (pos == "Noun" && stem.length >= 3) {
-                for (i in stem.indices) {
-                    for (j in i + 2..stem.length) {
-                        val sub = stem.substring(i, j)
-                        if (sub.length < stem.length) terms.putIfAbsent(sub, "Noun")
-                    }
-                }
-            }
-
             // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
             // This ensures "년" or "일" are added as separate search terms
             val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
             numericSuffixMatch?.let {
                 terms.putIfAbsent(it.groupValues[1], null)
             }
+
+            // Handle compound nouns by generating all sub-strings. This lets the dictionary
+            // decide which parts are "real" words.
+            if (pos == "Noun" && stem.length >= 2) {
+                compounds += stem
+                for (i in stem.indices) {
+                    for (j in i + 1..stem.length) {
+                        val sub = stem.substring(i, j)
+                        if (sub.length < stem.length && sub !in terms) {
+                            terms[sub] = "Noun"
+                            if (sub.length == 1) parts += sub
+                        }
+                    }
+                }
+            }
         }
 
         // Filter out pure numbers (e.g. "2009") to keep the UI chips clean
-        return terms.filterKeys { term -> term.any { !it.isDigit() } || term == word }
+        return SearchTerms(
+            terms = terms.filterKeys { term -> term.any { !it.isDigit() } || term == word },
+            compounds = compounds,
+            singleSyllableParts = parts
+        )
+    }
+
+    /**
+     * The one-syllable parts worth showing: those in the fewest-word split of a compound into
+     * dictionary [words], like 값 in 농산물값 or 팀 in 대표팀. Nearly every syllable of a
+     * Sino-Korean compound is a word of its own, so the rest (정 and 부 in 정부) are noise.
+     */
+    private fun usefulSingleSyllables(compounds: List<String>, words: Set<String>): Set<String> =
+        compounds.flatMap { compound -> splitIntoWords(compound, words).orEmpty() }
+            .filter { it.length == 1 }
+            .toSet()
+
+    /**
+     * Splits [compound] into the fewest [words], or null if it can't be split fully (such as
+     * loanwords, where partial splits give meaningless syllables). Ties go to the split with
+     * the longer first word, since compounds more often end in a short suffix (외교+부, 서울+시).
+     */
+    private fun splitIntoWords(compound: String, words: Set<String>): List<String>? {
+        // splits[i] is the best split of compound.substring(i)
+        val splits = arrayOfNulls<List<String>>(compound.length + 1)
+        splits[compound.length] = emptyList()
+        for (i in compound.length - 1 downTo 0) {
+            for (j in compound.length downTo i + 1) {
+                val word = compound.substring(i, j)
+                val rest = splits[j] ?: continue
+                if (word !in words) continue
+                val current = splits[i]
+                if (current == null || rest.size + 1 < current.size) splits[i] = listOf(word) + rest
+            }
+        }
+        return splits[0]
     }
 
     private fun tokenize(text: String) = OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
@@ -66,7 +113,7 @@ class DictionaryRepository(
             .filter { it !in searchTerms }
             .toSet()
 
-    private class Lookup(val terms: Map<String, String?>, val contextNouns: Set<String>)
+    private class Lookup(val searchTerms: SearchTerms, val contextNouns: Set<String>)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getDefinitionsForWord(
@@ -77,16 +124,20 @@ class DictionaryRepository(
         // Tokenizing with Open Korean Text is CPU-heavy (and the first call loads its
         // dictionaries), so it must not run on the main thread.
         return flow {
-            val terms = getSearchTermsWithPos(word)
-            emit(Lookup(terms, contextNouns(context.sentence, terms.keys)))
+            val searchTerms = getSearchTerms(word)
+            emit(Lookup(searchTerms, contextNouns(context.sentence, searchTerms.terms.keys)))
         }
             .flowOn(Dispatchers.Default)
             .flatMapLatest { lookup ->
-                dictionaryDao.getEntriesForTerms(lookup.terms.keys.toList()).map { entries ->
-                    entries.groupBy { it.entry.word }
+                val terms = lookup.searchTerms.terms
+                dictionaryDao.getEntriesForTerms(terms.keys.toList()).map { entries ->
+                    val byWord = entries.groupBy { it.entry.word }
+                    val keptParts = usefulSingleSyllables(lookup.searchTerms.compounds, byWord.keys)
+                    byWord
+                        .filterKeys { it !in lookup.searchTerms.singleSyllableParts || it in keptParts }
                         .mapValues { (term, homonyms) ->
                             val ranking = HomonymRanking(
-                                tokenPos = lookup.terms[term],
+                                tokenPos = terms[term],
                                 contextNouns = lookup.contextNouns,
                                 categoryPrefixes = categoryPrefixes
                             )

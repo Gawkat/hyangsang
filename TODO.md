@@ -45,3 +45,6 @@ Vocabulary screen?
   * Total Immersion Time
 
 ## Bugfixes
+
+* Tapping a word selects everything between spaces, so punctuation without a space joins words
+  (e.g. "포프모빌…콘서트장" is looked up as one word). Split on "…" and similar punctuation too.

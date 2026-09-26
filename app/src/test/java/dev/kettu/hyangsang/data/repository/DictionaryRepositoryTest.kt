@@ -81,6 +81,34 @@ class DictionaryRepositoryTest {
         assert(sortedKeys.contains("국어"))
     }
 
+    private suspend fun lookUp(word: String, dictionary: List<String>): Set<String> =
+        DictionaryRepository(FakeDictionaryDao(dictionary.map { createEntry(it, "Noun") }))
+            .getDefinitionsForWord(word).first().keys
+
+    @Test
+    fun `single syllables that complete a compound are looked up`() = runBlocking {
+        val keys = lookUp("대표팀이", listOf("대표", "대", "표", "팀"))
+        assertEquals(setOf("대표", "팀"), keys)
+    }
+
+    @Test
+    fun `single syllables of a compound that is a word are left out`() = runBlocking {
+        val keys = lookUp("정부는", listOf("정부", "정", "부"))
+        assertEquals(setOf("정부"), keys)
+    }
+
+    @Test
+    fun `ties between splits favor a short last word`() = runBlocking {
+        val keys = lookUp("외교부", listOf("외교", "교부", "외", "교", "부"))
+        assertEquals(setOf("외교", "교부", "부"), keys)
+    }
+
+    @Test
+    fun `words that cannot be split fully get no single syllables`() = runBlocking {
+        val keys = lookUp("사브르", listOf("사", "르"))
+        assertEquals(emptySet<String>(), keys)
+    }
+
     private fun createEntry(word: String, pos: String): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
