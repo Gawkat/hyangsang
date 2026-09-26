@@ -43,6 +43,13 @@ class DictionaryRepository(
         val counters = mutableSetOf<String>()
         terms[word] = javaTokens.singleOrNull()?.pos?.toString()
 
+        // A word can't start with a particle, so a leading particle token is Open Korean Text
+        // misreading a noun and its particle (나흘 만에 -> 만에/Josa, meaning 만 + 에)
+        val misreadNoun = javaTokens.firstOrNull()
+            ?.takeIf { it.pos.toString() == "Josa" && it.text.length > 1 && it.text.drop(1) in PARTICLES }
+            ?.text?.take(1)
+        misreadNoun?.let { terms.putIfAbsent(it, null) }
+
         javaTokens.forEachIndexed { index, token ->
             val pos = token.pos.toString()
             val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
@@ -111,7 +118,7 @@ class DictionaryRepository(
             splitParts = splitParts,
             affixFallbacks = affixFallbacks,
             counters = counters,
-            leadingNoun = javaTokens.firstOrNull()?.takeIf { it.pos.toString() == "Noun" }?.text
+            leadingNoun = misreadNoun ?: javaTokens.firstOrNull()?.takeIf { it.pos.toString() == "Noun" }?.text
         )
     }
 

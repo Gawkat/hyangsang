@@ -157,6 +157,13 @@ class DictionaryRepositoryTest {
         assertEquals(listOf("세", "씨"), keys.toList())
     }
 
+    @Test
+    fun `a word misread as one particle is looked up as a noun`() = runBlocking {
+        // Open Korean Text reads 만에 as a single particle
+        val keys = lookUp("만에", listOf("만", "에"))
+        assertEquals("만", keys.first())
+    }
+
     private fun createEntry(word: String, pos: String): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
