@@ -14,6 +14,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
@@ -37,7 +39,7 @@ fun ArticleHeader(
 ) {
     Column(modifier = modifier.padding(bottom = 24.dp)) {
         ClickableText(
-            text = articleWithFeed.feed.title,
+            text = articleWithFeed.feed.title.toUpperCase(Locale.current),
             textId = "feed-title",
             selectedRange = selection.rangeIn("feed-title"),
             onWordClick = onWordClick,
