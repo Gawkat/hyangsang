@@ -8,7 +8,6 @@
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
-* Remove the legacy article compatibility and all references to the legacy format
 
 ## Parser
 

@@ -127,9 +127,7 @@ fun ReaderContent(
     modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
-    // Legacy blocks are split into paragraphs once, up front, so that every paragraph becomes
-    // its own lazy item instead of one giant item that is composed all at once.
-    val contentBlocks = remember(article.content) { flattenContentBlocks(article.content) }
+    val contentBlocks = article.content.orEmpty()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val listState = rememberLazyListState()
@@ -271,9 +269,6 @@ fun ReaderContent(
                         Spacer(modifier = Modifier.height(paragraphSpacing))
                     }
 
-                    // Already flattened into Text blocks by flattenContentBlocks()
-                    is ContentBlock.Legacy -> Unit
-
                     is ContentBlock.Image -> {
                         ArticleImage(
                             url = block.url,
@@ -374,15 +369,6 @@ fun ReaderContent(
         }
     }
 }
-
-private fun flattenContentBlocks(blocks: List<ContentBlock>?): List<ContentBlock> =
-    blocks.orEmpty().flatMap { block ->
-        if (block is ContentBlock.Legacy) {
-            block.text.split("\n").filter { it.isNotBlank() }.map { ContentBlock.Text(it) }
-        } else {
-            listOf(block)
-        }
-    }
 
 @OptIn(ExperimentalTime::class)
 @Preview(showBackground = true)

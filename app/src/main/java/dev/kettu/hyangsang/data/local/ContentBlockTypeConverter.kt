@@ -15,11 +15,6 @@ class ContentBlockTypeConverter {
     @TypeConverter
     fun toContentBlocks(value: String?): List<ContentBlock>? {
         if (value == null) return null
-        return try {
-            json.decodeFromString<List<ContentBlock>>(value)
-        } catch (_: Exception) {
-            // Fallback for legacy plaintext content
-            listOf(ContentBlock.Legacy(value))
-        }
+        return json.decodeFromString<List<ContentBlock>>(value)
     }
 }

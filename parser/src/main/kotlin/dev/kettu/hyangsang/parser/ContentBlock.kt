@@ -27,11 +27,6 @@ sealed class ContentBlock {
     ) : ContentBlock()
 
     @Serializable
-    data class Legacy(
-        val text: String
-    ) : ContentBlock()
-
-    @Serializable
     data class Dateline(
         val text: String
     ) : ContentBlock()

@@ -4,7 +4,6 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.parser.ArticleParser
-import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -45,11 +44,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         article: Article,
         forceRefresh: Boolean = false
     ): Article {
-        if (!forceRefresh && !article.content.isNullOrEmpty()) {
-            // Check if it's legacy content
-            val isLegacy = article.content.any { it is ContentBlock.Legacy }
-            if (!isLegacy) return article
-        }
+        if (!forceRefresh && !article.content.isNullOrEmpty()) return article
         val url = article.sourceUrl
 
         return withContext(Dispatchers.IO) {

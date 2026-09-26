@@ -96,7 +96,6 @@ private fun countWords(content: List<ContentBlock>?): Int =
     content?.sumOf { block ->
         val text = when (block) {
             is ContentBlock.Text -> block.text
-            is ContentBlock.Legacy -> block.text
             is ContentBlock.Dateline -> block.text
             else -> return@sumOf 0
         }
