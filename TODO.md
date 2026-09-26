@@ -3,9 +3,8 @@
 ## General
 
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread
-  articles older than 7 days) to save space
-* Update default theme to Solarized (Gruvbox?), add different themes
-* Use Dagger for Dependency Injection
+  articles older than 7 days) to save space, maybe pull from feeds in background? (Feeds contain the latest articles, so not pulling for a few days will result in missing articles)
+* Use Dagger for Dependency Injection?
 * Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
@@ -15,45 +14,34 @@
 
 * Research other extraction techniques for generic sources
 * Add parsers for other sources
+* Parse Yonhap footer into other content block to distinguish from article body
 
 ## Reader
 
 * Track reading progress by saving scroll position or last visible paragraph index to Room
-* Text and layout settings:
-    * text size (update from current implementation)
-    * font
-    * font weight
-    * line spacing
-* Consider hiding examples from dictionary overlay (currently only showing 2, move somewhere else?)
-* Dictionary lookup can finish after overlay appears (if lookup is slow). Show a shimmering
-  placeholder while this happens instead of current "No definitions found"
-* If no definitions found, allow user to look up word themselves (search in browser or something)
 
-## Discover/Start
+## Lookup overlay
 
-* Add a search bar in the TopAppBar that updates searchQuery.
-* Add an "Unread only" toggle in a filter menu that updates showUnreadOnly.
-* Add by-feed filtering
+* Improve dictionary entry ranking
+  * Investigate embedding models for sense rankings
 
 ## Feeds
 
-* Allow user to restore built-in feeds if removed
-* Allow user to enable and disable feeds
-* Show if last pull from feed was successful
+* Default feeds strings are hardcoded and not localized
 * Yonhap News seems to contain all Yonhap feeds, probably handle this in some way during feed setup
+* Support Atom feeds?
 
-## Saved
+## Vocabulary/Statistics (maybe)
 
-* Allow users to save/unsave articles
-
-## Statistics
+Vocabulary screen?
+* Recap looked up words
 
 * **Word Tracking**: Mark unique stems as "encountered" in the database
 * **Metrics**:
-    * Reading Heatmap
-    * Vocabulary Level estimation
-    * Total Immersion Time
+  * Reading Heatmap
+  * Vocabulary Level estimation
+  * Total Immersion Time
 
 ## Bugfixes
 
-* Ensure status bar legibility with all themes
+* The launch splash always follows the system theme, so with the app set to Dark it flashes light on a light-mode phone
