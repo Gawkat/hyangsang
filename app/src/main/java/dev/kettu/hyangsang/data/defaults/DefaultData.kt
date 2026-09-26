@@ -25,25 +25,27 @@ enum class DefaultCategory(@StringRes val label: Int) {
     PEOPLE(R.string.category_people);
 
     companion object {
-        // Languages the built-in category names are translated into
-        private val LOCALES = listOf(Locale.ENGLISH, Locale.KOREA)
-
         /**
          * Built-in categories keyed by their name in every app language. Feeds store their
          * category as the name shown when they were added, which may be in another language
          * than the current one.
          */
         fun byLabel(context: Context): Map<String, DefaultCategory> {
-            val localizedContexts = LOCALES.map { locale ->
-                context.createConfigurationContext(
-                    Configuration(context.resources.configuration).apply { setLocale(locale) }
-                )
-            }
+            val localizedContexts = localizedContexts(context)
             return entries.flatMap { category ->
                 localizedContexts.map { it.getString(category.label) to category }
             }.toMap()
         }
     }
+}
+
+// Languages the built-in names are translated into
+private val APP_LOCALES = listOf(Locale.ENGLISH, Locale.KOREA)
+
+private fun localizedContexts(context: Context): List<Context> = APP_LOCALES.map { locale ->
+    context.createConfigurationContext(
+        Configuration(context.resources.configuration).apply { setLocale(locale) }
+    )
 }
 
 /**
@@ -82,7 +84,8 @@ object DefaultData {
     )
 
     // Titles and categories are stored as plain text, since the user can edit them,
-    // so they're resolved in the app language at the time the feeds are added
+    // so they're resolved in the app language at the time the feeds are added, and
+    // translated by [localizeFeeds] when the language changes
     fun resolveFeeds(context: Context): List<RssFeed> = defaultFeeds.map { feed ->
         val category = context.getString(feed.category.label)
         val source = context.getString(feed.source)
@@ -95,6 +98,30 @@ object DefaultData {
             url = feed.url,
             category = category
         )
+    }
+
+    /**
+     * The [feeds] whose built-in category names or default titles are in another app language
+     * than the current one, translated into it. Names the user has changed are left alone.
+     */
+    fun localizeFeeds(context: Context, feeds: List<RssFeed>): List<RssFeed> {
+        val categoriesByLabel = DefaultCategory.byLabel(context)
+        val currentTitles = resolveFeeds(context).associate { it.url to it.title }
+        val allTitles = localizedContexts(context)
+            .flatMap { resolveFeeds(it) }
+            .groupBy({ it.url }, { it.title })
+
+        return feeds.mapNotNull { feed ->
+            val category = categoriesByLabel[feed.category]?.let { context.getString(it.label) } ?: feed.category
+            val title = currentTitles[feed.url]
+                ?.takeIf { feed.title in allTitles[feed.url].orEmpty() }
+                ?: feed.title
+            if (category != feed.category || title != feed.title) {
+                feed.copy(title = title, category = category)
+            } else {
+                null
+            }
+        }
     }
 
     private fun yonhap(section: String, category: DefaultCategory) = DefaultFeed(

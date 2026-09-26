@@ -2,6 +2,7 @@ package dev.kettu.hyangsang
 
 import android.app.Application
 import android.app.UiModeManager
+import android.content.res.Configuration
 import android.os.Build
 import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
@@ -48,6 +49,9 @@ class HyangsangApplication : Application() {
         super.onCreate()
 
         applicationScope.launch {
+            // The language may have changed while the app wasn't running
+            rssFeedRepository.localizeDefaultNames()
+
             // Fetch latest articles from feeds
             rssFeedRepository.refreshEnabledFeeds()
 
@@ -62,6 +66,12 @@ class HyangsangApplication : Application() {
                 }
             }
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Also runs for other changes, such as rotation, when there's nothing to rename
+        applicationScope.launch { rssFeedRepository.localizeDefaultNames() }
     }
 
     /**
@@ -98,7 +108,8 @@ class HyangsangApplication : Application() {
             database.rssFeedDao(),
             database.articleDao(),
             rssFeedService,
-            defaultFeeds = { DefaultData.resolveFeeds(this) }
+            defaultFeeds = { DefaultData.resolveFeeds(this) },
+            localizeFeeds = { DefaultData.localizeFeeds(this, it) }
         )
     }
 

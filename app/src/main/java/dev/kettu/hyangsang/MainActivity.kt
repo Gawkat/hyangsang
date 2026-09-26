@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,6 +49,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
+import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
@@ -215,6 +217,15 @@ fun MainApp(
         else -> filterCriteria.selectedCategory ?: allArticlesTitle
     }
 
+    // Built-in categories are renamed when the app language changes, so the selection follows
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    LaunchedEffect(filterCriteria.selectedCategory, configuration) {
+        val selected = filterCriteria.selectedCategory ?: return@LaunchedEffect
+        val renamed = DefaultCategory.byLabel(context)[selected]?.let { context.getString(it.label) }
+        if (renamed != null && renamed != selected) articleViewModel.setCategory(renamed)
+    }
+
     // Show the top of the list whenever the drawer selection changes
     LaunchedEffect(filterCriteria.selectedCategory, filterCriteria.selectedFeedId) {
         discoverListState.scrollToItem(0)
@@ -364,7 +375,6 @@ fun MainApp(
                     )
                 }
                 composable(Routes.SETTINGS) {
-                    val context = LocalContext.current
                     SettingsScreen(
                         currentTheme = currentTheme,
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },

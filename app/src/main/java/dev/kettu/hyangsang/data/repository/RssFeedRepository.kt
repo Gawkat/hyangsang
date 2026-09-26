@@ -39,7 +39,9 @@ class RssFeedRepository(
     private val articleDao: ArticleDao,
     private val rssService: RssFeedService,
     // Resolved on each call, so restored feeds get names in the current app language
-    private val defaultFeeds: () -> List<RssFeed>
+    private val defaultFeeds: () -> List<RssFeed>,
+    // Returns the given feeds whose built-in names need translating into the app language
+    private val localizeFeeds: (List<RssFeed>) -> List<RssFeed> = { emptyList() }
 ) {
     val allFeeds: Flow<List<RssFeed>> = rssFeedDao.getAllFeeds()
 
@@ -99,6 +101,14 @@ class RssFeedRepository(
 
     suspend fun updateFeedDetails(feed: RssFeed, title: String, category: String) {
         rssFeedDao.updateFeedDetails(feed.id, title, category)
+    }
+
+    // Built-in category names and default titles are stored in the language they were added
+    // in, so translate them after the app language changes
+    suspend fun localizeDefaultNames() {
+        localizeFeeds(rssFeedDao.getAllFeeds().first()).forEach { feed ->
+            rssFeedDao.updateFeedDetails(feed.id, feed.title, feed.category)
+        }
     }
 
     suspend fun countSavedArticles(feed: RssFeed): Int = articleDao.countSavedInFeed(feed.id)
