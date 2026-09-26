@@ -32,6 +32,7 @@
 
 Vocabulary screen?
 * Recap looked up words
+* (For lookups) Learn from choices. If the user swaps to entry B for a word, prefer B for that word next time
 
 * **Word Tracking**: Mark unique stems as "encountered" in the database
 * **Metrics**:
@@ -40,5 +41,3 @@ Vocabulary screen?
   * Total Immersion Time
 
 ## Bugfixes
-
-* The launch splash always follows the system theme, so with the app set to Dark it flashes light on a light-mode phone
