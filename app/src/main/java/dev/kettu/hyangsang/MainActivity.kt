@@ -1,10 +1,12 @@
 package dev.kettu.hyangsang
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,6 +87,17 @@ class MainActivity : AppCompatActivity() {
                 else -> androidx.compose.foundation.isSystemInDarkTheme()
             }
 
+            // System bar icons must follow the app theme, not the system one
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) {
+                        darkTheme
+                    },
+                    navigationBarStyle = SystemBarStyle.auto(LIGHT_SCRIM, DARK_SCRIM) { darkTheme }
+                )
+                onDispose {}
+            }
+
             val articleViewModel: ArticleViewModel = viewModel(
                 factory = AppViewModelFactory(
                     app.articleRepository,
@@ -134,6 +148,12 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    private companion object {
+        // Same scrims enableEdgeToEdge() uses by default for 3-button navigation
+        val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 }
 

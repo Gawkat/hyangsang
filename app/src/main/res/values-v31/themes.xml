@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- The splash resolves day/night from the per-app night mode that
+         HyangsangApplication sets, so it matches the in-app theme setting -->
+    <style name="Theme.Hyangsang" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:windowSplashScreenBackground">@color/app_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+    </style>
+</resources>

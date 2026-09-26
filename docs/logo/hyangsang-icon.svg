@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- Full-bleed launcher icon (adaptive icon layers flattened). Mask it yourself where needed. -->
+  <rect width="108" height="108" fill="#2B5F75"/>
+  <g transform="translate(54 55.5) scale(.78) translate(-54 -54)">
+    <path d="M54 22.5a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0v-2a3 3 0 0 1 3-3zM42.75 33h22.5a2.75 2.75 0 0 1 0 5.5h-22.5a2.75 2.75 0 0 1 0-5.5z" fill="#FBF9F6"/>
+    <circle cx="54" cy="50.5" r="9.5" fill="#E3C56B"/>
+    <path d="M52.5 65.5C47 62 40 61 33 62v16.5c7-1 14 0 19.5 3.5zM55.5 65.5C61 62 68 61 75 62v16.5c-7-1-14 0-19.5 3.5z" fill="#FBF9F6"/>
+  </g>
+</svg>

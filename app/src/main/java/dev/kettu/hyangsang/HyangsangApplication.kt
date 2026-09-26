@@ -1,6 +1,8 @@
 package dev.kettu.hyangsang
 
 import android.app.Application
+import android.app.UiModeManager
+import android.os.Build
 import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
@@ -12,6 +14,7 @@ import dev.kettu.hyangsang.network.RssFeedService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
@@ -51,6 +54,29 @@ class HyangsangApplication : Application() {
             // Initialize Open Korean Text resources
             OpenKoreanTextProcessorJava.loadResources()
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            applicationScope.launch {
+                userPreferencesRepository.themeFlow.distinctUntilChanged().collect { theme ->
+                    applyApplicationNightMode(theme)
+                }
+            }
+        }
+    }
+
+    /**
+     * Stores the theme setting as the per-app night mode, which the system uses when drawing
+     * the launch splash screen before the app starts. Without it, the splash follows the
+     * system theme and flashes light when the app is set to Dark (and vice versa).
+     */
+    private fun applyApplicationNightMode(theme: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val mode = when (theme) {
+            "Light" -> UiModeManager.MODE_NIGHT_NO
+            "Dark" -> UiModeManager.MODE_NIGHT_YES
+            else -> UiModeManager.MODE_NIGHT_AUTO
+        }
+        getSystemService(UiModeManager::class.java).setApplicationNightMode(mode)
     }
 
     val articleRepository: ArticleRepository by lazy {

@@ -7,4 +7,9 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Match the Hyangsang palette background (Color.kt) -->
+    <color name="app_background">#FFFBF9F6</color>
+    <color name="logo_ink">#FF2B5F75</color>
+    <color name="logo_accent">#FFC29A2A</color>
 </resources>

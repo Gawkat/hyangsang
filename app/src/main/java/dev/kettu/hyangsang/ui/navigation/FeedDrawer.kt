@@ -59,6 +59,7 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.FeedAvatar
+import dev.kettu.hyangsang.ui.components.HyangsangLogo
 import java.util.Locale
 
 /**
@@ -98,17 +99,24 @@ fun FeedDrawerContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp)
         ) {
-            Column(modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 16.dp)) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(R.string.app_name_romanized),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                modifier = Modifier.padding(start = 12.dp, top = 24.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HyangsangLogo(modifier = Modifier.size(48.dp))
+                Column {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.app_name_romanized),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             NavigationDrawerItem(
