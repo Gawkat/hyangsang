@@ -121,6 +121,10 @@ fun createTables(conn: Connection) {
         )
     """
     )
+    // Same names as the indexes Room declares, so Room's CREATE INDEX IF NOT EXISTS finds them
+    statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_entries_word ON dictionary_entries (word)")
+    statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_senses_entryId ON dictionary_senses (entryId)")
+    statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_examples_senseId ON dictionary_examples (senseId)")
     statement.close()
 }
 

@@ -13,4 +13,11 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_13_14)
+// Indexes dictionary words for lookups
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_dictionary_entries_word` ON `dictionary_entries` (`word`)")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_13_14, MIGRATION_14_15)

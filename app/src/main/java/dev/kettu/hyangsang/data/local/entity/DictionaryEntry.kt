@@ -1,9 +1,14 @@
 package dev.kettu.hyangsang.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "dictionary_entries")
+@Entity(
+    tableName = "dictionary_entries",
+    // Lookups query by word, which would otherwise scan the whole table
+    indices = [Index("word")]
+)
 data class DictionaryEntry(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

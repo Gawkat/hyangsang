@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,6 +49,19 @@ class MigrationTest {
             assertEquals("2026-09-25T00:00:00Z", it.getString(1))
             assertNull(it.getString(2))
             assertNull(it.getString(3))
+        }
+    }
+
+    @Test
+    fun migrate14To15_indexesDictionaryWords() {
+        helper.createDatabase(TEST_DB, 14).close()
+
+        // Validation fails if the index Room expects is missing
+        val db = helper.runMigrationsAndValidate(TEST_DB, 15, true, MIGRATION_14_15)
+
+        db.query("EXPLAIN QUERY PLAN SELECT * FROM dictionary_entries WHERE word = '값'").use {
+            it.moveToFirst()
+            assertTrue(it.getString(3).contains("index_dictionary_entries_word"))
         }
     }
 }

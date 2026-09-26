@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         DictionaryExample::class,
         RssFeed::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(ContentBlockTypeConverter::class)
