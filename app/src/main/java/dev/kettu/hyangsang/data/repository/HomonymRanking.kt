@@ -14,6 +14,17 @@ data class LookupContext(
     val feedCategory: DefaultCategory? = null
 )
 
+/** What comes before a word in its sentence, as far as bound nouns (수, 중, 간) care. */
+internal enum class PrecedingWord {
+    /** A noun without a particle, or a verb in modifier form (맛볼 수, 정부 간) */
+    MODIFIER,
+
+    /** The start of the sentence, punctuation or a particle, where bound nouns can't follow */
+    BREAK,
+
+    UNKNOWN
+}
+
 /**
  * What a lookup knows when ranking the homonyms of one search term.
  *
@@ -21,21 +32,25 @@ data class LookupContext(
  * @param contextNouns nouns from the surrounding sentence
  * @param categoryPrefixes semantic categories that fit the feed, matched as prefixes
  * @param isCounter whether the term follows a number, as in 3명 or 26일
+ * @param preceding what comes before the term in the sentence, if the term starts the word
  */
 internal class HomonymRanking(
     private val tokenPos: String?,
     private val contextNouns: Set<String>,
     private val categoryPrefixes: List<String>,
-    private val isCounter: Boolean = false
+    private val isCounter: Boolean = false,
+    private val preceding: PrecedingWord = PrecedingWord.UNKNOWN
 ) {
     /**
-     * Ranks by, in order: being a counter when the term follows a number, POS matching the
-     * tapped token, nouns shared between the sentence and the entry's definitions and examples,
+     * Ranks by, in order: being a counter when the term follows a number, being a bound noun
+     * when the preceding word allows one, POS matching the tapped token, nouns shared between
+     * the sentence and the entry's definitions and examples,
      * a semantic category fitting the feed, vocabulary level (easier words are more likely the
      * common meaning), and homonym number.
      */
     val comparator: Comparator<DictionaryWithSenses> =
         compareBy<DictionaryWithSenses> { counterRank(it) }
+            .thenBy { boundNounRank(it) }
             .thenBy { posMismatch(it) }
             .thenByDescending { contextOverlap(it) }
             .thenBy { categoryMismatch(it) }
@@ -48,14 +63,27 @@ internal class HomonymRanking(
         if (!isCounter) return 0
         val pos = entry.entry.partOfSpeech
         if (entry.entry.word in NUMBER_WORDS) return if (pos == "Numeral") 0 else 1
-        val isUnit = entry.senses.any { "단위" in it.sense.definitionKo }
         return when {
-            pos == "Bound Noun" && isUnit -> 0
+            pos == "Bound Noun" && isUnit(entry) -> 0
             pos == "Bound Noun" -> 1
-            isUnit -> 2
+            isUnit(entry) -> 2
             else -> 3
         }
     }
+
+    // Bound nouns need a modifier before them. Counting units need a number, which counterRank
+    // covers, so after other modifiers only the rest count (위치한 섬 is an island, not 섬 the
+    // measure of sacks).
+    private fun boundNounRank(entry: DictionaryWithSenses): Int {
+        val isBound = entry.entry.partOfSpeech == "Bound Noun"
+        return when (preceding) {
+            PrecedingWord.MODIFIER -> if (isBound && !isUnit(entry)) 0 else 1
+            PrecedingWord.BREAK -> if (isBound) 1 else 0
+            PrecedingWord.UNKNOWN -> 0
+        }
+    }
+
+    private fun isUnit(entry: DictionaryWithSenses) = entry.senses.any { "단위" in it.sense.definitionKo }
 
     private fun posMismatch(entry: DictionaryWithSenses): Int {
         val expected = tokenPos?.let { OKT_TO_DICTIONARY_POS[it] } ?: return 0

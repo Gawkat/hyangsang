@@ -87,6 +87,35 @@ class HomonymRankingTest {
         assertEquals(6, listOf(group, trillion).sortedWith(ranking.comparator).first().entry.homonymNumber)
     }
 
+    private val wednesday = homonym("수", 5, "Noun", "Beginner", "개념 > 시간", "수요일.")
+    private val means = homonym("수", 3, "Bound Noun", "Beginner", "개념 > 성질", "어떤 일을 할 만한 능력이나 가능성.")
+    private val sackMeasure = homonym("수", 11, "Bound Noun", "Advanced", "개념 > 세는 말", "시를 세는 단위.")
+
+    @Test
+    fun `after a modifier bound nouns come first, except counting units`() {
+        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), preceding = PrecedingWord.MODIFIER)
+        assertEquals(
+            listOf(3, 5, 11),
+            listOf(sackMeasure, wednesday, means).sortedWith(ranking.comparator).map { it.entry.homonymNumber }
+        )
+    }
+
+    @Test
+    fun `after a break bound nouns come last`() {
+        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), preceding = PrecedingWord.BREAK)
+        assertEquals(5, listOf(means, sackMeasure, wednesday).sortedWith(ranking.comparator).first().entry.homonymNumber)
+    }
+
+    @Test
+    fun `lookup reads the preceding word from the sentence`() = runBlocking {
+        val repository = DictionaryRepository(FakeDao(listOf(wednesday, means)))
+        fun firstFor(sentence: String) = runBlocking {
+            repository.getDefinitionsForWord("수", LookupContext(sentence)).first().getValue("수").first().entry.homonymNumber
+        }
+        assertEquals(3, firstFor("다양한 국수를 맛볼 수 있는 축제가 열린다."))
+        assertEquals(5, firstFor("수 요일에 만나자."))
+    }
+
     @Test
     fun `homonym number breaks remaining ties`() {
         val first = homonym("배", 1, "Noun", "Beginner", "인간 > 신체 부위")

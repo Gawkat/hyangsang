@@ -23,13 +23,15 @@ class DictionaryRepository(
      * @param affixFallbacks tokens that look like affixes, mapped to their affix form; the token
      *   itself is only shown if the dictionary doesn't have the affix
      * @param counters terms right after a number, like 명 in 3명 or 일 in 26일
+     * @param leadingNoun the noun the word starts with, like 중 in 중에서, if any
      */
     private class SearchTerms(
         val terms: Map<String, String?>,
         val compounds: List<String>,
         val splitParts: Set<String>,
         val affixFallbacks: Map<String, String>,
-        val counters: Set<String>
+        val counters: Set<String>,
+        val leadingNoun: String?
     )
 
     private fun getSearchTerms(word: String): SearchTerms {
@@ -108,9 +110,41 @@ class DictionaryRepository(
             compounds = compounds,
             splitParts = splitParts,
             affixFallbacks = affixFallbacks,
-            counters = counters
+            counters = counters,
+            leadingNoun = javaTokens.firstOrNull()?.takeIf { it.pos.toString() == "Noun" }?.text
         )
     }
+
+    /** What comes before [word] in [sentence], for telling whether a bound noun can follow. */
+    private fun precedingWord(sentence: String, word: String): PrecedingWord {
+        if (sentence.isBlank()) return PrecedingWord.UNKNOWN
+        fun String.core() = trim { !it.isLetterOrDigit() }
+        val words = sentence.split(Regex("\\s+"))
+        val index = words.indexOfFirst { it.core() == word.core() }
+        if (index < 0) return PrecedingWord.UNKNOWN
+        if (index == 0) return PrecedingWord.BREAK
+        // Tapped words can start with punctuation too, as in "(9월"
+        if (!words[index].first().isLetterOrDigit()) return PrecedingWord.BREAK
+
+        val previous = words[index - 1]
+        if (!previous.last().isLetterOrDigit()) return PrecedingWord.BREAK
+        val last = tokenize(previous).lastOrNull() ?: return PrecedingWord.UNKNOWN
+        return when (last.pos.toString()) {
+            // Suffixes end nouns too (1960년대 -> 대/Suffix)
+            "Noun", "ProperNoun", "Number", "Determiner", "Modifier", "Suffix" -> PrecedingWord.MODIFIER
+            "Josa" -> PrecedingWord.BREAK
+            // What follows a number, like 대 in 1960년대 or 에 in 5조원에
+            "Foreign" -> if (last.text in PARTICLES) PrecedingWord.BREAK else PrecedingWord.MODIFIER
+            // Verbs modify nouns in forms ending in ㄴ or ㄹ (맛볼, 위치한, 하는)
+            "Verb", "Adjective", "Eomi" ->
+                if (last.text.last().finalConsonant() in listOf(FINAL_N, FINAL_L)) PrecedingWord.MODIFIER
+                else PrecedingWord.BREAK
+            else -> PrecedingWord.UNKNOWN
+        }
+    }
+
+    // Index of a Hangul syllable's final consonant (0 for none), or -1 for other characters
+    private fun Char.finalConsonant(): Int = if (this in '가'..'힣') (this - '가') % 28 else -1
 
     /**
      * The split parts worth showing: those in the fewest-word split of a compound into dictionary
@@ -164,7 +198,11 @@ class DictionaryRepository(
             .filter { it !in searchTerms }
             .toSet()
 
-    private class Lookup(val searchTerms: SearchTerms, val contextNouns: Set<String>)
+    private class Lookup(
+        val searchTerms: SearchTerms,
+        val contextNouns: Set<String>,
+        val precedingWord: PrecedingWord
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getDefinitionsForWord(
@@ -176,7 +214,13 @@ class DictionaryRepository(
         // dictionaries), so it must not run on the main thread.
         return flow {
             val searchTerms = getSearchTerms(word)
-            emit(Lookup(searchTerms, contextNouns(context.sentence, searchTerms.terms.keys)))
+            emit(
+                Lookup(
+                    searchTerms = searchTerms,
+                    contextNouns = contextNouns(context.sentence, searchTerms.terms.keys),
+                    precedingWord = precedingWord(context.sentence, word)
+                )
+            )
         }
             .flowOn(Dispatchers.Default)
             .flatMapLatest { lookup ->
@@ -195,7 +239,12 @@ class DictionaryRepository(
                                 tokenPos = terms[term],
                                 contextNouns = lookup.contextNouns,
                                 categoryPrefixes = categoryPrefixes,
-                                isCounter = term in lookup.searchTerms.counters
+                                isCounter = term in lookup.searchTerms.counters,
+                                preceding = if (term == lookup.searchTerms.leadingNoun) {
+                                    lookup.precedingWord
+                                } else {
+                                    PrecedingWord.UNKNOWN
+                                }
                             )
                             homonyms.sortedWith(ranking.comparator)
                         }
@@ -249,5 +298,14 @@ class DictionaryRepository(
         // Open Korean Text POS of particles and endings. It also tags particles after numbers as
         // Foreign (5조원에 -> 에/Foreign).
         val GRAMMATICAL_POS = setOf("Josa", "Eomi", "PreEomi", "Foreign")
+
+        val PARTICLES = setOf(
+            "이", "가", "을", "를", "은", "는", "의", "에", "에서", "에게", "로", "으로", "와", "과",
+            "도", "만", "까지", "부터"
+        )
+
+        // Hangul final consonant indexes
+        const val FINAL_N = 4
+        const val FINAL_L = 8
     }
 }
