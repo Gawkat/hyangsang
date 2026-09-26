@@ -1,9 +1,11 @@
 package dev.kettu.hyangsang.data.defaults
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.annotation.StringRes
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import java.util.Locale
 
 enum class DefaultCategory(@StringRes val label: Int) {
     NEWS(R.string.category_news),
@@ -20,7 +22,28 @@ enum class DefaultCategory(@StringRes val label: Int) {
     ENTERTAINMENT(R.string.category_entertainment),
     SPORTS(R.string.category_sports),
     OPINION(R.string.category_opinion),
-    PEOPLE(R.string.category_people)
+    PEOPLE(R.string.category_people);
+
+    companion object {
+        // Languages the built-in category names are translated into
+        private val LOCALES = listOf(Locale.ENGLISH, Locale.KOREA)
+
+        /**
+         * Built-in categories keyed by their name in every app language. Feeds store their
+         * category as the name shown when they were added, which may be in another language
+         * than the current one.
+         */
+        fun byLabel(context: Context): Map<String, DefaultCategory> {
+            val localizedContexts = LOCALES.map { locale ->
+                context.createConfigurationContext(
+                    Configuration(context.resources.configuration).apply { setLocale(locale) }
+                )
+            }
+            return entries.flatMap { category ->
+                localizedContexts.map { it.getString(category.label) to category }
+            }.toMap()
+        }
+    }
 }
 
 /**

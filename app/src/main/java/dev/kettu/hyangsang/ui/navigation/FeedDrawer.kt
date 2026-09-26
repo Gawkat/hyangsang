@@ -1,6 +1,5 @@
 package dev.kettu.hyangsang.ui.navigation
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,7 +59,6 @@ import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.FeedAvatar
 import dev.kettu.hyangsang.ui.components.HyangsangLogo
-import java.util.Locale
 
 /**
  * Feed and category picker for Discover. Categories with a single feed act as that feed;
@@ -258,26 +256,13 @@ private fun CountBadge(count: Int) {
     Text(text = count.toString(), style = MaterialTheme.typography.labelMedium)
 }
 
-// Languages the built-in category names are translated into
-private val categoryLocales = listOf(Locale.ENGLISH, Locale.KOREAN)
-
-/**
- * Icons for the built-in categories, keyed by their name. Categories are stored as free text
- * in the language the feeds were added in, so names in every app language are included.
- */
+/** Icons for the built-in categories, keyed by their name in every app language. */
 @Composable
 private fun rememberCategoryIcons(): Map<String, ImageVector> {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     return remember(configuration) {
-        val localizedContexts = categoryLocales.map { locale ->
-            context.createConfigurationContext(
-                Configuration(configuration).apply { setLocale(locale) }
-            )
-        }
-        DefaultCategory.entries.flatMap { category ->
-            localizedContexts.map { it.getString(category.label) to category.icon() }
-        }.toMap()
+        DefaultCategory.byLabel(context).mapValues { it.value.icon() }
     }
 }
 

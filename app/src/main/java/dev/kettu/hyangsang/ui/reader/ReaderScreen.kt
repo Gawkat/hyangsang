@@ -94,9 +94,8 @@ fun ReaderScreen(
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
     val isLookingUp by dictionaryViewModel.isLookingUp.collectAsState()
     val context = LocalContext.current
-    // Feeds store their category as the label shown when they were added, so match it back
     val feedCategory = remember(articleWithFeed.feed.category) {
-        DefaultCategory.entries.firstOrNull { context.getString(it.label) == articleWithFeed.feed.category }
+        DefaultCategory.byLabel(context)[articleWithFeed.feed.category]
     }
 
     ReaderContent(

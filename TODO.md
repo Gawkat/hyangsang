@@ -21,9 +21,6 @@
 
 * Revisit the order of stem chips?
 * Improve dictionary entry ranking
-  * The feed category signal matches the feed's stored category label against the current
-    language's labels, so it stops working after changing the app language (or for custom
-    categories). Store a category key on `RssFeed` instead?
 * Consider if clicks on new words when overlay is opened should trigger a new lookup instead of closing the overlay
 
 ## Feeds
