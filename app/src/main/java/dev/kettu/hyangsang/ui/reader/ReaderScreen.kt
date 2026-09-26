@@ -57,11 +57,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.settings.openInBrowser
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
@@ -91,13 +93,20 @@ fun ReaderScreen(
 ) {
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
     val isLookingUp by dictionaryViewModel.isLookingUp.collectAsState()
+    val context = LocalContext.current
+    // Feeds store their category as the label shown when they were added, so match it back
+    val feedCategory = remember(articleWithFeed.feed.category) {
+        DefaultCategory.entries.firstOrNull { context.getString(it.label) == articleWithFeed.feed.category }
+    }
 
     ReaderContent(
         articleWithFeed = articleWithFeed,
         onBackClick = onBackClick,
         lookupResult = lookupResult,
         isLookingUp = isLookingUp,
-        onLookupWord = { dictionaryViewModel.lookupWord(it) },
+        onLookupWord = { word, sentence ->
+            dictionaryViewModel.lookupWord(word, LookupContext(sentence, feedCategory))
+        },
         onClearLookup = { dictionaryViewModel.clearLookup() },
         readerSettings = readerSettings,
         onReaderSettingsChange = onReaderSettingsChange,
@@ -116,7 +125,7 @@ fun ReaderContent(
     onBackClick: () -> Unit,
     lookupResult: Map<String, List<DictionaryWithSenses>>,
     isLookingUp: Boolean,
-    onLookupWord: (String) -> Unit,
+    onLookupWord: (word: String, sentence: String) -> Unit,
     onClearLookup: () -> Unit,
     readerSettings: ReaderSettings,
     onReaderSettingsChange: (ReaderSettings) -> Unit,
@@ -158,7 +167,7 @@ fun ReaderContent(
         { wordSelection, word ->
             selection = wordSelection
             lookupWord = word
-            currentOnLookupWord(word)
+            currentOnLookupWord(word, wordSelection.sentence)
             showLookupSheet = true
 
             // Scroll the tapped line above where the lookup sheet will be, so the sentence
@@ -403,7 +412,7 @@ fun ReaderScreenPreview() {
             onBackClick = {},
             lookupResult = emptyMap(),
             isLookingUp = false,
-            onLookupWord = {},
+            onLookupWord = { _, _ -> },
             onClearLookup = {},
             readerSettings = ReaderSettings(),
             onReaderSettingsChange = {},

@@ -40,7 +40,9 @@ data class WordSelection(
     val range: TextRange,
     val token: String,
     // Window y of the bottom of the tapped line, used to keep the word visible above the lookup sheet
-    val anchorY: Float? = null
+    val anchorY: Float? = null,
+    // The sentence around the word, which helps rank dictionary entries
+    val sentence: String = ""
 )
 
 /** The selected range if the selection belongs to the text with [textId], otherwise null. */
@@ -49,6 +51,33 @@ fun WordSelection?.rangeIn(textId: String): TextRange? =
 
 private val WordRegex = Regex("\\S+")
 private const val LOOKUP_TRIM_CHARS = "!.?,\"'"
+
+// Context beyond this many characters on either side of a word adds little to a lookup
+private const val MAX_SENTENCE_CONTEXT = 200
+
+/** The sentence in [text] containing the word from [start] to [end], trimmed. */
+internal fun sentenceAround(text: String, start: Int, end: Int): String {
+    var sentenceStart = start
+    val minStart = (start - MAX_SENTENCE_CONTEXT).coerceAtLeast(0)
+    while (sentenceStart > minStart && !isSentenceEnd(text, sentenceStart - 1)) sentenceStart--
+
+    // The word itself may end the sentence, as in 했다.
+    var sentenceEnd = (start until end).firstOrNull { isSentenceEnd(text, it) } ?: end
+    if (sentenceEnd == end) {
+        val maxEnd = (end + MAX_SENTENCE_CONTEXT).coerceAtMost(text.length)
+        while (sentenceEnd < maxEnd && !isSentenceEnd(text, sentenceEnd)) sentenceEnd++
+    }
+    if (sentenceEnd < text.length && isSentenceEnd(text, sentenceEnd)) sentenceEnd++ // Keep the terminator
+
+    return text.substring(sentenceStart, sentenceEnd).trim()
+}
+
+// A period only ends a sentence before a space, closing quote or the end, so 3.5 doesn't
+private fun isSentenceEnd(text: String, index: Int): Boolean = when (text[index]) {
+    '\n', '!', '?', '。', '…' -> true
+    '.' -> index + 1 == text.length || text[index + 1].isWhitespace() || text[index + 1] in "\"'”’)"
+    else -> false
+}
 
 /**
  * Korean line breaking: by default Android may break a line between any two Hangul syllables.
@@ -156,7 +185,13 @@ fun ClickableText(
                         ?.localToWindow(Offset(0f, layout.getLineBottom(line)))
                         ?.y
                     currentOnWordClick(
-                        WordSelection(currentTextId, TextRange(start, end), token, anchorY),
+                        WordSelection(
+                            textId = currentTextId,
+                            range = TextRange(start, end),
+                            token = token,
+                            anchorY = anchorY,
+                            sentence = sentenceAround(text, start, end)
+                        ),
                         token.trim { it in LOOKUP_TRIM_CHARS }
                     )
                 }

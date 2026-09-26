@@ -14,72 +14,103 @@ import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 class DictionaryRepository(
     private val dictionaryDao: DictionaryDao
 ) {
-    fun getAllSearchTerms(word: String): List<String> {
-        val normalized = OpenKoreanTextProcessorJava.normalize(word)
-        val tokens = OpenKoreanTextProcessorJava.tokenize(normalized)
-        val javaTokens = OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(tokens)
+    fun getAllSearchTerms(word: String): List<String> = getSearchTermsWithPos(word).keys.toList()
 
-        val stems = javaTokens
-            .filter { it.pos.toString() !in listOf("Space", "Punctuation") }
-            .flatMap { token ->
-                val list = mutableListOf<String>()
-                val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
-                list.add(stem)
+    /**
+     * Search terms for [word], each with the Open Korean Text POS of the token it came from, or
+     * null when unknown (such as the whole word when it spans several tokens).
+     */
+    private fun getSearchTermsWithPos(word: String): Map<String, String?> {
+        val javaTokens = tokenize(word)
+        val terms = LinkedHashMap<String, String?>()
+        terms[word] = javaTokens.singleOrNull()?.pos?.toString()
 
-                // Handle compound nouns by generating all sub-strings (Length >= 2)
-                // This lets the dictionary decide which parts are "real" words.
-                if (token.pos.toString() == "Noun" && stem.length >= 3) {
-                    for (i in stem.indices) {
-                        for (j in i + 2..stem.length) {
-                            val sub = stem.substring(i, j)
-                            if (sub.length < stem.length) list.add(sub)
-                        }
+        javaTokens.forEach { token ->
+            val pos = token.pos.toString()
+            val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
+            terms.putIfAbsent(stem, pos)
+
+            // Handle compound nouns by generating all sub-strings (Length >= 2)
+            // This lets the dictionary decide which parts are "real" words.
+            if (pos == "Noun" && stem.length >= 3) {
+                for (i in stem.indices) {
+                    for (j in i + 2..stem.length) {
+                        val sub = stem.substring(i, j)
+                        if (sub.length < stem.length) terms.putIfAbsent(sub, "Noun")
                     }
                 }
-
-                // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
-                // This ensures "년" or "일" are added as separate search terms
-                val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
-                numericSuffixMatch?.let {
-                    list.add(it.groupValues[1])
-                }
-
-                list
             }
 
-        // Combine original word with stems, remove duplicates,
-        // and filter out pure numbers (e.g. "2009") to keep the UI chips clean
-        return (listOf(word) + stems)
-            .distinct()
-            .filter { term -> term.any { !it.isDigit() } || term == word }
+            // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
+            // This ensures "년" or "일" are added as separate search terms
+            val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
+            numericSuffixMatch?.let {
+                terms.putIfAbsent(it.groupValues[1], null)
+            }
+        }
+
+        // Filter out pure numbers (e.g. "2009") to keep the UI chips clean
+        return terms.filterKeys { term -> term.any { !it.isDigit() } || term == word }
     }
 
+    private fun tokenize(text: String) = OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
+        OpenKoreanTextProcessorJava.tokenize(OpenKoreanTextProcessorJava.normalize(text))
+    ).filter { it.pos.toString() !in listOf("Space", "Punctuation") }
+
+    // Nouns in the sentence other than the looked up word itself, for matching against entries
+    private fun contextNouns(sentence: String, searchTerms: Set<String>): Set<String> =
+        if (sentence.isBlank()) emptySet()
+        else tokenize(sentence)
+            .filter { it.pos.toString() in listOf("Noun", "ProperNoun") && it.text.length >= 2 }
+            .map { it.text }
+            .filter { it !in searchTerms }
+            .toSet()
+
+    private class Lookup(val terms: Map<String, String?>, val contextNouns: Set<String>)
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun getDefinitionsForWord(word: String): Flow<Map<String, List<DictionaryWithSenses>>> =
+    fun getDefinitionsForWord(
+        word: String,
+        context: LookupContext = LookupContext()
+    ): Flow<Map<String, List<DictionaryWithSenses>>> {
+        val categoryPrefixes = HomonymRanking.categoryPrefixesFor(context.feedCategory)
         // Tokenizing with Open Korean Text is CPU-heavy (and the first call loads its
         // dictionaries), so it must not run on the main thread.
-        flow { emit(getAllSearchTerms(word)) }
+        return flow {
+            val terms = getSearchTermsWithPos(word)
+            emit(Lookup(terms, contextNouns(context.sentence, terms.keys)))
+        }
             .flowOn(Dispatchers.Default)
-            .flatMapLatest { terms -> dictionaryDao.getEntriesForTerms(terms) }
-            .map { entries ->
-                entries.groupBy { it.entry.word }
-                    .toList()
-                    // Sort:
-                    // 1. Exact match first
-                    // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
-                    // 3. Longest sub-strings next
-                    .sortedWith(
-                        compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
-                            it.first == word
-                        }.thenBy {
-                            getPosPriority(it.second)
-                        }.thenByDescending {
-                            it.first.length
+            .flatMapLatest { lookup ->
+                dictionaryDao.getEntriesForTerms(lookup.terms.keys.toList()).map { entries ->
+                    entries.groupBy { it.entry.word }
+                        .mapValues { (term, homonyms) ->
+                            val ranking = HomonymRanking(
+                                tokenPos = lookup.terms[term],
+                                contextNouns = lookup.contextNouns,
+                                categoryPrefixes = categoryPrefixes
+                            )
+                            homonyms.sortedWith(ranking.comparator)
                         }
-                    )
-                    .toMap()
+                        .toList()
+                        // Sort:
+                        // 1. Exact match first
+                        // 2. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
+                        // 3. Longest sub-strings next
+                        .sortedWith(
+                            compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
+                                it.first == word
+                            }.thenBy {
+                                getPosPriority(it.second)
+                            }.thenByDescending {
+                                it.first.length
+                            }
+                        )
+                        .toMap()
+                }
             }
             .flowOn(Dispatchers.Default)
+    }
 
     private fun getPosPriority(entries: List<DictionaryWithSenses>): Int {
         val poses = entries.mapNotNull { it.entry.partOfSpeech }.distinct()
