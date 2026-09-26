@@ -189,7 +189,7 @@ class LookupEvaluationTest {
 
     companion object {
         // Correct cases in lookup-eval.tsv as of the last ranking change
-        private const val BASELINE_CORRECT = 63
+        private const val BASELINE_CORRECT = 64
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
         private lateinit var copy: File

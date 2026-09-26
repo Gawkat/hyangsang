@@ -49,8 +49,13 @@ data class WordSelection(
 fun WordSelection?.rangeIn(textId: String): TextRange? =
     if (this != null && this.textId == textId) range else null
 
-private val WordRegex = Regex("\\S+")
-internal const val LOOKUP_TRIM_CHARS = "!.?,\"'"
+// Punctuation that separates words even without a space around it, as in 포프모빌…콘서트장,
+// 한·미, 10∼20일 or 주(9월. Periods and commas are not here, so 3.5 and 1,000 stay whole.
+private const val WORD_SEPARATORS = "…⋯·ㆍ‧/~∼～–—―=()[]{}<>「」『』《》〈〉【】\"'“”‘’▲△▶▷◆◇■□●○"
+
+private fun Char.separatesWords() = isWhitespace() || this in WORD_SEPARATORS
+
+internal const val LOOKUP_TRIM_CHARS = "!.?,"
 
 // Context beyond this many characters on either side of a word adds little to a lookup
 private const val MAX_SENTENCE_CONTEXT = 200
@@ -91,9 +96,9 @@ internal val KoreanLineBreak = LineBreak(
 )
 internal val KoreanLocale = LocaleList("ko-KR")
 
-/** Start/end offsets of every whitespace-separated word, for binary searching tap positions. */
+/** Start/end offsets of every word, for binary searching tap positions. */
 @Immutable
-private class WordRanges(val starts: IntArray, val ends: IntArray) {
+internal class WordRanges(val starts: IntArray, val ends: IntArray) {
     /** Index of the word containing [offset] (end-inclusive, so taps on the last glyph count). */
     fun indexAt(offset: Int): Int {
         var lo = 0
@@ -113,11 +118,19 @@ private class WordRanges(val starts: IntArray, val ends: IntArray) {
 
     companion object {
         fun of(text: String): WordRanges {
-            val matches = WordRegex.findAll(text).toList()
-            return WordRanges(
-                starts = IntArray(matches.size) { matches[it].range.first },
-                ends = IntArray(matches.size) { matches[it].range.last + 1 }
-            )
+            val starts = ArrayList<Int>()
+            val ends = ArrayList<Int>()
+            var i = 0
+            while (i < text.length) {
+                if (text[i].separatesWords()) {
+                    i++
+                    continue
+                }
+                starts += i
+                while (i < text.length && !text[i].separatesWords()) i++
+                ends += i
+            }
+            return WordRanges(starts.toIntArray(), ends.toIntArray())
         }
     }
 }
