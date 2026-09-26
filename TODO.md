@@ -14,7 +14,6 @@
 
 * Research other extraction techniques for generic sources
 * Add parsers for other sources
-* Parse Yonhap footer into other content block to distinguish from article body
 
 ## Reader
 
@@ -27,8 +26,6 @@
 
 ## Feeds
 
-* Default feeds strings are hardcoded and not localized
-* Yonhap News seems to contain all Yonhap feeds, probably handle this in some way during feed setup
 * Support Atom feeds?
 
 ## Vocabulary/Statistics (maybe)

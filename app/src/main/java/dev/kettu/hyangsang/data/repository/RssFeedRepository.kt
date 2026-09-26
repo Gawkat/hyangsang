@@ -1,6 +1,5 @@
 package dev.kettu.hyangsang.data.repository
 
-import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
@@ -38,7 +37,9 @@ sealed interface FeedCheckResult {
 class RssFeedRepository(
     private val rssFeedDao: RssFeedDao,
     private val articleDao: ArticleDao,
-    private val rssService: RssFeedService
+    private val rssService: RssFeedService,
+    // Resolved on each call, so restored feeds get names in the current app language
+    private val defaultFeeds: () -> List<RssFeed>
 ) {
     val allFeeds: Flow<List<RssFeed>> = rssFeedDao.getAllFeeds()
 
@@ -104,7 +105,7 @@ class RssFeedRepository(
 
     // Re-adds built-in feeds the user removed; existing ones are left as they are
     suspend fun restoreDefaultFeeds(): Int {
-        val restored = DefaultData.defaultFeeds.mapNotNull { feed ->
+        val restored = defaultFeeds().mapNotNull { feed ->
             val id = rssFeedDao.insertFeed(feed)
             if (id != -1L) feed.copy(id = id) else null
         }

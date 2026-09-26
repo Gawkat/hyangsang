@@ -143,4 +143,21 @@
     <string name="not_right_meaning">찾는 뜻이 아닌가요?</string>
     <string name="lookup_online_hint">온라인 사전에서 찾아보세요.</string>
     <string name="search_web_dictionary">웹 사전</string>
+    <!-- Built-in feeds -->
+    <string name="source_yonhap_news">연합뉴스</string>
+    <string name="category_news">뉴스</string>
+    <string name="category_politics">정치</string>
+    <string name="category_north_korea">북한</string>
+    <string name="category_economy">경제</string>
+    <string name="category_market">마켓</string>
+    <string name="category_industry">산업</string>
+    <string name="category_society">사회</string>
+    <string name="category_local">전국</string>
+    <string name="category_international">세계</string>
+    <string name="category_culture">문화</string>
+    <string name="category_health">건강</string>
+    <string name="category_entertainment">연예</string>
+    <string name="category_sports">스포츠</string>
+    <string name="category_opinion">오피니언</string>
+    <string name="category_people">사람들</string>
 </resources>

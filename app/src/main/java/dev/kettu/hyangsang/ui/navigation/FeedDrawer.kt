@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.ui.navigation
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,11 +15,19 @@ import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.CandlestickChart
 import androidx.compose.material.icons.outlined.DynamicFeed
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Factory
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Settings
@@ -40,13 +49,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.FeedAvatar
+import java.util.Locale
 
 /**
  * Feed and category picker for Discover. Categories with a single feed act as that feed;
@@ -70,6 +83,7 @@ fun FeedDrawerContent(
     val feedsByCategory = remember(feeds) {
         feeds.filter { it.isEnabled }.groupBy { it.category }.toSortedMap()
     }
+    val categoryIcons = rememberCategoryIcons()
     // Start with the selected feed's category open, so the selection is visible
     var expanded by rememberSaveable {
         mutableStateOf(
@@ -126,7 +140,12 @@ fun FeedDrawerContent(
                             hasError = categoryFeeds.any { it.lastSyncError != null }
                         )
                     },
-                    icon = { Icon(categoryIcon(category), contentDescription = null) },
+                    icon = {
+                        Icon(
+                            imageVector = categoryIcons[category] ?: Icons.AutoMirrored.Outlined.Label,
+                            contentDescription = null
+                        )
+                    },
                     selected = selectedCategory == category,
                     onClick = { onSelectCategory(category) },
                     badge = {
@@ -231,14 +250,43 @@ private fun CountBadge(count: Int) {
     Text(text = count.toString(), style = MaterialTheme.typography.labelMedium)
 }
 
-// Categories are free text, so only the built-in ones get their own icon
-private fun categoryIcon(category: String): ImageVector = when (category) {
-    "News" -> Icons.Outlined.Newspaper
-    "Culture" -> Icons.Outlined.TheaterComedy
-    "Economy" -> Icons.AutoMirrored.Outlined.TrendingUp
-    "Entertainment" -> Icons.Outlined.Movie
-    "North Korea" -> Icons.Outlined.Public
-    "Politics" -> Icons.Outlined.AccountBalance
-    "Sports" -> Icons.Outlined.SportsSoccer
-    else -> Icons.AutoMirrored.Outlined.Label
+// Languages the built-in category names are translated into
+private val categoryLocales = listOf(Locale.ENGLISH, Locale.KOREAN)
+
+/**
+ * Icons for the built-in categories, keyed by their name. Categories are stored as free text
+ * in the language the feeds were added in, so names in every app language are included.
+ */
+@Composable
+private fun rememberCategoryIcons(): Map<String, ImageVector> {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    return remember(configuration) {
+        val localizedContexts = categoryLocales.map { locale ->
+            context.createConfigurationContext(
+                Configuration(configuration).apply { setLocale(locale) }
+            )
+        }
+        DefaultCategory.entries.flatMap { category ->
+            localizedContexts.map { it.getString(category.label) to category.icon() }
+        }.toMap()
+    }
+}
+
+private fun DefaultCategory.icon(): ImageVector = when (this) {
+    DefaultCategory.NEWS -> Icons.Outlined.Newspaper
+    DefaultCategory.POLITICS -> Icons.Outlined.AccountBalance
+    DefaultCategory.NORTH_KOREA -> Icons.Outlined.Flag
+    DefaultCategory.ECONOMY -> Icons.AutoMirrored.Outlined.TrendingUp
+    DefaultCategory.MARKET -> Icons.Outlined.CandlestickChart
+    DefaultCategory.INDUSTRY -> Icons.Outlined.Factory
+    DefaultCategory.SOCIETY -> Icons.Outlined.Groups
+    DefaultCategory.LOCAL -> Icons.Outlined.Place
+    DefaultCategory.INTERNATIONAL -> Icons.Outlined.Public
+    DefaultCategory.CULTURE -> Icons.Outlined.TheaterComedy
+    DefaultCategory.HEALTH -> Icons.Outlined.HealthAndSafety
+    DefaultCategory.ENTERTAINMENT -> Icons.Outlined.Movie
+    DefaultCategory.SPORTS -> Icons.Outlined.SportsSoccer
+    DefaultCategory.OPINION -> Icons.Outlined.Forum
+    DefaultCategory.PEOPLE -> Icons.Outlined.Person
 }

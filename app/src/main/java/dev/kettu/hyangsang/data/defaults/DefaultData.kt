@@ -1,49 +1,82 @@
 package dev.kettu.hyangsang.data.defaults
 
+import android.content.Context
+import androidx.annotation.StringRes
+import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 
+enum class DefaultCategory(@StringRes val label: Int) {
+    NEWS(R.string.category_news),
+    POLITICS(R.string.category_politics),
+    NORTH_KOREA(R.string.category_north_korea),
+    ECONOMY(R.string.category_economy),
+    MARKET(R.string.category_market),
+    INDUSTRY(R.string.category_industry),
+    SOCIETY(R.string.category_society),
+    LOCAL(R.string.category_local),
+    INTERNATIONAL(R.string.category_international),
+    CULTURE(R.string.category_culture),
+    HEALTH(R.string.category_health),
+    ENTERTAINMENT(R.string.category_entertainment),
+    SPORTS(R.string.category_sports),
+    OPINION(R.string.category_opinion),
+    PEOPLE(R.string.category_people)
+}
+
+/**
+ * A built-in feed. Section feeds are titled "<source> - <category>", other feeds just "<source>".
+ */
+data class DefaultFeed(
+    @StringRes val source: Int,
+    val url: String,
+    val category: DefaultCategory,
+    val isSection: Boolean = true
+)
+
 object DefaultData {
-    // TODO: really should be using resources strings here for localization and whatnot
-    val defaultFeeds: List<RssFeed> = listOf(
-        RssFeed(
-            title = "Yonhap News",
-            url = "https://www.yna.co.kr/rss/news.xml",
-            category = "News"
-        ),
-        RssFeed(
-            title = "Yonhap News - Politics",
-            url = "https://www.yna.co.kr/rss/politics.xml",
-            category = "Politics"
-        ),
-        RssFeed(
-            title = "Yonhap News - North Korea",
-            url = "https://www.yna.co.kr/rss/northkorea.xml",
-            category = "North Korea"
-        ),
-        RssFeed(
-            title = "Yonhap News - Economy",
-            url = "https://www.yna.co.kr/rss/economy.xml",
-            category = "Economy"
-        ),
-        RssFeed(
-            title = "Yonhap News - Culture",
-            url = "https://www.yna.co.kr/rss/culture.xml",
-            category = "Culture"
-        ),
-        RssFeed(
-            title = "Yonhap News - Entertainment",
-            url = "https://www.yna.co.kr/rss/entertainment.xml",
-            category = "Entertainment"
-        ),
-        RssFeed(
-            title = "Yonhap News - Sports",
-            url = "https://www.yna.co.kr/rss/sports.xml",
-            category = "Sports"
-        ),
-        RssFeed(
-            title = "BBC News 코리아",
+    // Yonhap's main news.xml feed is left out, as its articles all appear in the section feeds
+    val defaultFeeds: List<DefaultFeed> = listOf(
+        yonhap("politics", DefaultCategory.POLITICS),
+        yonhap("northkorea", DefaultCategory.NORTH_KOREA),
+        yonhap("economy", DefaultCategory.ECONOMY),
+        yonhap("market", DefaultCategory.MARKET),
+        yonhap("industry", DefaultCategory.INDUSTRY),
+        yonhap("society", DefaultCategory.SOCIETY),
+        yonhap("local", DefaultCategory.LOCAL),
+        yonhap("international", DefaultCategory.INTERNATIONAL),
+        yonhap("culture", DefaultCategory.CULTURE),
+        yonhap("health", DefaultCategory.HEALTH),
+        yonhap("entertainment", DefaultCategory.ENTERTAINMENT),
+        yonhap("sports", DefaultCategory.SPORTS),
+        yonhap("opinion", DefaultCategory.OPINION),
+        yonhap("people", DefaultCategory.PEOPLE),
+        DefaultFeed(
+            source = R.string.source_bbc_korean,
             url = "https://feeds.bbci.co.uk/korean/rss.xml",
-            category = "News"
+            category = DefaultCategory.NEWS,
+            isSection = false
         )
+    )
+
+    // Titles and categories are stored as plain text, since the user can edit them,
+    // so they're resolved in the app language at the time the feeds are added
+    fun resolveFeeds(context: Context): List<RssFeed> = defaultFeeds.map { feed ->
+        val category = context.getString(feed.category.label)
+        val source = context.getString(feed.source)
+        RssFeed(
+            title = if (feed.isSection) {
+                context.getString(R.string.default_feed_title, source, category)
+            } else {
+                source
+            },
+            url = feed.url,
+            category = category
+        )
+    }
+
+    private fun yonhap(section: String, category: DefaultCategory) = DefaultFeed(
+        source = R.string.source_yonhap_news,
+        url = "https://www.yna.co.kr/rss/$section.xml",
+        category = category
     )
 }

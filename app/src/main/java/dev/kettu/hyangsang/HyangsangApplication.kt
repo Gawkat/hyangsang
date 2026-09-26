@@ -1,6 +1,7 @@
 package dev.kettu.hyangsang
 
 import android.app.Application
+import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
@@ -70,7 +71,8 @@ class HyangsangApplication : Application() {
         RssFeedRepository(
             database.rssFeedDao(),
             database.articleDao(),
-            rssFeedService
+            rssFeedService,
+            defaultFeeds = { DefaultData.resolveFeeds(this) }
         )
     }
 

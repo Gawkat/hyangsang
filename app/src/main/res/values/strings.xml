@@ -152,4 +152,23 @@
     <string name="not_right_meaning">Not the right meaning?</string>
     <string name="lookup_online_hint">Try looking it up online.</string>
     <string name="search_web_dictionary">Web dictionary</string>
+    <!-- Built-in feeds -->
+    <string name="default_feed_title">%1$s - %2$s</string>
+    <string name="source_yonhap_news">Yonhap News</string>
+    <string name="source_bbc_korean" translatable="false">BBC News 코리아</string>
+    <string name="category_news">News</string>
+    <string name="category_politics">Politics</string>
+    <string name="category_north_korea">North Korea</string>
+    <string name="category_economy">Economy</string>
+    <string name="category_market">Market</string>
+    <string name="category_industry">Industry</string>
+    <string name="category_society">Society</string>
+    <string name="category_local">Local</string>
+    <string name="category_international">International</string>
+    <string name="category_culture">Culture</string>
+    <string name="category_health">Health</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_sports">Sports</string>
+    <string name="category_opinion">Opinion</string>
+    <string name="category_people">People</string>
 </resources>

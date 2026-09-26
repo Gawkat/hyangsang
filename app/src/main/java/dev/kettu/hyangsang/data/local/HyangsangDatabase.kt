@@ -62,7 +62,7 @@ abstract class HyangsangDatabase : RoomDatabase() {
 
                             CoroutineScope(Dispatchers.IO).launch {
                                 val dao = getDatabase(context).rssFeedDao()
-                                seedDefaultFeeds(dao)
+                                seedDefaultFeeds(context, dao)
                             }
                         }
                     })
@@ -71,8 +71,8 @@ abstract class HyangsangDatabase : RoomDatabase() {
             }
         }
 
-        private suspend fun seedDefaultFeeds(dao: RssFeedDao) {
-            DefaultData.defaultFeeds.forEach { dao.insertFeed(it) }
+        private suspend fun seedDefaultFeeds(context: Context, dao: RssFeedDao) {
+            DefaultData.resolveFeeds(context).forEach { dao.insertFeed(it) }
         }
     }
 }
