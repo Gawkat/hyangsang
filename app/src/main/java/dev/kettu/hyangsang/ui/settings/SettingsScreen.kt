@@ -62,11 +62,14 @@ import dev.kettu.hyangsang.BuildConfig
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.ReaderFont
+import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.ui.reader.formatLineSpacing
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
-private enum class SettingsDialog { THEME, PALETTE, FONT_SIZE, DICTIONARY_ATTRIBUTION }
+private enum class SettingsDialog { THEME, PALETTE, DICTIONARY_ATTRIBUTION }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,8 +78,8 @@ fun SettingsScreen(
     onThemeChange: (String) -> Unit,
     currentPalette: ThemePalette,
     onPaletteChange: (ThemePalette) -> Unit,
-    currentFontSize: String,
-    onFontSizeChange: (String) -> Unit,
+    readerSettings: ReaderSettings,
+    onTextLayoutClick: () -> Unit,
     showUnreadCounts: Boolean,
     onShowUnreadCountsChange: (Boolean) -> Unit,
     feeds: List<RssFeed>,
@@ -101,12 +104,6 @@ fun SettingsScreen(
             add(ThemePalette.DYNAMIC to stringResource(R.string.palette_dynamic))
         }
     }
-    val fontSizeOptions = listOf(
-        "Small" to stringResource(R.string.font_small),
-        "Medium (Default)" to stringResource(R.string.font_medium),
-        "Large" to stringResource(R.string.font_large),
-        "System default" to stringResource(R.string.font_system)
-    )
 
     Scaffold(
         topBar = {
@@ -146,11 +143,23 @@ fun SettingsScreen(
             )
 
             SectionHeader(stringResource(R.string.reader_preferences_section))
-            SettingsItem(
-                icon = Icons.Outlined.FormatSize,
-                title = stringResource(R.string.font_size_setting),
-                summary = fontSizeOptions.labelFor(currentFontSize),
-                onClick = { openDialog = SettingsDialog.FONT_SIZE }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.text_layout_title)) },
+                supportingContent = {
+                    Text(
+                        stringResource(
+                            R.string.text_layout_summary,
+                            readerSettings.textSize,
+                            stringResource(
+                                if (readerSettings.font == ReaderFont.SERIF) R.string.font_serif else R.string.font_sans
+                            ),
+                            formatLineSpacing(readerSettings.lineSpacing)
+                        )
+                    )
+                },
+                leadingContent = { Icon(Icons.Outlined.FormatSize, contentDescription = null) },
+                trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                modifier = Modifier.clickable(onClick = onTextLayoutClick)
             )
 
             SectionHeader(stringResource(R.string.feeds_title))
@@ -227,14 +236,6 @@ fun SettingsScreen(
             options = paletteOptions,
             selected = currentPalette,
             onSelect = { onPaletteChange(it); dismiss() },
-            onDismiss = dismiss
-        )
-
-        SettingsDialog.FONT_SIZE -> ChoiceDialog(
-            title = stringResource(R.string.font_size_setting),
-            options = fontSizeOptions,
-            selected = currentFontSize,
-            onSelect = { onFontSizeChange(it); dismiss() },
             onDismiss = dismiss
         )
 
@@ -362,8 +363,8 @@ fun SettingsScreenPreview() {
             onThemeChange = {},
             currentPalette = ThemePalette.HYANGSANG,
             onPaletteChange = {},
-            currentFontSize = "Medium (Default)",
-            onFontSizeChange = {},
+            readerSettings = ReaderSettings(),
+            onTextLayoutClick = {},
             showUnreadCounts = false,
             onShowUnreadCountsChange = {},
             feeds = emptyList(),

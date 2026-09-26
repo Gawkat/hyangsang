@@ -1,20 +1,28 @@
 package dev.kettu.hyangsang.ui.reader
 
-import android.content.Intent
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,68 +30,101 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
+import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.ui.settings.openInBrowser
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
+import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+// Upper bound for the lookup sheet, as a fraction of the window height
+private const val LOOKUP_SHEET_MAX_FRACTION = 0.55f
+
+// BottomSheetDefaults.DragHandle: 4dp tall with 22dp vertical padding
+private val DRAG_HANDLE_HEIGHT = 48.dp
+
 @Composable
 fun ReaderScreen(
     articleWithFeed: ArticleWithFeed,
     onBackClick: () -> Unit,
     dictionaryViewModel: DictionaryViewModel,
-    modifier: Modifier = Modifier,
-    fontSize: String = "Medium (Default)"
+    readerSettings: ReaderSettings,
+    onReaderSettingsChange: (ReaderSettings) -> Unit,
+    currentTheme: String,
+    onThemeChange: (String) -> Unit,
+    onSaveToggle: (saved: Boolean) -> Unit,
+    onMoreTextSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
+    val isLookingUp by dictionaryViewModel.isLookingUp.collectAsState()
 
     ReaderContent(
         articleWithFeed = articleWithFeed,
         onBackClick = onBackClick,
         lookupResult = lookupResult,
+        isLookingUp = isLookingUp,
         onLookupWord = { dictionaryViewModel.lookupWord(it) },
         onClearLookup = { dictionaryViewModel.clearLookup() },
-        modifier = modifier,
-        fontSize = fontSize
+        readerSettings = readerSettings,
+        onReaderSettingsChange = onReaderSettingsChange,
+        currentTheme = currentTheme,
+        onThemeChange = onThemeChange,
+        onSaveToggle = onSaveToggle,
+        onMoreTextSettingsClick = onMoreTextSettingsClick,
+        modifier = modifier
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderContent(
     articleWithFeed: ArticleWithFeed,
     onBackClick: () -> Unit,
     lookupResult: Map<String, List<DictionaryWithSenses>>,
+    isLookingUp: Boolean,
     onLookupWord: (String) -> Unit,
     onClearLookup: () -> Unit,
-    modifier: Modifier = Modifier,
-    fontSize: String = "Medium (Default)"
+    readerSettings: ReaderSettings,
+    onReaderSettingsChange: (ReaderSettings) -> Unit,
+    currentTheme: String,
+    onThemeChange: (String) -> Unit,
+    onSaveToggle: (saved: Boolean) -> Unit,
+    onMoreTextSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
     // Legacy blocks are split into paragraphs once, up front, so that every paragraph becomes
@@ -91,37 +132,66 @@ fun ReaderContent(
     val contentBlocks = remember(article.content) { flattenContentBlocks(article.content) }
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    var selection by remember { mutableStateOf<WordSelection?>(null) }
-    val sheetState = rememberModalBottomSheetState()
-    var showBottomSheet by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
+    val lookupSheetMaxPx = windowHeight * LOOKUP_SHEET_MAX_FRACTION
+    val lookupSheetMaxHeight = with(density) { lookupSheetMaxPx.toDp() }
+    // The drag handle and navigation bar padding sit outside the sheet content, so leave room
+    // for them to keep the whole sheet within LOOKUP_SHEET_MAX_FRACTION
+    val navigationBarBottom = WindowInsets.navigationBars.getBottom(density)
+    val lookupContentMaxHeight = with(density) {
+        (lookupSheetMaxPx - DRAG_HANDLE_HEIGHT.toPx() - navigationBarBottom).toDp()
+    }
+
+    var selection by remember { mutableStateOf<WordSelection?>(null) }
+    var lookupWord by remember { mutableStateOf("") }
+    var showLookupSheet by remember { mutableStateOf(false) }
+    var showTextSheet by rememberSaveable { mutableStateOf(false) }
+    // The article snapshot doesn't update, so the saved state is tracked locally
+    var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
+    val showTitleInBar by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+
     val currentOnLookupWord by rememberUpdatedState(onLookupWord)
+    val currentWindowHeight by rememberUpdatedState(windowHeight)
     val onWordClick: (WordSelection, String) -> Unit = remember {
-        { wordSelection, lookupWord ->
+        { wordSelection, word ->
             selection = wordSelection
-            currentOnLookupWord(lookupWord)
-            showBottomSheet = true
+            lookupWord = word
+            currentOnLookupWord(word)
+            showLookupSheet = true
+
+            // Scroll the tapped line above where the lookup sheet will be, so the sentence
+            // being looked up stays readable
+            wordSelection.anchorY?.let { anchorY ->
+                val visibleBottom = currentWindowHeight * (1 - LOOKUP_SHEET_MAX_FRACTION) -
+                        with(density) { 16.dp.toPx() }
+                if (anchorY > visibleBottom) {
+                    scope.launch { listState.animateScrollBy(anchorY - visibleBottom) }
+                }
+            }
         }
     }
 
-    // TODO: use enum or something
-    val baseFontSize = remember(fontSize) {
-        when (fontSize) {
-            "Small" -> 16.sp
-            "Medium (Default)" -> 20.sp
-            "Large" -> 24.sp
-            else -> 20.sp
-        }
-    }
+    val bodyStyle = readerBodyStyle(readerSettings)
+    val fontFamily = readerSettings.font.fontFamily()
+    val margin = readerSettings.margin.dp.dp
+    val paragraphSpacing = (readerSettings.textSize * readerSettings.lineSpacing * 0.5f).dp
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
-                    Text(
-                        articleWithFeed.feed.category,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    AnimatedVisibility(visible = showTitleInBar, enter = fadeIn(), exit = fadeOut()) {
+                        Text(
+                            text = article.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -133,44 +203,54 @@ fun ReaderContent(
                 },
                 actions = {
                     IconButton(onClick = {
-                        context.startActivity(
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                article.sourceUrl.toUri()
-                            )
-                        )
+                        isSaved = !isSaved
+                        onSaveToggle(isSaved)
                     }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = stringResource(R.string.open_in_browser_button) // TODO: add description
+                            imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = stringResource(
+                                if (isSaved) R.string.unsave_article else R.string.save_article
+                            ),
+                            tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    /*
-                    IconButton(onClick = { }) {
+                    IconButton(onClick = { showTextSheet = true }) {
                         Icon(
-                            imageVector = Icons.Filled.BookmarkBorder, // TODO: Indicate if saved or not
-                            contentDescription = null // TODO: Change description if saved/not saved
+                            Icons.Outlined.FormatSize,
+                            contentDescription = stringResource(R.string.text_layout_title)
                         )
                     }
-                    */
+                    IconButton(onClick = { openInBrowser(context, article.sourceUrl) }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = stringResource(R.string.open_in_browser_button)
+                        )
+                    }
                 },
                 scrollBehavior = scrollBehavior
             )
         },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
+            contentPadding = PaddingValues(
+                start = margin,
+                end = margin,
+                top = 16.dp,
+                // Room to scroll the last paragraphs above the lookup sheet
+                bottom = if (showLookupSheet) lookupSheetMaxHeight else 16.dp
+            )
         ) {
             item(key = "header", contentType = "header") {
                 ArticleHeader(
                     articleWithFeed = articleWithFeed,
                     selection = selection,
-                    onWordClick = onWordClick
+                    onWordClick = onWordClick,
+                    fontFamily = fontFamily
                 )
             }
             itemsIndexed(
@@ -185,10 +265,10 @@ fun ReaderContent(
                             textBlock = block,
                             textId = textId,
                             selectedRange = selectedRange,
-                            baseFontSize = baseFontSize,
+                            style = bodyStyle,
                             onWordClick = onWordClick
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(paragraphSpacing))
                     }
 
                     // Already flattened into Text blocks by flattenContentBlocks()
@@ -214,7 +294,8 @@ fun ReaderContent(
                             level = block.level,
                             textId = textId,
                             selectedRange = selectedRange,
-                            onWordClick = onWordClick
+                            onWordClick = onWordClick,
+                            fontFamily = fontFamily
                         )
                     }
 
@@ -225,7 +306,7 @@ fun ReaderContent(
                             selectedRange = selectedRange,
                             onWordClick = onWordClick,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.outline,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontStyle = FontStyle.Italic
                             ),
                             modifier = Modifier
@@ -238,20 +319,42 @@ fun ReaderContent(
             item(key = "bottom-spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
 
-        if (showBottomSheet) {
+        if (showLookupSheet) {
+            // No scrim and no half-expanded state: the article stays visible, and one back
+            // press closes the sheet
             ModalBottomSheet(
                 onDismissRequest = {
-                    showBottomSheet = false
+                    showLookupSheet = false
                     selection = null
                     onClearLookup()
                 },
-                sheetState = sheetState
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                scrimColor = Color.Transparent
             ) {
                 DefinitionOverlay(
-                    selectedWord = selection?.token ?: "",
-                    lookupResults = lookupResult
+                    selectedWord = lookupWord,
+                    lookupResults = lookupResult,
+                    isLoading = isLookingUp,
+                    onSearchWeb = { term ->
+                        openInBrowser(context, Constants.WEB_DICTIONARY_SEARCH_URL + Uri.encode(term))
+                    },
+                    modifier = Modifier.heightIn(max = lookupContentMaxHeight)
                 )
             }
+        }
+
+        if (showTextSheet) {
+            ReaderTextSheet(
+                settings = readerSettings,
+                onSettingsChange = onReaderSettingsChange,
+                currentTheme = currentTheme,
+                onThemeChange = onThemeChange,
+                onMoreSettingsClick = {
+                    showTextSheet = false
+                    onMoreTextSettingsClick()
+                },
+                onDismiss = { showTextSheet = false }
+            )
         }
     }
 }
@@ -297,8 +400,15 @@ fun ReaderScreenPreview() {
             ),
             onBackClick = {},
             lookupResult = emptyMap(),
+            isLookingUp = false,
             onLookupWord = {},
-            onClearLookup = {}
+            onClearLookup = {},
+            readerSettings = ReaderSettings(),
+            onReaderSettingsChange = {},
+            currentTheme = "System default",
+            onThemeChange = {},
+            onSaveToggle = {},
+            onMoreTextSettingsClick = {}
         )
     }
 }

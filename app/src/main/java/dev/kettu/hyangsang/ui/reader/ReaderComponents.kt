@@ -12,7 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -22,7 +25,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.unit.TextUnit
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.parser.ContentSpan
 import dev.kettu.hyangsang.parser.SpanType
@@ -36,7 +38,9 @@ import dev.kettu.hyangsang.parser.SpanType
 data class WordSelection(
     val textId: String,
     val range: TextRange,
-    val token: String
+    val token: String,
+    // Window y of the bottom of the tapped line, used to keep the word visible above the lookup sheet
+    val anchorY: Float? = null
 )
 
 /** The selected range if the selection belongs to the text with [textId], otherwise null. */
@@ -51,12 +55,12 @@ private const val LOOKUP_TRIM_CHARS = "!.?,\"'"
  * Phrase-based word breaking (Android 13+) keeps Korean words intact and breaks at spaces,
  * like the previous one-composable-per-word layout did. On older versions this is ignored.
  */
-private val KoreanLineBreak = LineBreak(
+internal val KoreanLineBreak = LineBreak(
     strategy = LineBreak.Strategy.HighQuality,
     strictness = LineBreak.Strictness.Normal,
     wordBreak = LineBreak.WordBreak.Phrase
 )
-private val KoreanLocale = LocaleList("ko-KR")
+internal val KoreanLocale = LocaleList("ko-KR")
 
 /** Start/end offsets of every whitespace-separated word, for binary searching tap positions. */
 @Immutable
@@ -106,15 +110,20 @@ fun ClickableText(
     spans: List<ContentSpan> = emptyList(),
 ) {
     val wordRanges = remember(text) { WordRanges.of(text) }
-    val highlightColor = MaterialTheme.colorScheme.primary
+    val highlight = SpanStyle(
+        background = MaterialTheme.colorScheme.tertiaryContainer,
+        color = MaterialTheme.colorScheme.onTertiaryContainer
+    )
 
-    val annotatedText = remember(text, spans, selectedRange, highlightColor) {
-        buildWordText(text, spans, selectedRange, highlightColor)
+    val annotatedText = remember(text, spans, selectedRange, highlight) {
+        buildWordText(text, spans, selectedRange, highlight)
     }
 
     // Only read from the tap handler, never during composition, so updating it does not
     // trigger recomposition.
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    // A plain holder: onPlaced runs on every scroll frame, and a snapshot write there is wasted work
+    val coordinates = remember { CoordinatesHolder() }
     val currentOnWordClick by rememberUpdatedState(onWordClick)
     val currentTextId by rememberUpdatedState(textId)
 
@@ -122,30 +131,36 @@ fun ClickableText(
         text = annotatedText,
         style = style.merge(TextStyle(lineBreak = KoreanLineBreak, localeList = KoreanLocale)),
         onTextLayout = { textLayout = it },
-        modifier = modifier.pointerInput(text) {
-            detectTapGestures { position ->
-                val layout = textLayout ?: return@detectTapGestures
+        modifier = modifier
+            .onPlaced { coordinates.value = it }
+            .pointerInput(text) {
+                detectTapGestures { position ->
+                    val layout = textLayout ?: return@detectTapGestures
 
-                // Ignore taps below the last line or beside the text on a line
-                // (getOffsetForPosition would otherwise snap to the nearest character).
-                if (position.y < 0f || position.y > layout.size.height) return@detectTapGestures
-                val line = layout.getLineForVerticalPosition(position.y)
-                if (position.x < layout.getLineLeft(line) || position.x > layout.getLineRight(line)) {
-                    return@detectTapGestures
+                    // Ignore taps below the last line or beside the text on a line
+                    // (getOffsetForPosition would otherwise snap to the nearest character).
+                    if (position.y < 0f || position.y > layout.size.height) return@detectTapGestures
+                    val line = layout.getLineForVerticalPosition(position.y)
+                    if (position.x < layout.getLineLeft(line) || position.x > layout.getLineRight(line)) {
+                        return@detectTapGestures
+                    }
+
+                    val index = wordRanges.indexAt(layout.getOffsetForPosition(position))
+                    if (index < 0) return@detectTapGestures
+
+                    val start = wordRanges.starts[index]
+                    val end = wordRanges.ends[index]
+                    val token = text.substring(start, end)
+                    val anchorY = coordinates.value
+                        ?.takeIf { it.isAttached }
+                        ?.localToWindow(Offset(0f, layout.getLineBottom(line)))
+                        ?.y
+                    currentOnWordClick(
+                        WordSelection(currentTextId, TextRange(start, end), token, anchorY),
+                        token.trim { it in LOOKUP_TRIM_CHARS }
+                    )
                 }
-
-                val index = wordRanges.indexAt(layout.getOffsetForPosition(position))
-                if (index < 0) return@detectTapGestures
-
-                val start = wordRanges.starts[index]
-                val end = wordRanges.ends[index]
-                val token = text.substring(start, end)
-                currentOnWordClick(
-                    WordSelection(currentTextId, TextRange(start, end), token),
-                    token.trim { it in LOOKUP_TRIM_CHARS }
-                )
             }
-        }
     )
 }
 
@@ -153,7 +168,7 @@ private fun buildWordText(
     text: String,
     spans: List<ContentSpan>,
     selectedRange: TextRange?,
-    highlightColor: androidx.compose.ui.graphics.Color
+    highlight: SpanStyle
 ): AnnotatedString = AnnotatedString.Builder(text).apply {
     for (span in spans) {
         val start = span.start.coerceIn(0, text.length)
@@ -166,20 +181,20 @@ private fun buildWordText(
         addStyle(spanStyle, start, end)
     }
     if (selectedRange != null && selectedRange.end <= text.length) {
-        addStyle(
-            SpanStyle(color = highlightColor, fontWeight = FontWeight.Bold),
-            selectedRange.start,
-            selectedRange.end
-        )
+        addStyle(highlight, selectedRange.start, selectedRange.end)
     }
 }.toAnnotatedString()
+
+private class CoordinatesHolder {
+    var value: LayoutCoordinates? = null
+}
 
 @Composable
 fun ParagraphContent(
     textBlock: ContentBlock.Text,
     textId: String,
     selectedRange: TextRange?,
-    baseFontSize: TextUnit,
+    style: TextStyle,
     onWordClick: (WordSelection, String) -> Unit
 ) {
     ClickableText(
@@ -188,7 +203,7 @@ fun ParagraphContent(
         spans = textBlock.spans,
         selectedRange = selectedRange,
         onWordClick = onWordClick,
-        style = MaterialTheme.typography.bodyLarge.copy(fontSize = baseFontSize),
+        style = style,
         modifier = Modifier.fillMaxWidth()
     )
 }

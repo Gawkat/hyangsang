@@ -30,14 +30,14 @@ object DateTimeUtils {
     }
 
     /**
-     * Formats an ISO8601 string into a full localized date and time.
+     * Formats an ISO8601 string into a localized date and time, without seconds.
      */
-    fun formatFullDate(isoString: String?): String {
+    fun formatDateTime(isoString: String?): String {
         if (isoString.isNullOrBlank()) return ""
         return try {
             val instant = Instant.parse(isoString)
             val formatter = DateTimeFormatter
-                .ofLocalizedDateTime(FormatStyle.MEDIUM)
+                .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
                 .withLocale(Locale.getDefault())
                 .withZone(ZoneId.systemDefault())
             formatter.format(instant)
@@ -82,4 +82,4 @@ object DateTimeUtils {
             isoString
         }
     }
-}
+}

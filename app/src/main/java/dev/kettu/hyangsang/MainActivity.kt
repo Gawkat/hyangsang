@@ -45,6 +45,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
+import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
@@ -52,6 +53,7 @@ import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
 import dev.kettu.hyangsang.ui.saved.SavedScreen
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
+import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
@@ -73,7 +75,7 @@ class MainActivity : AppCompatActivity() {
             val theme by prefsRepository.themeFlow.collectAsState(initial = "System default")
             val paletteKey by prefsRepository.paletteFlow.collectAsState(initial = "hyangsang")
             val palette = ThemePalette.fromKey(paletteKey)
-            val fontSize by prefsRepository.fontSizeFlow.collectAsState(initial = "Medium (Default)")
+            val readerSettings by prefsRepository.readerSettingsFlow.collectAsState(initial = ReaderSettings())
             val showUnreadCounts by prefsRepository.showUnreadCountsFlow.collectAsState(initial = false)
 
             val darkTheme = when (theme) {
@@ -127,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                     rssFeedViewModel = feedViewModel,
                     currentTheme = theme,
                     currentPalette = palette,
-                    currentFontSize = fontSize,
+                    readerSettings = readerSettings,
                     showUnreadCounts = showUnreadCounts
                 )
             }
@@ -140,6 +142,7 @@ private object Routes {
     const val SAVED = "saved"
     const val FEEDS = "manage_feeds"
     const val SETTINGS = "settings"
+    const val TEXT_LAYOUT = "text_layout"
     const val READER = "reader/{articleId}"
 
     fun reader(articleId: Long) = "reader/$articleId"
@@ -161,7 +164,7 @@ fun MainApp(
     rssFeedViewModel: RssFeedViewModel,
     currentTheme: String,
     currentPalette: ThemePalette,
-    currentFontSize: String,
+    readerSettings: ReaderSettings,
     showUnreadCounts: Boolean
 ) {
     val navController = rememberNavController()
@@ -319,12 +322,25 @@ fun MainApp(
                 composable(Routes.READER) { backStackEntry ->
                     val articleIdStr = backStackEntry.arguments?.getString("articleId")
                     val articleId = articleIdStr?.toLongOrNull()
-                    ReaderWithDrawer(
+                    ReaderRoute(
                         articleId = articleId,
                         articleViewModel = articleViewModel,
                         dictionaryViewModel = dictionaryViewModel,
                         onBackClick = { navController.popBackStack() },
-                        fontSize = currentFontSize
+                        readerSettings = readerSettings,
+                        onReaderSettingsChange = {
+                            scope.launch { prefsRepository.setReaderSettings(it) }
+                        },
+                        currentTheme = currentTheme,
+                        onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
+                        onMoreTextSettingsClick = { navController.navigate(Routes.TEXT_LAYOUT) }
+                    )
+                }
+                composable(Routes.TEXT_LAYOUT) {
+                    TextLayoutScreen(
+                        settings = readerSettings,
+                        onSettingsChange = { scope.launch { prefsRepository.setReaderSettings(it) } },
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
                 composable(Routes.SETTINGS) {
@@ -334,8 +350,8 @@ fun MainApp(
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
                         currentPalette = currentPalette,
                         onPaletteChange = { scope.launch { prefsRepository.setPalette(it.key) } },
-                        currentFontSize = currentFontSize,
-                        onFontSizeChange = { scope.launch { prefsRepository.setFontSize(it) } },
+                        readerSettings = readerSettings,
+                        onTextLayoutClick = { navController.navigate(Routes.TEXT_LAYOUT) },
                         showUnreadCounts = showUnreadCounts,
                         onShowUnreadCountsChange = {
                             scope.launch { prefsRepository.setShowUnreadCounts(it) }
@@ -357,12 +373,16 @@ fun MainApp(
 }
 
 @Composable
-fun ReaderWithDrawer(
+fun ReaderRoute(
     articleId: Long?,
     articleViewModel: ArticleViewModel,
     dictionaryViewModel: DictionaryViewModel,
     onBackClick: () -> Unit,
-    fontSize: String
+    readerSettings: ReaderSettings,
+    onReaderSettingsChange: (ReaderSettings) -> Unit,
+    currentTheme: String,
+    onThemeChange: (String) -> Unit,
+    onMoreTextSettingsClick: () -> Unit
 ) {
     val uiState by articleViewModel.currentArticleState.collectAsState()
 
@@ -384,11 +404,17 @@ fun ReaderWithDrawer(
         }
 
         is ArticleUiState.Success -> {
+            val article = state.articleWithFeed.article
             ReaderScreen(
                 state.articleWithFeed,
                 onBackClick = onBackClick,
                 dictionaryViewModel = dictionaryViewModel,
-                fontSize = fontSize
+                readerSettings = readerSettings,
+                onReaderSettingsChange = onReaderSettingsChange,
+                currentTheme = currentTheme,
+                onThemeChange = onThemeChange,
+                onSaveToggle = { saved -> articleViewModel.setSaved(article.id, saved) },
+                onMoreTextSettingsClick = onMoreTextSettingsClick
             )
         }
     }

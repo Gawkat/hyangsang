@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -16,7 +17,8 @@ fun ArticleHeading(
     textId: String,
     selectedRange: TextRange?,
     onWordClick: (WordSelection, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontFamily: FontFamily = FontFamily.Default
 ) {
     val style = when (level) {
         1 -> MaterialTheme.typography.headlineLarge
@@ -30,7 +32,7 @@ fun ArticleHeading(
         textId = textId,
         selectedRange = selectedRange,
         onWordClick = onWordClick,
-        style = style.copy(fontWeight = FontWeight.Bold),
+        style = style.copy(fontWeight = FontWeight.Bold, fontFamily = fontFamily),
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)

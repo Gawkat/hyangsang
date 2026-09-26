@@ -10,9 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
@@ -28,7 +32,8 @@ fun ArticleHeader(
     articleWithFeed: ArticleWithFeed,
     selection: WordSelection?,
     onWordClick: (WordSelection, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontFamily: FontFamily = FontFamily.Default
 ) {
     Column(modifier = modifier.padding(bottom = 24.dp)) {
         ClickableText(
@@ -48,7 +53,8 @@ fun ArticleHeader(
             selectedRange = selection.rangeIn("article-title"),
             onWordClick = onWordClick,
             style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                fontFamily = fontFamily
             ),
             modifier = Modifier.padding(vertical = 8.dp)
         )
@@ -59,9 +65,9 @@ fun ArticleHeader(
         ) {
             if (articleWithFeed.article.pubDate != null) {
                 Text(
-                    text = DateTimeUtils.formatFullDate(articleWithFeed.article.pubDate),
+                    text = DateTimeUtils.formatDateTime(articleWithFeed.article.pubDate),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -70,12 +76,14 @@ fun ArticleHeader(
         val wordCount = remember(content) { countWords(content) }
         val readingTime = maxOf(1, wordCount / wordsPerMinute)
 
-        val durationLabel = if (readingTime <= 1) "minute" else "minutes"
-
         Text(
-            text = "~$readingTime $durationLabel ($wordCount words)",
+            text = stringResource(
+                R.string.reading_time_and_words,
+                pluralStringResource(R.plurals.reading_time, readingTime, readingTime),
+                pluralStringResource(R.plurals.word_count, wordCount, wordCount)
+            ),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))

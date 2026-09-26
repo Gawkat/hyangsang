@@ -9,8 +9,7 @@
     <string name="language_setting">언어</string>
     <string name="appearance_section">모양</string>
     <string name="theme_setting">테마</string>
-    <string name="reader_preferences_section">독서 설정</string>
-    <string name="font_size_setting">글자 크기</string>
+    <string name="reader_preferences_section">읽기</string>
     <string name="theme_light">밝게</string>
     <string name="theme_dark">어둡게</string>
     <string name="theme_system">시스템 기본값</string>
@@ -19,10 +18,6 @@
     <string name="palette_solarized">Solarized</string>
     <string name="palette_gruvbox">Gruvbox</string>
     <string name="palette_dynamic">배경화면 색상</string>
-    <string name="font_small">작게</string>
-    <string name="font_medium">중간 (기본값)</string>
-    <string name="font_large">크게</string>
-    <string name="font_system">시스템 기본값</string>
     <string name="version_label">버전 %1$s</string>
     <string name="released_label">출시일: %1$s</string>
     <string name="discover_nav">탐색</string>
@@ -109,4 +104,43 @@
     <plurals name="remove_feed_saved">
         <item quantity="other">저장된 기사 %1$d개도 포함됩니다.</item>
     </plurals>
+    <string name="text_layout_title">글자 및 레이아웃</string>
+    <string name="text_layout_summary">%1$d sp · %2$s · 줄 간격 %3$s</string>
+    <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
+    <string name="more_settings">설정 더보기</string>
+    <string name="text_size_label">글자 크기</string>
+    <string name="font_label">글꼴</string>
+    <string name="font_sans">고딕</string>
+    <string name="font_serif">명조</string>
+    <string name="font_weight_label">글자 굵기</string>
+    <string name="weight_regular">보통</string>
+    <string name="weight_medium">중간</string>
+    <string name="weight_bold">굵게</string>
+    <string name="line_spacing_label">줄 간격</string>
+    <string name="spacing_tight">좁게</string>
+    <string name="spacing_normal">보통</string>
+    <string name="spacing_loose">넓게</string>
+    <string name="margins_label">여백</string>
+    <string name="margin_narrow">좁게</string>
+    <string name="margin_normal">보통</string>
+    <string name="margin_wide">넓게</string>
+    <string name="theme_auto">자동</string>
+    <string name="reset_defaults">기본값으로 재설정</string>
+    <string name="reading_time_and_words">약 %1$s · %2$s</string>
+    <plurals name="reading_time">
+        <item quantity="other">%1$d분 분량</item>
+    </plurals>
+    <plurals name="word_count">
+        <item quantity="other">%1$d단어</item>
+    </plurals>
+    <string name="no_definitions">“%1$s”에 대한 뜻을 찾을 수 없습니다.</string>
+    <string name="other_entries">%1$s의 다른 표제어</string>
+    <string name="show_this_entry">이 표제어 보기</string>
+    <string name="hide_examples">예문 숨기기</string>
+    <plurals name="show_examples">
+        <item quantity="other">예문 %1$d개 보기</item>
+    </plurals>
+    <string name="not_right_meaning">찾는 뜻이 아닌가요?</string>
+    <string name="lookup_online_hint">온라인 사전에서 찾아보세요.</string>
+    <string name="search_web_dictionary">웹 사전</string>
 </resources>

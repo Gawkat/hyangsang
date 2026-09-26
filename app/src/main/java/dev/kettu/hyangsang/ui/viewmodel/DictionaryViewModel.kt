@@ -19,6 +19,10 @@ class DictionaryViewModel(
     val lookupResult: StateFlow<Map<String, List<DictionaryWithSenses>>> =
         _lookupResult.asStateFlow()
 
+    // True from a new lookup until its first result, so the sheet can tell loading from no results
+    private val _isLookingUp = MutableStateFlow(false)
+    val isLookingUp: StateFlow<Boolean> = _isLookingUp.asStateFlow()
+
     private var lookupJob: Job? = null
 
     fun lookupWord(word: String) {
@@ -26,9 +30,12 @@ class DictionaryViewModel(
         // the previous one, every tapped word left a collector running for the rest of the
         // session, and a slow earlier lookup could overwrite the result of a newer one.
         lookupJob?.cancel()
+        _lookupResult.value = emptyMap()
+        _isLookingUp.value = true
         lookupJob = viewModelScope.launch {
             dictionaryRepository.getDefinitionsForWord(word).collect { result ->
                 _lookupResult.value = result
+                _isLookingUp.value = false
             }
         }
     }
@@ -37,5 +44,6 @@ class DictionaryViewModel(
         lookupJob?.cancel()
         lookupJob = null
         _lookupResult.value = emptyMap()
+        _isLookingUp.value = false
     }
 }

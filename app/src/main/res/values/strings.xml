@@ -6,8 +6,7 @@
     <string name="language_setting">Language</string>
     <string name="appearance_section">Appearance</string>
     <string name="theme_setting">Theme</string>
-    <string name="reader_preferences_section">Reader Preferences</string>
-    <string name="font_size_setting">Reader Font Size</string>
+    <string name="reader_preferences_section">Reading</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_system">System default</string>
@@ -16,10 +15,6 @@
     <string name="palette_solarized">Solarized</string>
     <string name="palette_gruvbox">Gruvbox</string>
     <string name="palette_dynamic">Wallpaper colours</string>
-    <string name="font_small">Small</string>
-    <string name="font_medium">Medium (Default)</string>
-    <string name="font_large">Large</string>
-    <string name="font_system">System default</string>
     <string name="version_label">Version %1$s</string>
     <string name="released_label">Released: %1$s</string>
     <string name="discover_nav">Discover</string>
@@ -115,4 +110,46 @@
         <item quantity="one">This includes %1$d saved article.</item>
         <item quantity="other">This includes %1$d saved articles.</item>
     </plurals>
+    <string name="text_layout_title">Text &amp; layout</string>
+    <string name="text_layout_summary">%1$d sp · %2$s · %3$s spacing</string>
+    <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
+    <string name="more_settings">More settings</string>
+    <string name="text_size_label">Text size</string>
+    <string name="font_label">Font</string>
+    <string name="font_sans">Sans (고딕)</string>
+    <string name="font_serif">Serif (명조)</string>
+    <string name="font_weight_label">Font weight</string>
+    <string name="weight_regular">Regular</string>
+    <string name="weight_medium">Medium</string>
+    <string name="weight_bold">Bold</string>
+    <string name="line_spacing_label">Line spacing</string>
+    <string name="spacing_tight">Tight</string>
+    <string name="spacing_normal">Normal</string>
+    <string name="spacing_loose">Loose</string>
+    <string name="margins_label">Margins</string>
+    <string name="margin_narrow">Narrow</string>
+    <string name="margin_normal">Normal</string>
+    <string name="margin_wide">Wide</string>
+    <string name="theme_auto">Auto</string>
+    <string name="reset_defaults">Reset to defaults</string>
+    <string name="reading_time_and_words">~%1$s · %2$s</string>
+    <plurals name="reading_time">
+        <item quantity="one">%1$d min read</item>
+        <item quantity="other">%1$d min read</item>
+    </plurals>
+    <plurals name="word_count">
+        <item quantity="one">%1$d word</item>
+        <item quantity="other">%1$d words</item>
+    </plurals>
+    <string name="no_definitions">No definitions found for “%1$s”.</string>
+    <string name="other_entries">Other entries for %1$s</string>
+    <string name="show_this_entry">Show this entry</string>
+    <string name="hide_examples">Hide examples</string>
+    <plurals name="show_examples">
+        <item quantity="one">Show %1$d example</item>
+        <item quantity="other">Show %1$d examples</item>
+    </plurals>
+    <string name="not_right_meaning">Not the right meaning?</string>
+    <string name="lookup_online_hint">Try looking it up online.</string>
+    <string name="search_web_dictionary">Web dictionary</string>
 </resources>
