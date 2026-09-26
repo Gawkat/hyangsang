@@ -20,7 +20,7 @@
 ## Lookup overlay
 
 * Revisit the order of stem chips?
-* Improve dictionary entry ranking
+* Improve the Lesk-style sentence overlap (`contextOverlap` in `HomonymRanking.kt`)?
 * Consider if clicks on new words when overlay is opened should trigger a new lookup instead of closing the overlay
 
 ## Feeds
