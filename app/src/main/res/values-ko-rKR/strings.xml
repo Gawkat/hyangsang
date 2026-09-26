@@ -27,19 +27,39 @@
     <string name="released_label">출시일: %1$s</string>
     <string name="discover_nav">탐색</string>
     <string name="settings_nav">설정</string>
-    <string name="menu_button">메뉴</string>
     <string name="reader_title">독서</string>
-    <string name="feeds_nav">피드</string>
-    <string name="menu_title">메뉴</string>
-    <string name="menu_nav">메뉴</string>
     <string name="oss_licenses_nav">오픈 소스 라이선스</string>
     <string name="feeds_title">피드</string>
     <string name="open_in_browser_button">브라우저로 열기</string>
     <string name="article_not_found_label">기사를 찾을 수 없습니다</string>
     <string name="report_issue_nav">문제 신고</string>
     <string name="view_license_information">라이선스 정보 보기</string>
-    <string name="support_label">앱 소개</string>
-    <string name="about_label">고객지원</string>
+    <string name="about_label">앱 소개</string>
     <string name="dictionary_attribution_label">사전 출처</string>
-    <string name="category_all">전체</string>
-</resources>
+    <string name="app_name_romanized">Hyangsang</string>
+    <string name="saved_nav">저장됨</string>
+    <string name="all_articles">전체 기사</string>
+    <string name="categories_label">카테고리</string>
+    <string name="manage_feeds">피드 관리</string>
+    <string name="expand_category">%1$s 피드 보기</string>
+    <string name="collapse_category">%1$s 피드 숨기기</string>
+    <string name="feed_update_failed">업데이트 실패</string>
+    <string name="open_feed_drawer">피드 및 카테고리 열기</string>
+    <string name="clear_search">검색어 지우기</string>
+    <string name="no_articles">아직 기사가 없습니다. 아래로 당겨 새로고침하세요.</string>
+    <string name="no_search_results">검색 결과가 없습니다.</string>
+    <plurals name="search_result_count">
+        <item quantity="other">기사 %1$d개</item>
+    </plurals>
+    <string name="save_article">기사 저장</string>
+    <string name="unsave_article">저장 취소</string>
+    <string name="saved_empty_title">저장된 기사가 없습니다</string>
+    <string name="saved_empty_body">기사의 북마크를 누르면 나중에 읽을 수 있도록 여기에 저장됩니다.</string>
+    <string name="unread_counts_setting">읽지 않은 기사 수</string>
+    <string name="unread_counts_summary">피드 목록에 개수 표시</string>
+    <string name="feeds_enabled_summary">%2$d개 중 %1$d개 사용 중</string>
+    <plurals name="feeds_failed_summary">
+        <item quantity="other">%1$d개 업데이트 실패</item>
+    </plurals>
+    <string name="report_issue_summary">GitHub에서 열기</string>
+</resources>

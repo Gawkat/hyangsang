@@ -24,13 +24,9 @@
     <string name="released_label">Released: %1$s</string>
     <string name="discover_nav">Discover</string>
     <string name="settings_nav">Settings</string>
-    <string name="menu_button">Menu</string>
     <string name="reader_title">Reader</string>
     <string name="lookup_title">Dictionary Entry</string>
     <string name="search_placeholder">Search articles…</string>
-    <string name="feeds_nav">Feeds</string>
-    <string name="menu_title">Menu</string>
-    <string name="menu_nav">Menu</string>
     <string name="oss_licenses_nav">Open source licenses</string>
     <string name="feeds_title">Feeds</string>
     <string name="open_in_browser_button">Open in browser</string>
@@ -39,7 +35,33 @@
     <string name="dictionary_attribution_label">Dictionary attribution</string>
     <string name="dictionary_attribution_text">This application uses data from the National Institute of Korean Language\'s Korean-English Learners\' Dictionary.\n\nAll dictionary content is owned by its respective copyright holders and is provided under the Creative Commons Attribution-ShareAlike license.</string>
     <string name="view_license_information">View license information</string>
-    <string name="support_label">Support</string>
     <string name="about_label">About</string>
-    <string name="category_all">All</string>
+    <string name="app_name_romanized">Hyangsang</string>
+    <string name="saved_nav">Saved</string>
+    <string name="all_articles">All articles</string>
+    <string name="categories_label">Categories</string>
+    <string name="manage_feeds">Manage feeds</string>
+    <string name="expand_category">Show feeds in %1$s</string>
+    <string name="collapse_category">Hide feeds in %1$s</string>
+    <string name="feed_update_failed">Couldn\'t update</string>
+    <string name="open_feed_drawer">Open feeds and categories</string>
+    <string name="clear_search">Clear search</string>
+    <string name="no_articles">No articles here yet. Pull down to refresh.</string>
+    <string name="no_search_results">No articles match your search.</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%1$d article</item>
+        <item quantity="other">%1$d articles</item>
+    </plurals>
+    <string name="save_article">Save article</string>
+    <string name="unsave_article">Remove from Saved</string>
+    <string name="saved_empty_title">No saved articles</string>
+    <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
+    <string name="unread_counts_setting">Unread counts</string>
+    <string name="unread_counts_summary">Show counts in the feed list</string>
+    <string name="feeds_enabled_summary">%1$d of %2$d on</string>
+    <plurals name="feeds_failed_summary">
+        <item quantity="one">%1$d couldn\'t update</item>
+        <item quantity="other">%1$d couldn\'t update</item>
+    </plurals>
+    <string name="report_issue_summary">Opens GitHub</string>
 </resources>

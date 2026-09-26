@@ -8,6 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -15,10 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
@@ -31,11 +39,13 @@ import kotlin.time.ExperimentalTime
 fun ArticleCard(
     articleWithFeed: ArticleWithFeed,
     onClick: () -> Unit,
+    onSaveClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
     val feed = articleWithFeed.feed
     val isRead = article.lastReadDate != null
+    val isSaved = article.savedDate != null
 
     Card(
         modifier = modifier
@@ -55,7 +65,7 @@ fun ArticleCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = feed.title,
@@ -63,12 +73,24 @@ fun ArticleCard(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Normal
                 )
-                Text(
-                    text = DateTimeUtils.formatRelativeTime(article.pubDate ?: article.addedDate),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    fontWeight = FontWeight.Normal
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = DateTimeUtils.formatRelativeTime(article.pubDate ?: article.addedDate),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        fontWeight = FontWeight.Normal
+                    )
+                    IconButton(onClick = onSaveClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = stringResource(
+                                if (isSaved) R.string.unsave_article else R.string.save_article
+                            ),
+                            tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
             Text(
                 text = article.title,
@@ -110,7 +132,8 @@ fun ArticleCardPreview() {
                     "Feed Category"
                 )
             ),
-            onClick = {}
+            onClick = {},
+            onSaveClick = {}
         )
     }
-}
+}

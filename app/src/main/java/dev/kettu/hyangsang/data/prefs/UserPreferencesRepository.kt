@@ -3,6 +3,7 @@ package dev.kettu.hyangsang.data.prefs
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,6 +18,7 @@ class UserPreferencesRepository(private val context: Context) {
         val THEME = stringPreferencesKey("theme")
         val PALETTE = stringPreferencesKey("palette")
         val FONT_SIZE = stringPreferencesKey("font_size")
+        val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -30,6 +32,15 @@ class UserPreferencesRepository(private val context: Context) {
 
     val fontSizeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[Keys.FONT_SIZE] ?: "Medium (Default)"
+    }
+
+    // Off by default: large feeds produce far more articles than anyone reads
+    val showUnreadCountsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[Keys.SHOW_UNREAD_COUNTS] ?: false
+    }
+
+    suspend fun setShowUnreadCounts(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_UNREAD_COUNTS] = show }
     }
 
     suspend fun setTheme(theme: String) {

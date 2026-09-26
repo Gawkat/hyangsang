@@ -10,11 +10,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+// selectedCategory and selectedFeedId are mutually exclusive; both null means all articles
 data class ArticleFilterCriteria(
     val selectedCategory: String? = null,
+    val selectedFeedId: Long? = null,
     val searchQuery: String = "",
     val showUnreadOnly: Boolean = false
 )
@@ -47,6 +50,8 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             articles.filter { articleWithFeed ->
                 val matchesCategory = criteria.selectedCategory == null ||
                         articleWithFeed.feed.category == criteria.selectedCategory
+                val matchesFeed = criteria.selectedFeedId == null ||
+                        articleWithFeed.feed.id == criteria.selectedFeedId
                 val matchesSearch = criteria.searchQuery.isBlank() ||
                         articleWithFeed.article.title.contains(
                             criteria.searchQuery,
@@ -59,7 +64,7 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 val matchesUnread =
                     !criteria.showUnreadOnly || articleWithFeed.article.lastReadDate == null
 
-                matchesCategory && matchesSearch && matchesUnread
+                matchesCategory && matchesFeed && matchesSearch && matchesUnread
             }
         }.stateIn(
             scope = viewModelScope,
@@ -67,12 +72,43 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             initialValue = emptyList()
         )
 
+    val savedArticlesWithFeed: StateFlow<List<ArticleWithFeed>> =
+        articleRepository.getSavedArticlesWithFeed().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Unread article count per feed id
+    val unreadCounts: StateFlow<Map<Long, Int>> = articleRepository.getAllArticles()
+        .map { articles ->
+            articles.filter { it.lastReadDate == null }
+                .groupingBy { it.feedId }
+                .eachCount()
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
     fun updateFilter(criteria: ArticleFilterCriteria) {
         _filterCriteria.value = criteria
     }
 
     fun setCategory(category: String?) {
-        _filterCriteria.value = _filterCriteria.value.copy(selectedCategory = category)
+        _filterCriteria.value =
+            _filterCriteria.value.copy(selectedCategory = category, selectedFeedId = null)
+    }
+
+    fun setFeed(feedId: Long?) {
+        _filterCriteria.value =
+            _filterCriteria.value.copy(selectedCategory = null, selectedFeedId = feedId)
+    }
+
+    fun setSaved(articleId: Long, saved: Boolean) {
+        viewModelScope.launch {
+            articleRepository.setSaved(articleId, saved)
+        }
     }
 
     fun setSearchQuery(query: String) {
