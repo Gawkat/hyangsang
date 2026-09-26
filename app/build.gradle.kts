@@ -91,6 +91,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
+    // Reads the bundled dictionary in LookupEvaluationTest
+    testImplementation(libs.sqlite.jdbc)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)

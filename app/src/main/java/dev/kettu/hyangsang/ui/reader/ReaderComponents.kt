@@ -50,7 +50,7 @@ fun WordSelection?.rangeIn(textId: String): TextRange? =
     if (this != null && this.textId == textId) range else null
 
 private val WordRegex = Regex("\\S+")
-private const val LOOKUP_TRIM_CHARS = "!.?,\"'"
+internal const val LOOKUP_TRIM_CHARS = "!.?,\"'"
 
 // Context beyond this many characters on either side of a word adds little to a lookup
 private const val MAX_SENTENCE_CONTEXT = 200

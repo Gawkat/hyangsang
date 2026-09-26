@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
+    implementation(libs.sqlite.jdbc)
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
