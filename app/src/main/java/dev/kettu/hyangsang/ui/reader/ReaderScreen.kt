@@ -314,6 +314,22 @@ fun ReaderContent(
                                 .padding(bottom = 8.dp)
                         )
                     }
+
+                    is ContentBlock.Footer -> {
+                        ClickableText(
+                            text = block.text,
+                            textId = textId,
+                            selectedRange = selectedRange,
+                            onWordClick = onWordClick,
+                            style = bodyStyle.copy(
+                                fontSize = bodyStyle.fontSize * 0.8f,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = paragraphSpacing / 2)
+                        )
+                    }
                 }
             }
             item(key = "bottom-spacer") { Spacer(modifier = Modifier.height(32.dp)) }

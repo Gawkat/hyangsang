@@ -35,6 +35,12 @@ sealed class ContentBlock {
     data class Dateline(
         val text: String
     ) : ContentBlock()
+
+    // Trailing contact and copyright notes, shown de-emphasised after the article body
+    @Serializable
+    data class Footer(
+        val text: String
+    ) : ContentBlock()
 }
 
 @Serializable

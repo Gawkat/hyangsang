@@ -6,6 +6,8 @@ class YonhapNewsParser : ContentsParser {
     companion object {
         // Regex to match Yonhap dateline: (Location=연합뉴스) Reporter Name =
         private val datelineRegex = Regex("""^\(([^)]+연합뉴스)\)\s*(.*?)\s*=\s*""")
+        private val emailRegex = Regex("""[\w.+-]+@[\w-]+(\.[\w-]+)+""")
+        private val emailSeparatorRegex = Regex("""[\s,/]+""")
     }
 
     override fun extractContents(document: Document): List<ContentBlock> {
@@ -13,7 +15,23 @@ class YonhapNewsParser : ContentsParser {
             .remove()
 
         val main = document.select("div[class=story-news article]").firstOrNull() ?: document.body()
+
+        // Pull the copyright notice out before parsing so it doesn't become body text.
+        // .ir-txt01 is a screen-reader copy of the visible send date, so drop it
+        val copyrightTexts = main.select("p.txt-copyright").map { element ->
+            element.select(".ir-txt01").remove()
+            element.remove()
+            element.text().trim()
+        }.filter { it.isNotEmpty() }
+
         val blocks = main.parseBlocks().toMutableList()
+
+        // The reporter's email address sits in a plain paragraph right before the copyright
+        val last = blocks.lastOrNull()
+        if (last is ContentBlock.Text && last.isEmailOnly()) {
+            blocks[blocks.lastIndex] = ContentBlock.Footer(last.text)
+        }
+        copyrightTexts.forEach { blocks.add(ContentBlock.Footer(it)) }
 
         // Look for the dateline in the first text block
         val firstTextBlockIndex = blocks.indexOfFirst { it is ContentBlock.Text }
@@ -47,4 +65,8 @@ class YonhapNewsParser : ContentsParser {
 
         return blocks
     }
+
+    private fun ContentBlock.Text.isEmailOnly(): Boolean =
+        text.split(emailSeparatorRegex).filter { it.isNotEmpty() }
+            .let { parts -> parts.isNotEmpty() && parts.all { emailRegex.matches(it) } }
 }
