@@ -5,11 +5,10 @@
 * **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread
   articles older than 7 days) to save space, maybe pull from feeds in background? (Feeds contain the latest articles, so not pulling for a few days will result in missing articles)
 * Use Dagger for Dependency Injection?
-* Research if full-text search would speed up dictionary lookups
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
 
-## Parser
+## Article Parser
 
 * Research other extraction techniques for generic sources
 * Add parsers for other sources
@@ -20,9 +19,8 @@
 
 ## Lookup overlay
 
-* Revisit the order of stem chips
+* Revisit the order of stem chips?
 * Improve dictionary entry ranking
-  * Investigate embedding models for sense rankings
   * The feed category signal matches the feed's stored category label against the current
     language's labels, so it stops working after changing the app language (or for custom
     categories). Store a category key on `RssFeed` instead?
