@@ -18,25 +18,44 @@ class DictionaryRepository(
      * @param terms search terms, each with the Open Korean Text POS of the token it came from, or
      *   null when unknown (such as the whole word when it spans several tokens)
      * @param compounds noun stems whose parts were added as terms
-     * @param singleSyllableParts one-syllable terms that only come from splitting [compounds]
+     * @param splitParts terms only worth showing when they're part of a compound's split into
+     *   words: single syllables, and affixes as the dictionary writes them (-부, 외-)
+     * @param affixFallbacks tokens that look like affixes, mapped to their affix form; the token
+     *   itself is only shown if the dictionary doesn't have the affix
      */
     private class SearchTerms(
         val terms: Map<String, String?>,
         val compounds: List<String>,
-        val singleSyllableParts: Set<String>
+        val splitParts: Set<String>,
+        val affixFallbacks: Map<String, String>
     )
 
     private fun getSearchTerms(word: String): SearchTerms {
         val javaTokens = tokenize(word)
         val terms = LinkedHashMap<String, String?>()
         val compounds = mutableListOf<String>()
-        val parts = mutableSetOf<String>()
+        val splitParts = mutableSetOf<String>()
+        val affixFallbacks = mutableMapOf<String, String>()
         terms[word] = javaTokens.singleOrNull()?.pos?.toString()
 
-        javaTokens.forEach { token ->
+        javaTokens.forEachIndexed { index, token ->
             val pos = token.pos.toString()
             val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
             terms.putIfAbsent(stem, pos)
+
+            // Open Korean Text splits off common suffixes (후보군 -> 후보 + 군/Suffix) and some
+            // prefixes, as one-syllable nouns (초고속 -> 초 + 고속). The dictionary writes these
+            // as -군 and 초-.
+            val nextPos = javaTokens.getOrNull(index + 1)?.pos?.toString()
+            val affix = when (pos) {
+                "Suffix" -> "-$stem"
+                "Noun" if stem.length == 1 && nextPos == "Noun" -> "$stem-"
+                else -> null
+            }
+            if (affix != null && affix !in terms) {
+                terms[affix] = pos
+                if (stem != word) affixFallbacks[stem] = affix
+            }
 
             // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
             // This ensures "년" or "일" are added as separate search terms
@@ -54,7 +73,16 @@ class DictionaryRepository(
                         val sub = stem.substring(i, j)
                         if (sub.length < stem.length && sub !in terms) {
                             terms[sub] = "Noun"
-                            if (sub.length == 1) parts += sub
+                            if (sub.length == 1) splitParts += sub
+                        }
+                    }
+                }
+                // The start and end of a compound can also be affixes (외교부 -> 외-, -부)
+                for (i in 1 until stem.length) {
+                    for (affix in listOf(stem.substring(0, i) + "-", "-" + stem.substring(i))) {
+                        if (affix !in terms) {
+                            terms[affix] = null
+                            splitParts += affix
                         }
                     }
                 }
@@ -65,36 +93,45 @@ class DictionaryRepository(
         return SearchTerms(
             terms = terms.filterKeys { term -> term.any { !it.isDigit() } || term == word },
             compounds = compounds,
-            singleSyllableParts = parts
+            splitParts = splitParts,
+            affixFallbacks = affixFallbacks
         )
     }
 
     /**
-     * The one-syllable parts worth showing: those in the fewest-word split of a compound into
-     * dictionary [words], like 값 in 농산물값 or 팀 in 대표팀. Nearly every syllable of a
-     * Sino-Korean compound is a word of its own, so the rest (정 and 부 in 정부) are noise.
+     * The split parts worth showing: those in the fewest-word split of a compound into dictionary
+     * [words], like 값 in 농산물값, 팀 in 대표팀 or the suffix -군 in 후보군. Nearly every
+     * syllable of a Sino-Korean compound is a word of its own, so the rest (정 and 부 in 정부)
+     * are noise.
      */
-    private fun usefulSingleSyllables(compounds: List<String>, words: Set<String>): Set<String> =
-        compounds.flatMap { compound -> splitIntoWords(compound, words).orEmpty() }
-            .filter { it.length == 1 }
+    private fun usefulSplitParts(compounds: List<String>, words: Set<String>): Set<String> =
+        compounds.flatMap { compound -> splitIntoWords(compound, words).orEmpty().flatten() }
             .toSet()
 
     /**
      * Splits [compound] into the fewest [words], or null if it can't be split fully (such as
-     * loanwords, where partial splits give meaningless syllables). Ties go to the split with
-     * the longer first word, since compounds more often end in a short suffix (외교+부, 서울+시).
+     * loanwords, where partial splits give meaningless syllables). Each part is given as the
+     * dictionary forms it matched: itself, and at the start or end of the compound also as a
+     * prefix or suffix. Ties go to the split with the longer first word, since compounds more
+     * often end in a short suffix (외교+부, 서울+시).
      */
-    private fun splitIntoWords(compound: String, words: Set<String>): List<String>? {
+    private fun splitIntoWords(compound: String, words: Set<String>): List<List<String>>? {
         // splits[i] is the best split of compound.substring(i)
-        val splits = arrayOfNulls<List<String>>(compound.length + 1)
+        val splits = arrayOfNulls<List<List<String>>>(compound.length + 1)
         splits[compound.length] = emptyList()
         for (i in compound.length - 1 downTo 0) {
             for (j in compound.length downTo i + 1) {
-                val word = compound.substring(i, j)
                 val rest = splits[j] ?: continue
-                if (word !in words) continue
+                val part = compound.substring(i, j)
+                val forms = buildList {
+                    if (part in words) add(part)
+                    if (i == 0 && j < compound.length && "$part-" in words) add("$part-")
+                    if (i > 0 && j == compound.length && "-$part" in words) add("-$part")
+                }
+                if (forms.isEmpty()) continue
                 val current = splits[i]
-                if (current == null || rest.size + 1 < current.size) splits[i] = listOf(word) + rest
+                if (current == null || rest.size + 1 < current.size) splits[i] =
+                    listOf(forms) + rest
             }
         }
         return splits[0]
@@ -132,9 +169,13 @@ class DictionaryRepository(
                 val terms = lookup.searchTerms.terms
                 dictionaryDao.getEntriesForTerms(terms.keys.toList()).map { entries ->
                     val byWord = entries.groupBy { it.entry.word }
-                    val keptParts = usefulSingleSyllables(lookup.searchTerms.compounds, byWord.keys)
+                    val keptParts = usefulSplitParts(lookup.searchTerms.compounds, byWord.keys)
                     byWord
-                        .filterKeys { it !in lookup.searchTerms.singleSyllableParts || it in keptParts }
+                        .filterKeys { it !in lookup.searchTerms.splitParts || it in keptParts }
+                        .filterKeys { term ->
+                            val affix = lookup.searchTerms.affixFallbacks[term]
+                            affix == null || affix !in byWord
+                        }
                         .mapValues { (term, homonyms) ->
                             val ranking = HomonymRanking(
                                 tokenPos = terms[term],

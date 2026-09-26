@@ -109,6 +109,34 @@ class DictionaryRepositoryTest {
         assertEquals(emptySet<String>(), keys)
     }
 
+    @Test
+    fun `suffix tokens are looked up as suffixes`() = runBlocking {
+        // Open Korean Text splits 후보군 into 후보 and 군/Suffix
+        val keys = lookUp("후보군", listOf("후보", "보", "군", "-군"))
+        assertEquals(setOf("후보", "-군"), keys)
+    }
+
+    @Test
+    fun `suffix tokens fall back to the plain word`() = runBlocking {
+        val keys = lookUp("후보군", listOf("후보", "군"))
+        assertEquals(setOf("후보", "군"), keys)
+    }
+
+    @Test
+    fun `the end of a compound can be a suffix`() = runBlocking {
+        // 외교부 stays a single noun
+        val keys = lookUp("외교부", listOf("외교", "-부"))
+        assertEquals(setOf("외교", "-부"), keys)
+    }
+
+    @Test
+    fun `affixes outside the best split are left out`() = runBlocking {
+        val keys = lookUp("외교부", listOf("외교", "교부", "외-", "-부"))
+        assertEquals(setOf("외교", "교부", "-부"), keys)
+
+        assertEquals(setOf("정부"), lookUp("정부는", listOf("정부", "정-", "-부")))
+    }
+
     private fun createEntry(word: String, pos: String): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
