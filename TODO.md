@@ -15,6 +15,7 @@
 
 ## Reader
 
+* Allow user to reload articles from their source
 * Track reading progress by saving scroll position or last visible paragraph index to Room
 * Add setting to toggle between:
   * Mark as read when opened
