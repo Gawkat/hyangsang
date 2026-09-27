@@ -7,7 +7,6 @@
 * Use Dagger for Dependency Injection?
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
-* Handle window insets so settings menu respects the system navigation bar area
 * Add license information about Solarized/Gruvbox
 
 ## Article Parser
