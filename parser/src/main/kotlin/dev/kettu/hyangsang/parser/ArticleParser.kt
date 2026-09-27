@@ -9,7 +9,8 @@ class ArticleParser {
     private val parsers = mapOf(
         "feeds.bbci.co.uk" to BbcNewsParser(),
         "bbc.com" to BbcNewsParser(),
-        "yna.co.kr" to YonhapNewsParser()
+        "yna.co.kr" to YonhapNewsParser(),
+        "news.sbs.co.kr" to SbsNewsParser()
     )
 
     fun parse(url: String, document: Document): List<ContentBlock> {

@@ -80,7 +80,14 @@ object DefaultData {
             url = "https://feeds.bbci.co.uk/korean/rss.xml",
             category = DefaultCategory.NEWS,
             isSection = false
-        )
+        ),
+        sbs("01", DefaultCategory.POLITICS),
+        sbs("02", DefaultCategory.ECONOMY),
+        sbs("03", DefaultCategory.SOCIETY),
+        sbs("07", DefaultCategory.INTERNATIONAL),
+        sbs("08", DefaultCategory.CULTURE),
+        sbs("14", DefaultCategory.ENTERTAINMENT),
+        sbs("09", DefaultCategory.SPORTS)
     )
 
     // Titles and categories are stored as plain text, since the user can edit them,
@@ -112,7 +119,8 @@ object DefaultData {
             .groupBy({ it.url }, { it.title })
 
         return feeds.mapNotNull { feed ->
-            val category = categoriesByLabel[feed.category]?.let { context.getString(it.label) } ?: feed.category
+            val category = categoriesByLabel[feed.category]?.let { context.getString(it.label) }
+                ?: feed.category
             val title = currentTitles[feed.url]
                 ?.takeIf { feed.title in allTitles[feed.url].orEmpty() }
                 ?: feed.title
@@ -127,6 +135,12 @@ object DefaultData {
     private fun yonhap(section: String, category: DefaultCategory) = DefaultFeed(
         source = R.string.source_yonhap_news,
         url = "https://www.yna.co.kr/rss/$section.xml",
+        category = category
+    )
+
+    private fun sbs(sectionId: String, category: DefaultCategory) = DefaultFeed(
+        source = R.string.source_sbs_news,
+        url = "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=$sectionId&plink=RSSREADER",
         category = category
     )
 }
