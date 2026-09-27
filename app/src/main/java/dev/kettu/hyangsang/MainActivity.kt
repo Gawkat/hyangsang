@@ -3,11 +3,11 @@ package dev.kettu.hyangsang
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.annotation.StringRes
-import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,8 +21,9 @@ import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -41,7 +42,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.remember
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -55,8 +55,8 @@ import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
-import dev.kettu.hyangsang.ui.saved.SavedScreen
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
+import dev.kettu.hyangsang.ui.saved.SavedScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
@@ -201,7 +201,12 @@ fun MainApp(
     val isRefreshing by rssFeedViewModel.isRefreshing.collectAsState()
 
     val navItems = listOf(
-        NavItem(Routes.DISCOVER, Icons.Outlined.Newspaper, Icons.Filled.Newspaper, R.string.discover_nav),
+        NavItem(
+            Routes.DISCOVER,
+            Icons.Outlined.Newspaper,
+            Icons.Filled.Newspaper,
+            R.string.discover_nav
+        ),
         NavItem(Routes.SAVED, Icons.Outlined.Bookmarks, Icons.Filled.Bookmarks, R.string.saved_nav)
     )
 
@@ -222,7 +227,8 @@ fun MainApp(
     val configuration = LocalConfiguration.current
     LaunchedEffect(filterCriteria.selectedCategory, configuration) {
         val selected = filterCriteria.selectedCategory ?: return@LaunchedEffect
-        val renamed = DefaultCategory.byLabel(context)[selected]?.let { context.getString(it.label) }
+        val renamed =
+            DefaultCategory.byLabel(context)[selected]?.let { context.getString(it.label) }
         if (renamed != null && renamed != selected) articleViewModel.setCategory(renamed)
     }
 
@@ -375,6 +381,8 @@ fun MainApp(
                     )
                 }
                 composable(Routes.SETTINGS) {
+                    val colorScheme = MaterialTheme.colorScheme
+                    val typography = MaterialTheme.typography
                     SettingsScreen(
                         currentTheme = currentTheme,
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
@@ -389,7 +397,7 @@ fun MainApp(
                         feeds = feeds,
                         onManageFeedsClick = { navController.navigate(Routes.FEEDS) },
                         onOssLicensesClick = {
-                            //TODO: Set theme to match app
+                            OssLicensesMenuActivity.setTheme(colorScheme, colorScheme, typography)
                             context.startActivity(
                                 Intent(context, OssLicensesMenuActivity::class.java)
                             )
