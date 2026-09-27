@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalTime::class)
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -8,7 +9,6 @@ plugins {
     id("com.google.android.gms.oss-licenses-plugin")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -26,6 +26,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // generateLocaleConfig is still @Incubating in AGP, but it is the supported way to do this
+    @Suppress("UnstableApiUsage")
     androidResources {
         generateLocaleConfig = true
     }
@@ -56,12 +58,15 @@ android {
         compose = true
         buildConfig = true
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     sourceSets {
         // Exported Room schemas are needed by MigrationTestHelper
-        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
     }
 }
 
@@ -88,7 +93,6 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation(libs.core.ktx)
     ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
@@ -97,7 +101,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
