@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -57,6 +58,7 @@ fun ArticleImage(
     onWordClick: (WordSelection, String) -> Unit,
     modifier: Modifier = Modifier,
     captionSpans: List<ContentSpan> = emptyList(),
+    fontFamily: FontFamily = FontFamily.Default,
     width: Int? = null,
     height: Int? = null
 ) {
@@ -124,7 +126,8 @@ fun ArticleImage(
                 selectedRange = selectedRange,
                 onWordClick = onWordClick,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = fontFamily
                 ),
                 modifier = Modifier.padding(top = 4.dp, start = 16.dp, end = 16.dp)
             )

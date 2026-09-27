@@ -49,7 +49,6 @@ Vocabulary screen?
 
 ## Bugfixes
 
-* Selecting serif font does not affect image captions
 * Affixes have character entities in them, maybe from original JSON dictionary source
 * Opening the feed drawer will sometimes result in a blank screen - unknown cause
   * Rare, not reproducible on demand; seen on both emulator and device

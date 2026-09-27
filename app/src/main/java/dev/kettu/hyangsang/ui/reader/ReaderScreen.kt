@@ -190,7 +190,11 @@ fun ReaderContent(
         topBar = {
             TopAppBar(
                 title = {
-                    AnimatedVisibility(visible = showTitleInBar, enter = fadeIn(), exit = fadeOut()) {
+                    AnimatedVisibility(
+                        visible = showTitleInBar,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
                         Text(
                             text = article.title,
                             style = MaterialTheme.typography.titleMedium,
@@ -282,6 +286,7 @@ fun ReaderContent(
                             url = block.url,
                             caption = block.caption,
                             captionSpans = block.captionSpans,
+                            fontFamily = fontFamily,
                             width = block.width,
                             height = block.height,
                             textId = textId,
@@ -310,7 +315,8 @@ fun ReaderContent(
                             onWordClick = onWordClick,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontStyle = FontStyle.Italic
+                                fontStyle = FontStyle.Italic,
+                                fontFamily = fontFamily
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -355,7 +361,10 @@ fun ReaderContent(
                     lookupResults = lookupResult,
                     isLoading = isLookingUp,
                     onSearchWeb = { term ->
-                        openInBrowser(context, Constants.WEB_DICTIONARY_SEARCH_URL + Uri.encode(term))
+                        openInBrowser(
+                            context,
+                            Constants.WEB_DICTIONARY_SEARCH_URL + Uri.encode(term)
+                        )
                     },
                     modifier = Modifier.heightIn(max = lookupContentMaxHeight)
                 )
