@@ -53,3 +53,8 @@ Vocabulary screen?
 
 * Selecting serif font does not affect image captions
 * Affixes have character entities in them, maybe from original JSON dictionary source
+* Opening the feed drawer will sometimes result in a blank screen - unknown cause
+  * Rare, not reproducible on demand; seen on both emulator and device
+  * Content area goes blank while the bottom navigation bar stays visible; switching bottom tab recovers
+  * Still present after updating to Compose BOM 2026.09.00 (material3 1.4.0)
+  * Suspects: left-edge predictive back gesture (targetSdk 36) competing with drawer swipe, or NavHost content not being redrawn
