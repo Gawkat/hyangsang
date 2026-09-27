@@ -53,8 +53,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -70,7 +74,7 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
-private enum class SettingsDialog { THEME, PALETTE, DICTIONARY_ATTRIBUTION }
+private enum class SettingsDialog { THEME, PALETTE, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -194,6 +198,11 @@ fun SettingsScreen(
                 title = stringResource(R.string.dictionary_attribution_label),
                 onClick = { openDialog = SettingsDialog.DICTIONARY_ATTRIBUTION }
             )
+            SettingsItem(
+                icon = Icons.Outlined.Palette,
+                title = stringResource(R.string.palette_attribution_label),
+                onClick = { openDialog = SettingsDialog.PALETTE_ATTRIBUTION }
+            )
             ListItem(
                 headlineContent = { Text(stringResource(R.string.report_issue_nav)) },
                 supportingContent = { Text(stringResource(R.string.report_issue_summary)) },
@@ -252,6 +261,31 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
+                TextButton(onClick = dismiss) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            }
+        )
+
+        SettingsDialog.PALETTE_ATTRIBUTION -> AlertDialog(
+            onDismissRequest = dismiss,
+            title = { Text(stringResource(R.string.palette_attribution_label)) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        AnnotatedString.fromHtml(
+                            stringResource(R.string.palette_attribution_text),
+                            linkStyles = TextLinkStyles(
+                                style = SpanStyle(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            )
+                        )
+                    )
+                }
+            },
+            confirmButton = {
                 TextButton(onClick = dismiss) {
                     Text(stringResource(android.R.string.ok))
                 }

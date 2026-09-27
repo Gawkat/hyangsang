@@ -86,6 +86,10 @@ val HyangsangDarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF36332F)
 )
 
+/*
+    Solarized by Ethan Schoonover
+    https://ethanschoonover.com/solarized/
+ */
 val SolarizedLightColors = lightColorScheme(
     primary = Color(0xFF1F6FA8),
     onPrimary = Color(0xFFFFFFFF),
@@ -125,6 +129,10 @@ val SolarizedLightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE1D9C3)
 )
 
+/*
+    Solarized by Ethan Schoonover
+    https://ethanschoonover.com/solarized/
+ */
 val SolarizedDarkColors = darkColorScheme(
     primary = Color(0xFF5AA9E0),
     onPrimary = Color(0xFF00344F),
@@ -164,6 +172,10 @@ val SolarizedDarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF124956)
 )
 
+/*
+    Gruvbox by Pavel Pertsev
+    https://github.com/morhetz/gruvbox
+ */
 val GruvboxLightColors = lightColorScheme(
     primary = Color(0xFF076678),
     onPrimary = Color(0xFFFFFFFF),
@@ -203,6 +215,10 @@ val GruvboxLightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE2D0A5)
 )
 
+/*
+    Gruvbox by Pavel Pertsev
+    https://github.com/morhetz/gruvbox
+ */
 val GruvboxDarkColors = darkColorScheme(
     primary = Color(0xFF83A598),
     onPrimary = Color(0xFF1D2021),
