@@ -54,7 +54,10 @@ class HyangsangApplication : Application() {
 
             // Fetch latest articles from feeds
             rssFeedRepository.refreshEnabledFeeds()
+        }
 
+        // Loaded separately, so it doesn't wait for the feed refresh to finish
+        applicationScope.launch {
             // Initialize Open Korean Text resources
             OpenKoreanTextProcessorJava.loadResources()
         }
