@@ -65,6 +65,8 @@ class RssFeedParser {
         var title = ""
         var link = ""
         var pubDate = ""
+        // Dublin Core date, used by some feeds instead of pubDate
+        var dcDate = ""
         var description = ""
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.eventType != XmlPullParser.START_TAG) {
@@ -75,12 +77,13 @@ class RssFeedParser {
                 "title" -> title = readText(parser, "title")
                 "link" -> link = readText(parser, "link")
                 "pubDate" -> pubDate = readText(parser, "pubDate")
+                "dc:date" -> dcDate = readText(parser, "dc:date")
                 "description" -> description = readText(parser, "description")
                 else -> skip(parser)
             }
         }
 
-        return RssItem(title, link, pubDate, description)
+        return RssItem(title, link, pubDate.ifBlank { dcDate }, description)
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
