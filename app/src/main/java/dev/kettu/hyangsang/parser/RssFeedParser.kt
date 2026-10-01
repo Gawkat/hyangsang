@@ -8,12 +8,31 @@ import java.io.IOException
 
 private val ns: String? = null
 
+// An & that doesn't start a named or numeric character reference
+private val BARE_AMPERSAND = Regex("""&(?!(?:[A-Za-z_:][\w.:-]*|#[0-9]+|#x[0-9a-fA-F]+);)""")
+private val CDATA_SECTION = Regex("""<!\[CDATA\[.*?]]>""", RegexOption.DOT_MATCHES_ALL)
+
+// Some feeds leave a bare & in URLs, which makes the whole document malformed. A bare & is
+// never valid XML, so escaping it can't change a valid feed. CDATA is literal text, so it's
+// left as is
+internal fun escapeBareAmpersands(xml: String): String {
+    val result = StringBuilder(xml.length)
+    var last = 0
+    CDATA_SECTION.findAll(xml).forEach { cdata ->
+        result.append(xml.substring(last, cdata.range.first).replace(BARE_AMPERSAND, "&amp;"))
+        result.append(cdata.value)
+        last = cdata.range.last + 1
+    }
+    result.append(xml.substring(last).replace(BARE_AMPERSAND, "&amp;"))
+    return result.toString()
+}
+
 class RssFeedParser {
     @Throws(XmlPullParserException::class, IOException::class)
     fun parse(xml: String): List<RssItem> {
         val parser: XmlPullParser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-        parser.setInput(xml.reader())
+        parser.setInput(escapeBareAmpersands(xml).reader())
         parser.nextTag()
 
         return readFeed(parser)
