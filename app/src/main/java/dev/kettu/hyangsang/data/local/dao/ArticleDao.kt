@@ -48,6 +48,10 @@ interface ArticleDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticle(article: Article): Long
 
+    // Inserts a whole feed's articles in one transaction; existing articles are skipped
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertArticles(articles: List<Article>): List<Long>
+
     @Update
     suspend fun updateArticle(article: Article)
 

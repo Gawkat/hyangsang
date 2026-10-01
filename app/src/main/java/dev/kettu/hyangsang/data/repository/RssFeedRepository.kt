@@ -9,9 +9,14 @@ import dev.kettu.hyangsang.parser.RssFeedParser
 import dev.kettu.hyangsang.parser.parseToIso8601
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
@@ -21,6 +26,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 private val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5.minutes
+private const val MAX_CONCURRENT_FEED_FETCHES = 6
 
 enum class FeedCheckError { UNREACHABLE, HTTP_ERROR, NOT_A_FEED, ALREADY_ADDED }
 
@@ -119,7 +125,7 @@ class RssFeedRepository(
             val id = rssFeedDao.insertFeed(feed)
             if (id != -1L) feed.copy(id = id) else null
         }
-        restored.forEach { fetchAndSaveRss(it) }
+        fetchConcurrently(restored)
         return restored.size
     }
 
@@ -132,8 +138,9 @@ class RssFeedRepository(
     @OptIn(ExperimentalTime::class)
     suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) {
         val enabledFeeds = rssFeedDao.getEnabledFeeds().first()
+        val now = Clock.System.now()
 
-        enabledFeeds.forEach { feed ->
+        val dueFeeds = enabledFeeds.filter { feed ->
             // Rate limit on attempts rather than successes, so a broken feed isn't retried constantly
             val lastAttempt = try {
                 Instant.parse(feed.lastSyncAttempt ?: feed.lastSynced)
@@ -142,11 +149,20 @@ class RssFeedRepository(
             }
 
             // Skip if forceRefresh is false and the last attempt is within the last 5 minutes
-            if (!forceRefresh && ((Clock.System.now() - lastAttempt) < DEFAULT_FEED_REFRESH_RATE_LIMIT)) {
-                return@forEach
-            }
+            forceRefresh || (now - lastAttempt) >= DEFAULT_FEED_REFRESH_RATE_LIMIT
+        }
 
-            fetchAndSaveRss(feed)
+        fetchConcurrently(dueFeeds)
+    }
+
+    // Fetches feeds in parallel; each fetch records its own failure, so one bad feed doesn't
+    // cancel the rest. The cap bounds how many feed bodies are downloaded and parsed at once
+    private suspend fun fetchConcurrently(feeds: List<RssFeed>) {
+        val semaphore = Semaphore(MAX_CONCURRENT_FEED_FETCHES)
+        coroutineScope {
+            feeds.map { feed ->
+                async { semaphore.withPermit { fetchAndSaveRss(feed) } }
+            }.awaitAll()
         }
     }
 
@@ -164,24 +180,19 @@ class RssFeedRepository(
                     val xmlString = response.body()?.string() ?: ""
                     val items = RssFeedParser().parse(xmlString)
 
-                    items.forEach { item ->
-                        if (item.title.isEmpty() || item.link.isEmpty()) {
-                            return@forEach
+                    val articles = items
+                        .filter { it.title.isNotEmpty() && it.link.isNotEmpty() }
+                        .map { item ->
+                            // Clean title and description from HTML tags and entities
+                            Article(
+                                title = Parser.unescapeEntities(item.title, false),
+                                description = Jsoup.parse(item.description).text(),
+                                sourceUrl = item.link,
+                                feedId = feed.id,
+                                pubDate = parseToIso8601(item.pubDate)
+                            )
                         }
-
-                        // Clean title and description from HTML tags and entities
-                        val cleanTitle = Parser.unescapeEntities(item.title, false)
-                        val cleanDescription = Jsoup.parse(item.description).text()
-
-                        val article = Article(
-                            title = cleanTitle,
-                            description = cleanDescription,
-                            sourceUrl = item.link,
-                            feedId = feed.id,
-                            pubDate = parseToIso8601(item.pubDate)
-                        )
-                        articleDao.insertArticle(article)
-                    }
+                    articleDao.insertArticles(articles)
 
                     rssFeedDao.markSyncSucceeded(feed.id, attemptTime)
                 } else {
