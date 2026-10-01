@@ -34,6 +34,8 @@
 
 ## Feeds
 
+* Allow refreshing individual feeds
+* Parallelize feed fetching
 * Support Atom feeds?
 
 ## Vocabulary/Statistics (maybe)
