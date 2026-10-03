@@ -2,9 +2,11 @@
 
 ## General
 
+* Move the items in this file to GitHub issues
 * Use Dagger for Dependency Injection?
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
+* Work on an original lookup evaluation example set
 
 ## Article Parser
 
