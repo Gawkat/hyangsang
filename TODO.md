@@ -23,9 +23,9 @@
 
 ## Lookup overlay
 
+* External dictionary lookup should search complete word, not selected stem
 * Revisit the order of stem chips?
 * Improve the Lesk-style sentence overlap (`contextOverlap` in `HomonymRanking.kt`)?
-* Consider if clicks on new words when overlay is opened should trigger a new lookup instead of closing the overlay
 
 ## Saved
 
@@ -52,7 +52,7 @@ Vocabulary screen?
 ## Bugfixes
 
 * Affixes have character entities in them, maybe from original JSON dictionary source
-* Opening the feed drawer will sometimes result in a blank screen - unknown cause
+* Opening the feed drawer will sometimes result in a blank screen - possibly fixed in `3059613`
   * Rare, not reproducible on demand; seen on both emulator and device
   * Content area goes blank while the bottom navigation bar stays visible; switching bottom tab recovers
   * Still present after updating to Compose BOM 2026.09.00 (material3 1.4.0)
