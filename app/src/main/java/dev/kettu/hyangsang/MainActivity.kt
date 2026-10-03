@@ -41,7 +41,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -312,7 +314,7 @@ fun MainApp(
                 startDestination = Routes.DISCOVER,
                 modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                composable(Routes.DISCOVER) {
+                composable(Routes.DISCOVER) { entry ->
                     DiscoverScreen(
                         articlesWithFeed = articlesWithFeed,
                         filterTitle = filterTitle,
@@ -321,7 +323,7 @@ fun MainApp(
                         isRefreshing = isRefreshing,
                         onRefresh = { rssFeedViewModel.refreshFeeds() },
                         onArticleClick = { articleId ->
-                            navController.navigate(Routes.reader(articleId))
+                            entry.ifResumed { navController.navigate(Routes.reader(articleId)) }
                         },
                         onSaveClick = { articleWithFeed ->
                             articleViewModel.setSaved(
@@ -330,19 +332,23 @@ fun MainApp(
                             )
                         },
                         onMenuClick = { scope.launch { drawerState.open() } },
-                        onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                        onSettingsClick = {
+                            entry.ifResumed { navController.navigate(Routes.SETTINGS) }
+                        },
                         showUnreadOnly = filterCriteria.showUnreadOnly,
                         onShowUnreadOnlyChange = { articleViewModel.setShowUnreadOnly(it) },
                         feeds = feeds,
-                        onFeedStatusClick = { navController.navigate(Routes.FEEDS) },
+                        onFeedStatusClick = {
+                            entry.ifResumed { navController.navigate(Routes.FEEDS) }
+                        },
                         listState = discoverListState
                     )
                 }
-                composable(Routes.SAVED) {
+                composable(Routes.SAVED) { entry ->
                     SavedScreen(
                         savedArticles = savedArticles,
                         onArticleClick = { articleId ->
-                            navController.navigate(Routes.reader(articleId))
+                            entry.ifResumed { navController.navigate(Routes.reader(articleId)) }
                         },
                         onUnsave = { articleId -> articleViewModel.setSaved(articleId, false) },
                         onUndoUnsave = { articleId, savedDate ->
@@ -350,37 +356,39 @@ fun MainApp(
                         }
                     )
                 }
-                composable(Routes.FEEDS) {
+                composable(Routes.FEEDS) { entry ->
                     FeedsScreen(
                         viewModel = rssFeedViewModel,
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }
-                composable(Routes.READER) { backStackEntry ->
-                    val articleIdStr = backStackEntry.arguments?.getString("articleId")
+                composable(Routes.READER) { entry ->
+                    val articleIdStr = entry.arguments?.getString("articleId")
                     val articleId = articleIdStr?.toLongOrNull()
                     ReaderRoute(
                         articleId = articleId,
                         articleViewModel = articleViewModel,
                         dictionaryViewModel = dictionaryViewModel,
-                        onBackClick = { navController.popBackStack() },
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } },
                         readerSettings = readerSettings,
                         onReaderSettingsChange = {
                             scope.launch { prefsRepository.setReaderSettings(it) }
                         },
                         currentTheme = currentTheme,
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
-                        onMoreTextSettingsClick = { navController.navigate(Routes.TEXT_LAYOUT) }
+                        onMoreTextSettingsClick = {
+                            entry.ifResumed { navController.navigate(Routes.TEXT_LAYOUT) }
+                        }
                     )
                 }
-                composable(Routes.TEXT_LAYOUT) {
+                composable(Routes.TEXT_LAYOUT) { entry ->
                     TextLayoutScreen(
                         settings = readerSettings,
                         onSettingsChange = { scope.launch { prefsRepository.setReaderSettings(it) } },
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }
-                composable(Routes.SETTINGS) {
+                composable(Routes.SETTINGS) { entry ->
                     val colorScheme = MaterialTheme.colorScheme
                     val typography = MaterialTheme.typography
                     SettingsScreen(
@@ -389,25 +397,35 @@ fun MainApp(
                         currentPalette = currentPalette,
                         onPaletteChange = { scope.launch { prefsRepository.setPalette(it.key) } },
                         readerSettings = readerSettings,
-                        onTextLayoutClick = { navController.navigate(Routes.TEXT_LAYOUT) },
+                        onTextLayoutClick = {
+                            entry.ifResumed { navController.navigate(Routes.TEXT_LAYOUT) }
+                        },
                         showUnreadCounts = showUnreadCounts,
                         onShowUnreadCountsChange = {
                             scope.launch { prefsRepository.setShowUnreadCounts(it) }
                         },
                         feeds = feeds,
-                        onManageFeedsClick = { navController.navigate(Routes.FEEDS) },
+                        onManageFeedsClick = {
+                            entry.ifResumed { navController.navigate(Routes.FEEDS) }
+                        },
                         onOssLicensesClick = {
                             OssLicensesMenuActivity.setTheme(colorScheme, colorScheme, typography)
                             context.startActivity(
                                 Intent(context, OssLicensesMenuActivity::class.java)
                             )
                         },
-                        onBackClick = { navController.popBackStack() }
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }
             }
         }
     }
+}
+
+// A screen still animating in or out isn't resumed; dropping its clicks stops a double tap from
+// navigating twice, e.g. popping the start destination after the first back already popped Settings
+private inline fun NavBackStackEntry.ifResumed(action: () -> Unit) {
+    if (lifecycle.currentState == Lifecycle.State.RESUMED) action()
 }
 
 @Composable
