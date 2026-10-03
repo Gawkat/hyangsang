@@ -35,6 +35,20 @@ the bundled dictionary and a set of cases in `app/src/test/resources/lookup-eval
 are sentences from real articles, so the file is ignored by git as well, and the test is skipped
 without either one. Its format is described in the test.
 
+## Release builds
+
+Release builds are signed with the key configured in `keystore.properties` at the repository
+root, which is ignored by git:
+
+```properties
+storeFile=C:/path/outside/the/repository/hyangsang-release.jks
+storePassword=...
+keyAlias=hyangsang
+keyPassword=...
+```
+
+Without it, `./gradlew :app:assembleRelease` builds an unsigned APK.
+
 ## When you change...
 
 ### An article parser

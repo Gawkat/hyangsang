@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalTime::class)
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -32,9 +33,25 @@ android {
         generateLocaleConfig = true
     }
 
+    // The release key is configured in keystore.properties, which isn't committed. Without it,
+    // release builds are left unsigned.
+    val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }
+        ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
