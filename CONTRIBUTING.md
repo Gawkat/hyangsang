@@ -30,6 +30,11 @@ skipped, and Gradle reports them as skipped. To run them, save an article page f
 under the name the test reads, such as `bbc_sample.html`. They check details of specific
 articles, so expect to adjust the assertions for a different article.
 
+`LookupEvaluationTest` measures how often word lookups show the right dictionary entry. It needs
+the bundled dictionary and a set of cases in `app/src/test/resources/lookup-eval.tsv`. The cases
+are sentences from real articles, so the file is ignored by git as well, and the test is skipped
+without either one. Its format is described in the test.
+
 ## When you change...
 
 ### An article parser

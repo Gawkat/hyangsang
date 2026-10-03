@@ -20,3 +20,4 @@
 .kotlin
 *.jks
 *.keystore
+/app/src/test/resources/lookup-eval.tsv

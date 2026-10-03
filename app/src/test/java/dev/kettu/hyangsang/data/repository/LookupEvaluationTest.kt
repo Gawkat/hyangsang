@@ -26,6 +26,12 @@ import java.sql.DriverManager
  * `lookup-eval.tsv` against the bundled dictionary. Writes a per-case report to
  * `build/reports/lookup-eval.txt`, and fails if accuracy drops below [BASELINE_CORRECT], so
  * ranking changes can't make lookups worse unnoticed. Raise the baseline when they get better.
+ *
+ * The cases come from real news articles, so the file isn't committed, and the test is skipped
+ * without it. It's tab-separated, with `#` comment lines and a header row, and these columns:
+ * the feed category, the word as tapped, the expected entries as `word#homonymNumber` with `|`
+ * between equally right ones, a gloss of the intended meaning for people reading the file, and
+ * the sentence the word was tapped in.
  */
 class LookupEvaluationTest {
 
@@ -41,7 +47,9 @@ class LookupEvaluationTest {
     }
 
     private fun loadCases(): List<Case> {
-        val lines = javaClass.classLoader!!.getResource("lookup-eval.tsv")!!.readText().lines()
+        val text = javaClass.classLoader!!.getResource("lookup-eval.tsv")?.readText()
+        assumeTrue("lookup-eval.tsv not found in src/test/resources, skipping", text != null)
+        val lines = text!!.lines()
         return lines
             .filter { it.isNotBlank() && !it.startsWith("#") }
             .drop(1) // Header
