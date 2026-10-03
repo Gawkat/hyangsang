@@ -45,11 +45,14 @@ object DictionaryMapper {
 fun main(args: Array<String>) {
     // The app recopies the bundled dictionary when this changes, see DictionaryDatabase
     val version = args.firstOrNull()?.toIntOrNull()
-        ?: error("Usage: dictionary-generator <version>, the NIKL release date such as 20260919")
+        ?: error("Usage: dictionary-generator <version>, the NIKL release date and a two-digit revision such as 2026091901")
     val inputDir = File("app/src/main/assets/dictionary") // TODO update me
     val outputFile = File("app/src/main/assets/dictionary.db")
 
-    if (outputFile.exists()) outputFile.delete()
+    // Tables are created if missing, so a leftover file would get every entry twice
+    check(!outputFile.exists() || outputFile.delete()) {
+        "Couldn't delete ${outputFile.absolutePath}, is it open elsewhere (such as a Gradle daemon)?"
+    }
 
     DriverManager.getConnection("jdbc:sqlite:${outputFile.absolutePath}").use { conn ->
         createTables(conn)
@@ -128,6 +131,7 @@ fun createTables(conn: Connection) {
     )
     // Same names as the indexes Room declares, so Room's CREATE INDEX IF NOT EXISTS finds them
     statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_entries_word ON dictionary_entries (word)")
+    statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_entries_origin ON dictionary_entries (origin)")
     statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_senses_entryId ON dictionary_senses (entryId)")
     statement.execute("CREATE INDEX IF NOT EXISTS index_dictionary_examples_senseId ON dictionary_examples (senseId)")
     statement.close()
@@ -219,7 +223,9 @@ fun insertLexicalEntry(
     // Insert Entry
     entryStmt.setString(1, id)
     entryStmt.setString(2, word)
-    entryStmt.setString(3, origin)
+    // A few origins use compatibility ideographs (料金制 with U+F90A), which the app normalizes
+    // away when looking up hanja
+    entryStmt.setString(3, origin?.let { java.text.Normalizer.normalize(it, java.text.Normalizer.Form.NFC) })
     entryStmt.setInt(4, homonymNumber)
     entryStmt.setString(5, pos)
     entryStmt.setString(6, level)

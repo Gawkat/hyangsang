@@ -6,7 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
@@ -24,6 +26,13 @@ class DictionaryRepository(
      *   itself is only shown if the dictionary doesn't have the affix
      * @param counters terms right after a number, like 명 in 3명 or 일 in 26일
      * @param leadingNoun the noun the word starts with, like 중 in 중에서, if any
+     * @param hanjaTerms the hanja runs and their parts, looked up by the entries' origin
+     * @param titledHanja single hanja followed by a title, like 李 in 李대통령, which makes them
+     *   family names
+     * @param standaloneHanja single hanja with no Hangul attached but a particle (金, 北이), so
+     *   not affixes
+     * @param weekdayHanja standalone hanja in parentheses, as weekdays are written in dates
+     *   (3일(金))
      */
     private class SearchTerms(
         val terms: Map<String, String?>,
@@ -31,10 +40,128 @@ class DictionaryRepository(
         val splitParts: Set<String>,
         val affixFallbacks: Map<String, String>,
         val counters: Set<String>,
-        val leadingNoun: String?
+        val leadingNoun: String?,
+        val hanjaTerms: List<String> = emptyList(),
+        val titledHanja: Set<String> = emptySet(),
+        val standaloneHanja: Set<String> = emptySet(),
+        val weekdayHanja: Set<String> = emptySet()
     )
 
-    private fun getSearchTerms(word: String): SearchTerms {
+    /**
+     * News writes some words in hanja (北, 韓美), which Open Korean Text reads as foreign and
+     * misreads the particles after (北이 -> 이/Noun). So hanja are looked up by the entries'
+     * origin, and the Hangul between them as words of their own.
+     *
+     * @param nextWord the word after [word] in its sentence, if known, for telling whether hanja
+     *   at the end of [word] are a family name before a title (韓 총리)
+     */
+    private fun getSearchTerms(word: String, nextWord: String? = null): SearchTerms {
+        val hanjaRuns = Hanja.RUN.findAll(word).map { it.value }.toList()
+        if (hanjaRuns.isEmpty()) return getHangulSearchTerms(word)
+
+        // Longest first, so a run's parts follow it (韓美日, 韓美, 美日, 韓, 美, 日)
+        val hanjaTerms = LinkedHashSet<String>()
+        for (run in hanjaRuns) {
+            for (length in run.length downTo 1) hanjaTerms += run.windowed(length)
+        }
+
+        val terms = LinkedHashMap<String, String?>()
+        terms[word] = null
+        val parts = mutableListOf<SearchTerms>()
+        var leadingNoun: String? = null
+        val titledHanja = mutableSetOf<String>()
+        val standaloneHanja = mutableSetOf<String>()
+        val weekdayHanja = mutableSetOf<String>()
+        // Every segment but the first follows a hanja run, hanjaRuns[index - 1]
+        val segments = word.split(Hanja.RUN)
+        segments.forEachIndexed { index, segment ->
+            val text = segment.trim { !it.isLetterOrDigit() }
+            val run = hanjaRuns.getOrNull(index - 1)
+            // A title can also be the next word, but not after punctuation (韓, 美)
+            val following = if (index == segments.lastIndex && segment.isEmpty()) nextWord else segment
+            if (run != null && run.length == 1 && following != null && startsWithTitle(following)) {
+                titledHanja += run
+            }
+            val previous = segments.getOrNull(index - 1)
+            if (run != null && run.length == 1 && previous?.lastOrNull()?.isLetterOrDigit() != true &&
+                (segment.firstOrNull()?.isLetterOrDigit() != true || text in PARTICLES)
+            ) {
+                standaloneHanja += run
+                if (previous?.lastOrNull() == '(' && segment.firstOrNull() == ')') weekdayHanja += run
+            }
+            when {
+                text.isEmpty() -> Unit
+                index > 0 && text in PARTICLES -> terms.putIfAbsent(text, "Josa")
+                else -> {
+                    val part = getHangulSearchTerms(text)
+                    if (index == 0) leadingNoun = part.leadingNoun
+                    parts += part
+                }
+            }
+        }
+        parts.forEach { part -> part.terms.forEach { (term, pos) -> terms.putIfAbsent(term, pos) } }
+
+        return SearchTerms(
+            terms = terms,
+            compounds = parts.flatMap { it.compounds },
+            splitParts = parts.flatMap { it.splitParts }.toSet(),
+            affixFallbacks = parts.fold(emptyMap()) { fallbacks, part -> fallbacks + part.affixFallbacks },
+            counters = parts.flatMap { it.counters }.toSet(),
+            leadingNoun = leadingNoun,
+            hanjaTerms = hanjaTerms.toList(),
+            titledHanja = titledHanja,
+            standaloneHanja = standaloneHanja,
+            weekdayHanja = weekdayHanja
+        )
+    }
+
+    // Whether [text] starts with a title as a word of its own (대통령은), not as part of a
+    // compound (대표팀) or after punctuation
+    private fun startsWithTitle(text: String): Boolean {
+        val hangul = text.split(Hanja.RUN).first()
+        if (hangul.firstOrNull()?.isLetter() != true) return false
+        return tokenize(hangul).firstOrNull()?.text in Hanja.TITLES
+    }
+
+    /**
+     * Entries for each hanja term, keyed by the term as written. Hanja the dictionary has
+     * together (韓美 -> 한미) hide their parts. Within a term, entries come in this order:
+     * - A family name, if followed by a title (李대통령)
+     * - The full word for a hanja that news uses as an abbreviation (美 for 미국), since the
+     *   entry for the hanja alone has its literal meaning (미, beauty)
+     * - Entries with the term as their origin. A standalone hanja puts affixes last, and puts
+     *   time senses (금, Friday) first in parentheses and last elsewhere.
+     * - A family name otherwise, as in 韓에, which is usually Korea but can be someone named Han
+     */
+    private fun hanjaResults(
+        searchTerms: SearchTerms,
+        byOrigin: Map<String?, List<DictionaryWithSenses>>,
+        ranking: HomonymRanking
+    ): List<Pair<String, List<DictionaryWithSenses>>> {
+        fun entries(term: String) = byOrigin[Hanja.normalize(term)].orEmpty()
+        val found = searchTerms.hanjaTerms.filter { it.length > 1 && entries(it).isNotEmpty() }
+        return searchTerms.hanjaTerms
+            .filter { term -> found.none { it != term && term in it } }
+            .map { term ->
+                val normalized = Hanja.normalize(term)
+                val surname = listOfNotNull(Hanja.surnameEntry(normalized))
+                val titled = term in searchTerms.titledHanja
+                term to (if (titled) surname else emptyList()) +
+                    byOrigin[Hanja.NEWS_ABBREVIATIONS[normalized]].orEmpty() +
+                    entries(term).sortedWith(ranking.comparator).let { ranked ->
+                        if (term !in searchTerms.standaloneHanja) return@let ranked
+                        val weekday = term in searchTerms.weekdayHanja
+                        ranked.sortedWith(
+                            compareBy<DictionaryWithSenses> { it.entry.partOfSpeech == "Affix" }
+                                .thenBy { (it.entry.semanticCategory == TIME_CATEGORY) != weekday }
+                        )
+                    } +
+                    (if (titled) emptyList() else surname)
+            }
+            .filter { (_, entries) -> entries.isNotEmpty() }
+    }
+
+    private fun getHangulSearchTerms(word: String): SearchTerms {
         val javaTokens = tokenize(word)
         val terms = LinkedHashMap<String, String?>()
         val compounds = mutableListOf<String>()
@@ -122,6 +249,15 @@ class DictionaryRepository(
             counters = counters,
             leadingNoun = misreadNoun ?: javaTokens.firstOrNull()?.takeIf { it.pos.toString() == "Noun" }?.text
         )
+    }
+
+    /** The word after [word] in [sentence], or null if [word] ends in punctuation or isn't found. */
+    private fun nextWord(sentence: String, word: String): String? {
+        fun String.core() = trim { !it.isLetterOrDigit() }
+        val words = sentence.split(Regex("\\s+"))
+        val index = words.indexOfFirst { it.core() == word.core() }
+        if (index < 0 || words[index].lastOrNull()?.isLetterOrDigit() != true) return null
+        return words.getOrNull(index + 1)
     }
 
     /** What comes before [word] in [sentence], for telling whether a bound noun can follow. */
@@ -222,7 +358,7 @@ class DictionaryRepository(
         // Tokenizing with Open Korean Text is CPU-heavy (and the first call loads its
         // dictionaries), so it must not run on the main thread.
         return flow {
-            val searchTerms = getSearchTerms(word)
+            val searchTerms = getSearchTerms(word, nextWord(context.sentence, word))
             emit(
                 Lookup(
                     searchTerms = searchTerms,
@@ -234,8 +370,29 @@ class DictionaryRepository(
             .flowOn(Dispatchers.Default)
             .flatMapLatest { lookup ->
                 val terms = lookup.searchTerms.terms
-                dictionaryDao.getEntriesForTerms(terms.keys.toList()).map { entries ->
+                val hanjaTerms = lookup.searchTerms.hanjaTerms
+                val originEntries = if (hanjaTerms.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    val origins = hanjaTerms.map { Hanja.normalize(it) }
+                    dictionaryDao.getEntriesForOrigins(
+                        origins + origins.mapNotNull { Hanja.NEWS_ABBREVIATIONS[it] }
+                    )
+                }
+                combine(
+                    dictionaryDao.getEntriesForTerms(terms.keys.toList()),
+                    originEntries
+                ) { entries, hanjaEntries ->
                     val byWord = entries.groupBy { it.entry.word }
+                    val hanja = hanjaResults(
+                        lookup.searchTerms,
+                        hanjaEntries.groupBy { it.entry.origin },
+                        HomonymRanking(
+                            tokenPos = null,
+                            contextNouns = lookup.contextNouns,
+                            categoryPrefixes = categoryPrefixes
+                        )
+                    )
                     val keptParts = usefulSplitParts(lookup.searchTerms.compounds, byWord.keys)
                     byWord
                         .filterKeys { it !in lookup.searchTerms.splitParts || it in keptParts }
@@ -258,8 +415,10 @@ class DictionaryRepository(
                             homonyms.sortedWith(ranking.comparator)
                         }
                         .toList()
+                        .plus(hanja)
                         // Sort:
-                        // 1. Exact match first
+                        // 1. Exact match first, then hanja, which are likely why the word was
+                        //    tapped
                         // 2. Particles and endings last. Many have noun homonyms (과, 이), so
                         //    the entries' POS alone would put them first.
                         // 3. Counters first, as the word after a number is what's being counted
@@ -269,6 +428,8 @@ class DictionaryRepository(
                         .sortedWith(
                             compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
                                 it.first == word
+                            }.thenByDescending {
+                                it.first in hanjaTerms
                             }.thenBy {
                                 terms[it.first] in GRAMMATICAL_POS
                             }.thenByDescending {
@@ -310,6 +471,9 @@ class DictionaryRepository(
             "이", "가", "을", "를", "은", "는", "의", "에", "에서", "에게", "로", "으로", "와", "과",
             "도", "만", "까지", "부터"
         )
+
+        // The semantic category of weekdays (금, Friday), among other time words
+        const val TIME_CATEGORY = "개념 > 시간"
 
         // Hangul final consonant indexes
         const val FINAL_N = 4

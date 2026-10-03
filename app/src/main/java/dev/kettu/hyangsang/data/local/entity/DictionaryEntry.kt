@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "dictionary_entries",
-    // Lookups query by word, which would otherwise scan the whole table
-    indices = [Index("word")]
+    // Lookups query by word, and by origin for hanja, which would otherwise scan the whole table
+    indices = [Index("word"), Index("origin")]
 )
 data class DictionaryEntry(
     @PrimaryKey(autoGenerate = true)

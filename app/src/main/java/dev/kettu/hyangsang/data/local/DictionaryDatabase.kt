@@ -51,7 +51,9 @@ abstract class DictionaryDatabase : RoomDatabase() {
 }
 
 /**
- * The NIKL release date of the bundled dictionary. Must match the `user_version` the dictionary
- * generator stamps on `dictionary.db`, which DictionaryAssetTest checks.
+ * The NIKL release date of the bundled dictionary followed by a two-digit revision, bumped when
+ * the generator changes without a new release (01 added the origin index). Must match the
+ * `user_version` the dictionary generator stamps on `dictionary.db`, which DictionaryAssetTest
+ * checks.
  */
-const val DICTIONARY_VERSION = 20260919
+const val DICTIONARY_VERSION = 2026091901

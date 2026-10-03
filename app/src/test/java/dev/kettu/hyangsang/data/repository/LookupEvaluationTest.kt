@@ -120,13 +120,19 @@ class LookupEvaluationTest {
 
     /** Reads entries the way Room's [DictionaryWithSenses] relations would. */
     private class JdbcDictionaryDao(private val connection: Connection) : DictionaryDao {
-        override fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>> {
-            if (words.isEmpty()) return flowOf(emptyList())
-            val placeholders = words.joinToString(",") { "?" }
+        override fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>> =
+            entriesWhere("word", words)
+
+        override fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>> =
+            entriesWhere("origin", origins)
+
+        private fun entriesWhere(column: String, values: List<String>): Flow<List<DictionaryWithSenses>> {
+            if (values.isEmpty()) return flowOf(emptyList())
+            val placeholders = values.joinToString(",") { "?" }
             val entries = connection.prepareStatement(
-                "SELECT * FROM dictionary_entries WHERE word IN ($placeholders)"
+                "SELECT * FROM dictionary_entries WHERE $column IN ($placeholders)"
             ).use { statement ->
-                words.forEachIndexed { i, word -> statement.setString(i + 1, word) }
+                values.forEachIndexed { i, value -> statement.setString(i + 1, value) }
                 statement.executeQuery().use { rows ->
                     generateSequence { if (rows.next()) rows else null }.map {
                         DictionaryEntry(

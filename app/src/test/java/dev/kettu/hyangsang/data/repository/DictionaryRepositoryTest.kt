@@ -24,6 +24,9 @@ class DictionaryRepositoryTest {
         override fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>> {
             return flowOf(entries.filter { it.entry.word in words })
         }
+        override fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>> {
+            return flowOf(entries.filter { it.entry.origin in origins })
+        }
 
         private fun <T> emptyOfList(): List<T> = emptyList()
     }
@@ -183,15 +186,94 @@ class DictionaryRepositoryTest {
         assertEquals(listOf("결정", "시키다"), keys.toList())
     }
 
-    private fun createEntry(word: String, pos: String): DictionaryWithSenses {
+    private val hanjaDictionary = listOf(
+        createEntry("북", "Noun", origin = "北"),
+        createEntry("북한", "Noun", origin = "北韓"),
+        createEntry("미", "Noun", origin = "美"),
+        createEntry("미국", "Noun", origin = "美國"),
+        createEntry("한미", "Noun", origin = "韓美"),
+        createEntry("한국", "Noun", origin = "韓國"),
+        createEntry("일본", "Noun", origin = "日本"),
+        createEntry("핵", "Noun", origin = "核"),
+        createEntry("이", "Particle"),
+        createEntry("국방부", "Noun", origin = "國防部"),
+        createEntry("-금", "Affix", origin = "金"),
+        createEntry("금", "Noun", origin = "金", homonymNumber = 2, semanticCategory = "개념 > 시간"),
+        createEntry("금", "Noun", origin = "金", homonymNumber = 3, semanticCategory = "자연 > 자원"),
+        createEntry("반-", "Affix", origin = "反"),
+        createEntry("대통령", "Noun", origin = "大統領")
+    )
+
+    private suspend fun lookUpHanja(word: String, sentence: String = ""): Map<String, List<String>> =
+        DictionaryRepository(FakeDictionaryDao(hanjaDictionary))
+            .getDefinitionsForWord(word, LookupContext(sentence)).first()
+            .mapValues { (_, entries) -> entries.map { it.entry.word } }
+
+    // 金 as gold, Friday, the affix -금 and the family name Kim
+    private suspend fun lookUpGold(word: String, sentence: String = ""): List<String>? =
+        DictionaryRepository(FakeDictionaryDao(hanjaDictionary))
+            .getDefinitionsForWord(word, LookupContext(sentence)).first()
+            .entries.firstOrNull { (term, _) -> Hanja.normalize(term) == "金" }
+            ?.value?.map { entry ->
+                when {
+                    entry.entry.partOfSpeech == "Surname" -> "Kim"
+                    entry.entry.partOfSpeech == "Affix" -> "affix"
+                    entry.entry.homonymNumber == 2 -> "Friday"
+                    else -> "gold"
+                }
+            }
+
+    @Test
+    fun `compatibility ideographs find the unified ones`() = runBlocking {
+        // News text often has U+F90A for 金, the dictionary U+91D1
+        assertEquals(listOf("gold", "Friday", "affix", "Kim"), lookUpGold("\uF90A"))
+    }
+
+    @Test
+    fun `a standalone hanja is not an affix`() = runBlocking {
+        assertEquals(listOf("gold", "Friday", "affix", "Kim"), lookUpGold("金이"))
+        // 反민생, where 反 is the prefix 반-
+        assertEquals(listOf("반-"), lookUpHanja("反민생")["反"])
+    }
+
+    @Test
+    fun `a hanja in parentheses is a weekday`() = runBlocking {
+        assertEquals(listOf("Friday", "gold", "affix", "Kim"), lookUpGold("3일(金)"))
+    }
+
+    @Test
+    fun `a hanja before a title is a family name`() = runBlocking {
+        assertEquals(listOf("이"), lookUpHanja("李대통령")["李"])
+        assertEquals(listOf("대통령"), lookUpHanja("李대통령")["대통령"])
+        assertEquals(listOf("한", "한국"), lookUpHanja("韓", "韓 총리는 말했다")["韓"])
+        assertEquals(listOf("Kim", "gold", "Friday", "affix"), lookUpGold("金", "金 장관은"))
+    }
+
+    @Test
+    fun `family names without a title come last`() = runBlocking {
+        assertEquals(listOf("한국", "한"), lookUpHanja("韓에")["韓"])
+        assertEquals(listOf("gold", "Friday", "affix", "Kim"), lookUpGold("金", "최종성적 金 7·銀 13"))
+        // Punctuation ends the name, and compounds starting with a title don't count
+        assertEquals(listOf("한국", "한"), lookUpHanja("韓", "韓, 총리")["韓"])
+        assertEquals(listOf("한국", "한"), lookUpHanja("韓대표팀")["韓"])
+    }
+
+    private fun createEntry(
+        word: String,
+        pos: String,
+        origin: String? = null,
+        homonymNumber: Int = 0,
+        semanticCategory: String? = null
+    ): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
                 originalId = "id_$word",
                 word = word,
-                origin = null,
+                origin = origin,
+                homonymNumber = homonymNumber,
                 partOfSpeech = pos,
                 vocabularyLevel = null,
-                semanticCategory = null,
+                semanticCategory = semanticCategory,
                 lexicalUnit = null,
                 pronunciation = null,
                 audioUrl = null

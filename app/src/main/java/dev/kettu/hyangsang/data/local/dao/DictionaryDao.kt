@@ -34,6 +34,10 @@ interface DictionaryDao {
     @Transaction
     @Query("SELECT * FROM dictionary_entries WHERE word IN (:words)")
     fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>>
+
+    @Transaction
+    @Query("SELECT * FROM dictionary_entries WHERE origin IN (:origins)")
+    fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>>
 }
 
 data class DictionaryWithSenses(

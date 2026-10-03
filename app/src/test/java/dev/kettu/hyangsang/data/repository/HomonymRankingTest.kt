@@ -149,6 +149,8 @@ class HomonymRankingTest {
         override fun getFullEntriesByWord(word: String): Flow<List<DictionaryWithSenses>> = flowOf(emptyList())
         override fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>> =
             flowOf(entries.filter { it.entry.word in words })
+        override fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>> =
+            flowOf(entries.filter { it.entry.origin in origins })
     }
 
     private fun homonym(
