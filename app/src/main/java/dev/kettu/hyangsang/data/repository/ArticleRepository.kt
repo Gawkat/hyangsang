@@ -4,6 +4,7 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
@@ -109,13 +110,15 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         return ContentRefresh.Updated
     }
 
-    // Returns how many articles had their content cleared
-    @OptIn(ExperimentalTime::class)
-    suspend fun clearUnopenedContent(retention: ContentRetention): Int {
-        val days = retention.days ?: return 0
-        val cutoff = Clock.System.now() - days.days
-        return articleDao.clearContentNotOpenedSince(cutoff.toString())
+    // Removes old unsaved articles, then the downloaded text of ones not opened for a while.
+    // Saved articles are never touched
+    suspend fun pruneStorage(articleRetention: ArticleRetention, contentRetention: ContentRetention) {
+        articleRetention.days?.let { articleDao.deleteUnsavedOlderThan(cutoff(it)) }
+        contentRetention.days?.let { articleDao.clearContentNotOpenedSince(cutoff(it)) }
     }
+
+    @OptIn(ExperimentalTime::class)
+    private fun cutoff(days: Int): String = (Clock.System.now() - days.days).toString()
 
     // Stored content from an older parser, which may have missed what a fix now extracts
     fun needsReparse(article: Article): Boolean =

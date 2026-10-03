@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
@@ -69,6 +70,7 @@ import dev.kettu.hyangsang.BuildConfig
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderFont
@@ -79,7 +81,7 @@ import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
 private enum class SettingsDialog {
-    THEME, PALETTE, FEED_SYNC_INTERVAL, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
+    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +97,8 @@ fun SettingsScreen(
     onShowUnreadCountsChange: (Boolean) -> Unit,
     feedSyncInterval: FeedSyncInterval,
     onFeedSyncIntervalChange: (FeedSyncInterval) -> Unit,
+    articleRetention: ArticleRetention,
+    onArticleRetentionChange: (ArticleRetention) -> Unit,
     contentRetention: ContentRetention,
     onContentRetentionChange: (ContentRetention) -> Unit,
     feeds: List<RssFeed>,
@@ -125,6 +129,12 @@ fun SettingsScreen(
         FeedSyncInterval.SIX_HOURS to stringResource(R.string.background_refresh_6_hours),
         FeedSyncInterval.TWELVE_HOURS to stringResource(R.string.background_refresh_12_hours),
         FeedSyncInterval.DAILY to stringResource(R.string.background_refresh_daily)
+    )
+    val articleRetentionOptions = listOf(
+        ArticleRetention.ONE_MONTH to stringResource(R.string.retention_one_month),
+        ArticleRetention.THREE_MONTHS to stringResource(R.string.retention_three_months),
+        ArticleRetention.ONE_YEAR to stringResource(R.string.retention_one_year),
+        ArticleRetention.FOREVER to stringResource(R.string.retention_forever)
     )
     val contentRetentionOptions = listOf(
         ContentRetention.ONE_WEEK to stringResource(R.string.retention_one_week),
@@ -218,6 +228,19 @@ fun SettingsScreen(
 
             SectionHeader(stringResource(R.string.storage_section))
             SettingsItem(
+                icon = Icons.Outlined.History,
+                title = stringResource(R.string.article_retention_setting),
+                summary = if (articleRetention == ArticleRetention.FOREVER) {
+                    stringResource(R.string.article_retention_summary_forever)
+                } else {
+                    stringResource(
+                        R.string.article_retention_summary,
+                        articleRetentionOptions.labelFor(articleRetention)
+                    )
+                },
+                onClick = { openDialog = SettingsDialog.ARTICLE_RETENTION }
+            )
+            SettingsItem(
                 icon = Icons.Outlined.Storage,
                 title = stringResource(R.string.content_retention_setting),
                 summary = if (contentRetention == ContentRetention.FOREVER) {
@@ -298,6 +321,14 @@ fun SettingsScreen(
             options = feedSyncOptions,
             selected = feedSyncInterval,
             onSelect = { onFeedSyncIntervalChange(it); dismiss() },
+            onDismiss = dismiss
+        )
+
+        SettingsDialog.ARTICLE_RETENTION -> ChoiceDialog(
+            title = stringResource(R.string.article_retention_setting),
+            options = articleRetentionOptions,
+            selected = articleRetention,
+            onSelect = { onArticleRetentionChange(it); dismiss() },
             onDismiss = dismiss
         )
 
@@ -464,6 +495,8 @@ fun SettingsScreenPreview() {
             onShowUnreadCountsChange = {},
             feedSyncInterval = FeedSyncInterval.DEFAULT,
             onFeedSyncIntervalChange = {},
+            articleRetention = ArticleRetention.DEFAULT,
+            onArticleRetentionChange = {},
             contentRetention = ContentRetention.DEFAULT,
             onContentRetentionChange = {},
             feeds = emptyList(),

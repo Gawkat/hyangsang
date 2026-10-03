@@ -17,6 +17,7 @@ import dev.kettu.hyangsang.sync.FeedSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -77,10 +78,14 @@ class HyangsangApplication : Application() {
             }
         }
 
-        // Runs at startup and again when the setting changes
+        // Runs at startup and again when either setting changes
         applicationScope.launch {
-            userPreferencesRepository.contentRetentionFlow.collect { retention ->
-                articleRepository.clearUnopenedContent(retention)
+            combine(
+                userPreferencesRepository.articleRetentionFlow,
+                userPreferencesRepository.contentRetentionFlow,
+                ::Pair
+            ).collect { (articleRetention, contentRetention) ->
+                articleRepository.pruneStorage(articleRetention, contentRetention)
             }
         }
 

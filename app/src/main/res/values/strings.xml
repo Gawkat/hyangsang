@@ -63,12 +63,17 @@
     <string name="background_refresh_12_hours">Every 12 hours</string>
     <string name="background_refresh_daily">Once a day</string>
     <string name="storage_section">Storage</string>
+    <string name="article_retention_setting">Old articles</string>
+    <string name="article_retention_summary">Unsaved articles are removed after %1$s</string>
+    <string name="article_retention_summary_forever">All articles are kept</string>
     <string name="content_retention_setting">Downloaded article text</string>
     <string name="content_retention_summary">Removed from unsaved articles not opened for %1$s</string>
     <string name="content_retention_summary_forever">Kept for all articles</string>
     <string name="retention_one_week">1 week</string>
     <string name="retention_two_weeks">2 weeks</string>
     <string name="retention_one_month">1 month</string>
+    <string name="retention_three_months">3 months</string>
+    <string name="retention_one_year">1 year</string>
     <string name="retention_forever">Forever</string>
     <string name="feeds_enabled_summary">%1$d of %2$d on</string>
     <plurals name="feeds_failed_summary">

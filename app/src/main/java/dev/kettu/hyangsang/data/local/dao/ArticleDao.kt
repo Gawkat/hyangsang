@@ -104,6 +104,16 @@ interface ArticleDao {
     )
     suspend fun clearContentNotOpenedSince(cutoff: String): Int
 
+    // Deletes unsaved articles both published and added before the cutoff. Checking addedDate too
+    // keeps an article with an old or wrong publication date that's still in its feed
+    @Query(
+        """
+        DELETE FROM articles
+        WHERE savedDate IS NULL AND addedDate < :cutoff AND (pubDate IS NULL OR pubDate < :cutoff)
+    """
+    )
+    suspend fun deleteUnsavedOlderThan(cutoff: String): Int
+
     @Query("UPDATE articles SET parserVersion = :parserVersion WHERE id = :id")
     suspend fun updateParserVersion(id: Long, parserVersion: Int)
 

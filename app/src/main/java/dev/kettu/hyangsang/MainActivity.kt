@@ -52,6 +52,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
+import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
@@ -88,6 +89,8 @@ class MainActivity : AppCompatActivity() {
             val showUnreadCounts by prefsRepository.showUnreadCountsFlow.collectAsState(initial = false)
             val feedSyncInterval by prefsRepository.feedSyncIntervalFlow
                 .collectAsState(initial = FeedSyncInterval.DEFAULT)
+            val articleRetention by prefsRepository.articleRetentionFlow
+                .collectAsState(initial = ArticleRetention.DEFAULT)
             val contentRetention by prefsRepository.contentRetentionFlow
                 .collectAsState(initial = ContentRetention.DEFAULT)
 
@@ -156,6 +159,7 @@ class MainActivity : AppCompatActivity() {
                     readerSettings = readerSettings,
                     showUnreadCounts = showUnreadCounts,
                     feedSyncInterval = feedSyncInterval,
+                    articleRetention = articleRetention,
                     contentRetention = contentRetention
                 )
             }
@@ -199,6 +203,7 @@ fun MainApp(
     readerSettings: ReaderSettings,
     showUnreadCounts: Boolean,
     feedSyncInterval: FeedSyncInterval,
+    articleRetention: ArticleRetention,
     contentRetention: ContentRetention
 ) {
     val navController = rememberNavController()
@@ -417,6 +422,10 @@ fun MainApp(
                         feedSyncInterval = feedSyncInterval,
                         onFeedSyncIntervalChange = {
                             scope.launch { prefsRepository.setFeedSyncInterval(it) }
+                        },
+                        articleRetention = articleRetention,
+                        onArticleRetentionChange = {
+                            scope.launch { prefsRepository.setArticleRetention(it) }
                         },
                         contentRetention = contentRetention,
                         onContentRetentionChange = {

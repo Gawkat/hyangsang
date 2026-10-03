@@ -128,6 +128,26 @@ class ArticleDaoTest {
     }
 
     @Test
+    fun deletesUnsavedArticlesPublishedAndAddedBeforeCutoff(): Unit = runBlocking {
+        val longAgo = "2026-01-01T00:00:00Z"
+        dao.insertArticles(
+            listOf(
+                article(5, newsFeed, "old", pubDate = longAgo).copy(addedDate = longAgo),
+                article(6, newsFeed, "old, saved", pubDate = longAgo).copy(addedDate = longAgo),
+                article(7, newsFeed, "old, no date", pubDate = null).copy(addedDate = longAgo),
+                // An old publication date on an item that was only just added
+                article(8, newsFeed, "old date, added recently", pubDate = longAgo)
+            )
+        )
+        dao.updateSavedDate(6, longAgo)
+
+        val deleted = dao.deleteUnsavedOlderThan("2026-07-01T00:00:00Z")
+
+        assertEquals(2, deleted)
+        assertEquals(setOf(1L, 2L, 3L, 4L, 6L, 8L), ids().toSet())
+    }
+
+    @Test
     fun includesFeedWithSummary(): Unit = runBlocking {
         dao.updateSavedDate(3, "2026-10-03T01:00:00Z")
         val saved = dao.getSavedArticleSummaries().first().single()

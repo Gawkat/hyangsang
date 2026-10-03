@@ -31,6 +31,7 @@ class UserPreferencesRepository(private val context: Context) {
         val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
         val CONTENT_RETENTION = stringPreferencesKey("content_retention")
         val FEED_SYNC_INTERVAL = stringPreferencesKey("feed_sync_interval")
+        val ARTICLE_RETENTION = stringPreferencesKey("article_retention")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -76,6 +77,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setContentRetention(retention: ContentRetention) {
         context.dataStore.edit { it[Keys.CONTENT_RETENTION] = retention.name }
+    }
+
+    val articleRetentionFlow: Flow<ArticleRetention> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.ARTICLE_RETENTION], ArticleRetention.DEFAULT)
+    }.distinctUntilChanged()
+
+    suspend fun setArticleRetention(retention: ArticleRetention) {
+        context.dataStore.edit { it[Keys.ARTICLE_RETENTION] = retention.name }
     }
 
     suspend fun setTheme(theme: String) {

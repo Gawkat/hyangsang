@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 // Refreshes enabled feeds while the app isn't open, so articles that drop out of a feed between
-// visits are still stored. Also clears old article text, as app start does
+// visits are still stored. Also removes old articles and article text, as app start does
 class FeedSyncWorker(
     context: Context,
     params: WorkerParameters
@@ -24,8 +24,10 @@ class FeedSyncWorker(
         val app = applicationContext as HyangsangApplication
         // Each feed records its own failure, and the next run tries again
         app.rssFeedRepository.refreshEnabledFeeds()
-        app.articleRepository.clearUnopenedContent(
-            app.userPreferencesRepository.contentRetentionFlow.first()
+        val prefs = app.userPreferencesRepository
+        app.articleRepository.pruneStorage(
+            prefs.articleRetentionFlow.first(),
+            prefs.contentRetentionFlow.first()
         )
         return Result.success()
     }
