@@ -151,7 +151,7 @@
     </plurals>
     <string name="not_right_meaning">Not the right meaning?</string>
     <string name="lookup_online_hint">Try looking it up online.</string>
-    <string name="search_web_dictionary">Web dictionary</string>
+    <string name="search_web_dictionary">Search “%1$s” online</string>
     <!-- Built-in feeds -->
     <string name="default_feed_title">%1$s - %2$s</string>
     <string name="source_yonhap_news">Yonhap News</string>

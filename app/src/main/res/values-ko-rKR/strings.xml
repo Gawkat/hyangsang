@@ -142,7 +142,7 @@
     </plurals>
     <string name="not_right_meaning">찾는 뜻이 아닌가요?</string>
     <string name="lookup_online_hint">온라인 사전에서 찾아보세요.</string>
-    <string name="search_web_dictionary">웹 사전</string>
+    <string name="search_web_dictionary">“%1$s” 웹 사전 검색</string>
     <!-- Built-in feeds -->
     <string name="source_yonhap_news">연합뉴스</string>
     <string name="category_news">뉴스</string>

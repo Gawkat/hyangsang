@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -74,9 +75,10 @@ fun DefinitionOverlay(
     modifier: Modifier = Modifier
 ) {
     var selectedStem by remember(selectedWord) { mutableStateOf(selectedWord) }
+    var userPickedStem by remember(selectedWord) { mutableStateOf(false) }
 
     LaunchedEffect(lookupResults) {
-        if (lookupResults[selectedStem].isNullOrEmpty()) {
+        if (!userPickedStem && lookupResults[selectedStem].isNullOrEmpty()) {
             lookupResults.keys.firstOrNull { !lookupResults[it].isNullOrEmpty() }
                 ?.let { selectedStem = it }
         }
@@ -84,7 +86,8 @@ fun DefinitionOverlay(
 
     val entries = lookupResults[selectedStem].orEmpty()
     var selectedEntryIndex by remember(selectedStem, entries.size) { mutableIntStateOf(0) }
-    val searchTerm = if (entries.isEmpty()) selectedWord else selectedStem
+    // The whole word is selectable even without an entry, so the web search always covers it
+    val stems = lookupResults.keys.filter { it != selectedWord }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Column(
@@ -94,19 +97,22 @@ fun DefinitionOverlay(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
         ) {
-            if (lookupResults.size > 1 || (lookupResults.size == 1 && selectedStem != selectedWord)) {
+            if (stems.isNotEmpty()) {
                 StemChips(
                     word = selectedWord,
-                    stems = lookupResults.keys.toList(),
+                    stems = stems,
                     selectedStem = selectedStem,
-                    onSelect = { selectedStem = it }
+                    onSelect = {
+                        selectedStem = it
+                        userPickedStem = true
+                    }
                 )
             }
 
             when {
                 isLoading && entries.isEmpty() -> LookupPlaceholder()
                 entries.isEmpty() -> Text(
-                    text = stringResource(R.string.no_definitions, selectedWord),
+                    text = stringResource(R.string.no_definitions, selectedStem),
                     style = MaterialTheme.typography.bodyLarge
                 )
 
@@ -146,14 +152,19 @@ fun DefinitionOverlay(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { onSearchWeb(searchTerm) }) {
+            TextButton(
+                onClick = { onSearchWeb(selectedStem) },
+                modifier = Modifier.widthIn(max = 240.dp)
+            ) {
                 Icon(
                     Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = stringResource(R.string.search_web_dictionary),
+                    text = stringResource(R.string.search_web_dictionary, selectedStem),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -173,10 +184,10 @@ private fun StemChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.horizontalScroll(rememberScrollState())
     ) {
-        Text(
-            text = word,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        FilterChip(
+            selected = selectedStem == word,
+            onClick = { onSelect(word) },
+            label = { Text(word) }
         )
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,

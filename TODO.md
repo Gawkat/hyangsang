@@ -23,7 +23,6 @@
 
 ## Lookup overlay
 
-* External dictionary lookup should search complete word, not selected stem
 * Revisit the order of stem chips?
 * Improve the Lesk-style sentence overlap (`contextOverlap` in `HomonymRanking.kt`)?
 
