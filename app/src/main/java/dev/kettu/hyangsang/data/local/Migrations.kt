@@ -20,4 +20,13 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_13_14, MIGRATION_14_15)
+// The dictionary moved to DictionaryDatabase, so it can be replaced without touching user data
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `dictionary_examples`")
+        db.execSQL("DROP TABLE IF EXISTS `dictionary_senses`")
+        db.execSQL("DROP TABLE IF EXISTS `dictionary_entries`")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)

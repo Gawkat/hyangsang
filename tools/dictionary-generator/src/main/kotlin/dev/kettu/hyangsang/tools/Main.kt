@@ -43,6 +43,9 @@ object DictionaryMapper {
 }
 
 fun main(args: Array<String>) {
+    // The app recopies the bundled dictionary when this changes, see DictionaryDatabase
+    val version = args.firstOrNull()?.toIntOrNull()
+        ?: error("Usage: dictionary-generator <version>, the NIKL release date such as 20260919")
     val inputDir = File("app/src/main/assets/dictionary") // TODO update me
     val outputFile = File("app/src/main/assets/dictionary.db")
 
@@ -74,8 +77,10 @@ fun main(args: Array<String>) {
         }
 
         conn.commit()
+        conn.autoCommit = true
+        conn.createStatement().use { it.execute("PRAGMA user_version = $version") }
     }
-    println("Done! Database created at ${outputFile.absolutePath}")
+    println("Done! Database version $version created at ${outputFile.absolutePath}")
 }
 
 fun createTables(conn: Connection) {

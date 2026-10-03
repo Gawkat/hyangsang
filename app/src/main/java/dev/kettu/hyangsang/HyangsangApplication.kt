@@ -5,6 +5,7 @@ import android.app.UiModeManager
 import android.content.res.Configuration
 import android.os.Build
 import dev.kettu.hyangsang.data.defaults.DefaultData
+import dev.kettu.hyangsang.data.local.DictionaryDatabase
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
@@ -25,6 +26,7 @@ class HyangsangApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val database: HyangsangDatabase by lazy { HyangsangDatabase.getDatabase(this) }
+    val dictionaryDatabase: DictionaryDatabase by lazy { DictionaryDatabase.getDatabase(this) }
 
     private val retrofit by lazy {
         val logging = okhttp3.logging.HttpLoggingInterceptor().apply {
@@ -60,6 +62,12 @@ class HyangsangApplication : Application() {
         applicationScope.launch {
             // Initialize Open Korean Text resources
             OpenKoreanTextProcessorJava.loadResources()
+        }
+
+        // Opening copies the bundled dictionary on first launch or after an update, which would
+        // otherwise delay the first lookup
+        applicationScope.launch {
+            dictionaryDatabase.openHelper.writableDatabase
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -98,7 +106,7 @@ class HyangsangApplication : Application() {
 
     val dictionaryRepository: DictionaryRepository by lazy {
         DictionaryRepository(
-            database.dictionaryDao()
+            dictionaryDatabase.dictionaryDao()
         )
     }
 

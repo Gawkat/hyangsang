@@ -64,4 +64,31 @@ class MigrationTest {
             assertTrue(it.getString(3).contains("index_dictionary_entries_word"))
         }
     }
+
+    @Test
+    fun migrate15To16_dropsDictionaryTables() {
+        helper.createDatabase(TEST_DB, 15).apply {
+            execSQL(
+                "INSERT INTO rss_feeds (id, title, url, category, isEnabled, lastSynced) " +
+                    "VALUES (1, 'Feed', 'https://example.com/rss', 'News', 1, '2026-09-25T00:00:00Z')"
+            )
+            execSQL(
+                "INSERT INTO dictionary_entries (id, originalId, word, origin, homonymNumber, partOfSpeech, vocabularyLevel, semanticCategory, lexicalUnit, pronunciation, audioUrl) " +
+                    "VALUES (1, '1', '값', NULL, 0, 'Noun', NULL, NULL, 'Word', NULL, NULL)"
+            )
+            close()
+        }
+
+        // Validation fails if the dictionary tables are still there
+        val db = helper.runMigrationsAndValidate(TEST_DB, 16, true, MIGRATION_15_16)
+
+        db.query("SELECT count(*) FROM sqlite_master WHERE name LIKE 'dictionary_%'").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        db.query("SELECT title FROM rss_feeds WHERE id = 1").use {
+            it.moveToFirst()
+            assertEquals("Feed", it.getString(0))
+        }
+    }
 }
