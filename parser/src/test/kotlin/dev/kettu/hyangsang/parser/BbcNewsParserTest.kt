@@ -10,14 +10,8 @@ class BbcNewsParserTest {
 
     @Test
     fun `extracts text from BBC News article`() {
-        val html = javaClass.classLoader.getResource("bbc_sample.html")?.readText()
-        val expected =
-            javaClass.classLoader.getResource("bbc_sample_expected_output.txt")?.readText()
-                ?.replace(Regex("\\r\\n?"), "\n")
-
-        if (html == null || expected == null) {
-            return
-        }
+        val html = readSample("bbc_sample.html")
+        val expected = readSample("bbc_sample_expected_output.txt")
 
         val doc = Jsoup.parse(html)
         val result = parser.extractContents(doc)

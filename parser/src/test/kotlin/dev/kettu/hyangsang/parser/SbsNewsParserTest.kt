@@ -10,7 +10,7 @@ class SbsNewsParserTest {
 
     @Test
     fun `extracts body text and images from SBS News article`() {
-        val html = javaClass.classLoader.getResource("sbs_sample.html")?.readText() ?: return
+        val html = readSample("sbs_sample.html")
 
         val result = parser.extractContents(Jsoup.parse(html))
 

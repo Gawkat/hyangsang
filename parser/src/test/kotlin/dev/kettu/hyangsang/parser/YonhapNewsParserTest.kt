@@ -10,14 +10,7 @@ class YonhapNewsParserTest {
 
     @Test
     fun `extracts text from Yonhap News article`() {
-        val html = javaClass.classLoader.getResource("yonhap_sample.htm")?.readText()
-        val expected =
-            javaClass.classLoader.getResource("yonhap_sample_expected_output.txt")?.readText()
-                ?.replace(Regex("\\r\\n?"), "\n")
-
-        if (html == null || expected == null) {
-            return
-        }
+        val html = readSample("yonhap_sample.htm")
 
         val doc = Jsoup.parse(html)
         val result = parser.extractContents(doc)

@@ -24,6 +24,12 @@ The instrumented tests, such as the Room migration tests, need a running emulato
 
 Running them uninstalls the app from the device, along with its data.
 
+Some parser tests run against saved copies of real articles in `parser/src/test/resources`, which
+is ignored by git since the articles belong to the news sites. Without them those tests are
+skipped, and Gradle reports them as skipped. To run them, save an article page from the site
+under the name the test reads, such as `bbc_sample.html`. They check details of specific
+articles, so expect to adjust the assertions for a different article.
+
 ## When you change...
 
 ### An article parser
