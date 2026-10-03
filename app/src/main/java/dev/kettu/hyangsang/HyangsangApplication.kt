@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 import retrofit2.Retrofit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class HyangsangApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -60,18 +61,6 @@ class HyangsangApplication : Application() {
             rssFeedRepository.refreshEnabledFeeds()
         }
 
-        // Loaded separately, so it doesn't wait for the feed refresh to finish
-        applicationScope.launch {
-            // Initialize Open Korean Text resources
-            OpenKoreanTextProcessorJava.loadResources()
-        }
-
-        // Opening copies the bundled dictionary on first launch or after an update, which would
-        // otherwise delay the first lookup
-        applicationScope.launch {
-            dictionaryDatabase.openHelper.writableDatabase
-        }
-
         applicationScope.launch {
             userPreferencesRepository.feedSyncIntervalFlow.collect { interval ->
                 FeedSyncWorker.schedule(this@HyangsangApplication, interval)
@@ -95,6 +84,26 @@ class HyangsangApplication : Application() {
                     applyApplicationNightMode(theme)
                 }
             }
+        }
+    }
+
+    private val readerResourcesLoaded = AtomicBoolean(false)
+
+    // Loads what word lookups need ahead of the first one. Called when the UI starts rather than
+    // in onCreate, so a background feed sync doesn't load them. Only the first call loads
+    fun loadReaderResources() {
+        if (!readerResourcesLoaded.compareAndSet(false, true)) return
+
+        // Loaded separately, so it doesn't wait for the feed refresh to finish
+        applicationScope.launch {
+            // Initialize Open Korean Text resources
+            OpenKoreanTextProcessorJava.loadResources()
+        }
+
+        // Opening copies the bundled dictionary on first launch or after an update, which would
+        // otherwise delay the first lookup
+        applicationScope.launch {
+            dictionaryDatabase.openHelper.writableDatabase
         }
     }
 

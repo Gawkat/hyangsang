@@ -79,6 +79,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as HyangsangApplication
+        app.loadReaderResources()
         val prefsRepository = app.userPreferencesRepository
 
         setContent {
