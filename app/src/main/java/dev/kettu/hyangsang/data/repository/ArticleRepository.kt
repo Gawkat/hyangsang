@@ -47,8 +47,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
         return try {
             val content = fetchContent(article.sourceUrl)
-            articleDao.updateContent(article.id, content)
-            article.copy(content = content)
+            articleDao.updateContent(article.id, content, ArticleParser.VERSION)
+            article.copy(content = content, parserVersion = ArticleParser.VERSION)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -56,7 +56,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         }
     }
 
-    // Downloads and parses the article again, e.g. after a parser fix or a publisher's edit.
+    // Downloads and parses the article again, after a parser fix or for a publisher's edit.
     // The stored content is only replaced when the new parse looks complete
     suspend fun refreshArticleContent(article: Article): ContentRefresh {
         val content = try {
@@ -67,12 +67,25 @@ class ArticleRepository(private val articleDao: ArticleDao) {
             return ContentRefresh.Failed
         }
 
-        if (content == article.content) return ContentRefresh.Unchanged
+        if (content == article.content) {
+            articleDao.updateParserVersion(article.id, ArticleParser.VERSION)
+            return ContentRefresh.Unchanged
+        }
+        // Not marked as parsed, so a rejected parse is tried again on the next open
         if (!isUsableRefresh(article.content.orEmpty(), content)) return ContentRefresh.Failed
 
-        articleDao.replaceContent(article.id, content, maxPosition = content.lastIndex)
+        articleDao.replaceContent(
+            article.id,
+            content,
+            maxPosition = content.lastIndex,
+            parserVersion = ArticleParser.VERSION
+        )
         return ContentRefresh.Updated
     }
+
+    // Stored content from an older parser, which may have missed what a fix now extracts
+    fun needsReparse(article: Article): Boolean =
+        !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
 
     private suspend fun fetchContent(url: String): List<ContentBlock> =
         withContext(Dispatchers.IO) {

@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
         VocabularyWord::class,
         RssFeed::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(ContentBlockTypeConverter::class)

@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -38,5 +39,9 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val pubDate: String?,
     val lastReadDate: String? = null,
     val scrollPosition: Int = 0,
-    val savedDate: String? = null // Null when not saved; saved articles must survive pruning
-)
+    val savedDate: String? = null, // Null when not saved; saved articles must survive pruning
+    // ArticleParser.VERSION the content was parsed with
+    @ColumnInfo(defaultValue = "0")
+    val parserVersion: Int = 0
+)
+

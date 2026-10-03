@@ -4,6 +4,12 @@ import org.jsoup.nodes.Document
 import java.net.URI
 
 class ArticleParser {
+    companion object {
+        // Raise when a parser change should reach articles already stored. Older ones are
+        // parsed again the next time they're opened
+        const val VERSION = 1
+    }
+
     private val defaultParser = GenericContentsParser()
 
     private val parsers = mapOf(

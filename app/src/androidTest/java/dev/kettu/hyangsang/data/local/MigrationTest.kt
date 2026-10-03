@@ -91,4 +91,28 @@ class MigrationTest {
             assertEquals("Feed", it.getString(0))
         }
     }
+
+    @Test
+    fun migrate16To17_marksStoredArticlesForReparse() {
+        helper.createDatabase(TEST_DB, 16).apply {
+            execSQL(
+                "INSERT INTO rss_feeds (id, title, url, category, isEnabled, lastSynced) " +
+                    "VALUES (1, 'Feed', 'https://example.com/rss', 'News', 1, '2026-09-25T00:00:00Z')"
+            )
+            execSQL(
+                "INSERT INTO articles (id, feedId, title, description, content, sourceUrl, addedDate, pubDate, lastReadDate, scrollPosition) " +
+                    "VALUES (1, 1, 'Title', 'Description', '[]', 'https://example.com/a', '2026-09-25T00:00:00Z', NULL, NULL, 0)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 17, true, MIGRATION_16_17)
+
+        // Version 0 is older than any ArticleParser.VERSION, so the article is parsed again
+        db.query("SELECT content, parserVersion FROM articles WHERE id = 1").use {
+            it.moveToFirst()
+            assertEquals("[]", it.getString(0))
+            assertEquals(0, it.getInt(1))
+        }
+    }
 }

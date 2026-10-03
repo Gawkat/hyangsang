@@ -59,16 +59,24 @@ interface ArticleDao {
     suspend fun deleteArticle(article: Article)
 
     // Targeted updates, so a stale Article copy can't overwrite columns changed elsewhere
-    @Query("UPDATE articles SET content = :content WHERE id = :id")
-    suspend fun updateContent(id: Long, content: List<ContentBlock>?)
+    @Query("UPDATE articles SET content = :content, parserVersion = :parserVersion WHERE id = :id")
+    suspend fun updateContent(id: Long, content: List<ContentBlock>?, parserVersion: Int)
 
     // Replaces re-fetched content, clamping the saved position (a content block index) so it
     // still points into the new, possibly shorter, content
     @Query(
-        "UPDATE articles SET content = :content, " +
+        "UPDATE articles SET content = :content, parserVersion = :parserVersion, " +
                 "scrollPosition = MAX(0, MIN(scrollPosition, :maxPosition)) WHERE id = :id"
     )
-    suspend fun replaceContent(id: Long, content: List<ContentBlock>, maxPosition: Int)
+    suspend fun replaceContent(
+        id: Long,
+        content: List<ContentBlock>,
+        maxPosition: Int,
+        parserVersion: Int
+    )
+
+    @Query("UPDATE articles SET parserVersion = :parserVersion WHERE id = :id")
+    suspend fun updateParserVersion(id: Long, parserVersion: Int)
 
     @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id")
     suspend fun updateSavedDate(id: Long, savedDate: String?)

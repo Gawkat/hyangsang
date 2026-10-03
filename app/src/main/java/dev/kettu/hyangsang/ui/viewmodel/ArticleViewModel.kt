@@ -6,6 +6,7 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.ContentRefresh
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,7 @@ sealed class ArticleUiState {
 class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewModel() {
     private val _currentArticleState = MutableStateFlow<ArticleUiState>(ArticleUiState.Loading)
     val currentArticleState: StateFlow<ArticleUiState> = _currentArticleState.asStateFlow()
+    private var refreshJob: Job? = null
 
     private val _filterCriteria = MutableStateFlow(ArticleFilterCriteria())
     val filterCriteria: StateFlow<ArticleFilterCriteria> = _filterCriteria.asStateFlow()
@@ -162,16 +164,29 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             )
 
             _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
+
+            // Shows the stored content right away and swaps in the new parse if it differs
+            if (articleRepository.needsReparse(articleWithFeed.article)) {
+                startRefresh(articleId, reportResult = false)
+            }
         }
     }
 
     fun refreshArticle() {
         val current = _currentArticleState.value as? ArticleUiState.Success ?: return
         if (current.isRefreshing) return
-        val articleId = current.articleWithFeed.article.id
-        updateSuccess(articleId) { it.copy(isRefreshing = true, refreshResult = null) }
+        // A background re-parse may still be running; this one replaces it and reports back
+        refreshJob?.cancel()
+        startRefresh(current.articleWithFeed.article.id, reportResult = true)
+    }
 
-        viewModelScope.launch {
+    // Only a manual reload shows progress and its result
+    private fun startRefresh(articleId: Long, reportResult: Boolean) {
+        if (reportResult) {
+            updateSuccess(articleId) { it.copy(isRefreshing = true, refreshResult = null) }
+        }
+
+        refreshJob = viewModelScope.launch {
             // Start from the stored article, so a refresh compares against what's saved
             val stored = articleRepository.getArticleWithFeedById(articleId)
             val result = stored?.let { articleRepository.refreshArticleContent(it.article) }
@@ -182,11 +197,12 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 null
             }
             updateSuccess(articleId) {
-                it.copy(
-                    articleWithFeed = updated ?: it.articleWithFeed,
-                    isRefreshing = false,
-                    refreshResult = result
-                )
+                val withContent = it.copy(articleWithFeed = updated ?: it.articleWithFeed)
+                if (reportResult) {
+                    withContent.copy(isRefreshing = false, refreshResult = result)
+                } else {
+                    withContent
+                }
             }
         }
     }
