@@ -2,6 +2,7 @@ package dev.kettu.hyangsang.data.repository
 
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
@@ -14,12 +15,24 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 class ArticleRepository(private val articleDao: ArticleDao) {
-    fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
+    // A blank search matches all articles
+    fun getArticleSummaries(
+        category: String?,
+        feedId: Long?,
+        searchQuery: String,
+        unreadOnly: Boolean
+    ): Flow<List<ArticleSummaryWithFeed>> = articleDao.getArticleSummaries(
+        category = category,
+        feedId = feedId,
+        query = if (searchQuery.isBlank()) "" else escapeLike(searchQuery),
+        unreadOnly = unreadOnly
+    )
 
-    fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>> = articleDao.getAllArticlesWithFeed()
+    fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>> =
+        articleDao.getSavedArticleSummaries()
 
-    fun getSavedArticlesWithFeed(): Flow<List<ArticleWithFeed>> =
-        articleDao.getSavedArticlesWithFeed()
+    // Unread article count per feed id; feeds without unread articles are left out
+    fun getUnreadCounts(): Flow<Map<Long, Int>> = articleDao.getUnreadCounts()
 
     suspend fun getArticleById(id: Long): Article? = articleDao.getArticleById(id)
 
@@ -93,6 +106,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
             ArticleParser().parse(url, Jsoup.connect(url).get(), article.title)
         }
 }
+
+// Makes the search text match literally inside a LIKE pattern that uses ESCAPE '\'
+internal fun escapeLike(text: String): String =
+    text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 enum class ContentRefresh { Updated, Unchanged, Failed }
 

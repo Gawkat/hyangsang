@@ -3,16 +3,17 @@ package dev.kettu.hyangsang.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.ContentRefresh
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,57 +45,32 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
     private val _filterCriteria = MutableStateFlow(ArticleFilterCriteria())
     val filterCriteria: StateFlow<ArticleFilterCriteria> = _filterCriteria.asStateFlow()
 
-    val allArticles: StateFlow<List<Article>> = articleRepository.getAllArticles()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    val allArticlesWithFeed: StateFlow<List<ArticleWithFeed>> =
-        combine(
-            articleRepository.getAllArticlesWithFeed(),
-            _filterCriteria
-        ) { articles, criteria ->
-            articles.filter { articleWithFeed ->
-                val matchesCategory = criteria.selectedCategory == null ||
-                        articleWithFeed.feed.category == criteria.selectedCategory
-                val matchesFeed = criteria.selectedFeedId == null ||
-                        articleWithFeed.feed.id == criteria.selectedFeedId
-                val matchesSearch = criteria.searchQuery.isBlank() ||
-                        articleWithFeed.article.title.contains(
-                            criteria.searchQuery,
-                            ignoreCase = true
-                        ) ||
-                        articleWithFeed.article.description.contains(
-                            criteria.searchQuery,
-                            ignoreCase = true
-                        )
-                val matchesUnread =
-                    !criteria.showUnreadOnly || articleWithFeed.article.lastReadDate == null
-
-                matchesCategory && matchesFeed && matchesSearch && matchesUnread
-            }
+    // Filtered by the database, so changing the filter runs a new query
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> = _filterCriteria
+        .flatMapLatest { criteria ->
+            articleRepository.getArticleSummaries(
+                category = criteria.selectedCategory,
+                feedId = criteria.selectedFeedId,
+                searchQuery = criteria.searchQuery,
+                unreadOnly = criteria.showUnreadOnly
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val savedArticlesWithFeed: StateFlow<List<ArticleWithFeed>> =
-        articleRepository.getSavedArticlesWithFeed().stateIn(
+    val savedArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> =
+        articleRepository.getSavedArticleSummaries().stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
     // Unread article count per feed id
-    val unreadCounts: StateFlow<Map<Long, Int>> = articleRepository.getAllArticles()
-        .map { articles ->
-            articles.filter { it.lastReadDate == null }
-                .groupingBy { it.feedId }
-                .eachCount()
-        }.stateIn(
+    val unreadCounts: StateFlow<Map<Long, Int>> = articleRepository.getUnreadCounts()
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyMap()

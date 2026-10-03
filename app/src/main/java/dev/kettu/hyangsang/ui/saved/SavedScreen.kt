@@ -31,14 +31,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
-import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.ui.discover.ArticleRow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedScreen(
-    savedArticles: List<ArticleWithFeed>,
+    savedArticles: List<ArticleSummaryWithFeed>,
     onArticleClick: (Long) -> Unit,
     onUnsave: (Long) -> Unit,
     onUndoUnsave: (articleId: Long, savedDate: String) -> Unit,

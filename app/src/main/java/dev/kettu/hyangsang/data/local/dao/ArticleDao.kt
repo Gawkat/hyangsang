@@ -3,11 +3,13 @@ package dev.kettu.hyangsang.data.local.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import dev.kettu.hyangsang.data.local.entity.Article
+import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.flow.Flow
@@ -16,9 +18,6 @@ import kotlin.time.ExperimentalTime
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles ORDER BY COALESCE(pubDate, addedDate) DESC")
-    fun getAllArticles(): Flow<List<Article>>
-
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: Long): Article?
 
@@ -26,24 +25,45 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed?
 
+    // A null category or feed matches all; a blank query matches all and otherwise is a LIKE
+    // pattern, escaped with a backslash
     @Transaction
     @Query(
         """
-        SELECT * FROM articles 
-        ORDER BY COALESCE(pubDate, addedDate) DESC
+        SELECT a.id, a.feedId, a.title, a.description, a.addedDate, a.pubDate, a.lastReadDate,
+            a.savedDate
+        FROM articles a
+        INNER JOIN rss_feeds f ON f.id = a.feedId
+        WHERE (:category IS NULL OR f.category = :category)
+            AND (:feedId IS NULL OR a.feedId = :feedId)
+            AND (:unreadOnly = 0 OR a.lastReadDate IS NULL)
+            AND (:query = '' OR a.title LIKE '%' || :query || '%' ESCAPE '\'
+                OR a.description LIKE '%' || :query || '%' ESCAPE '\')
+        ORDER BY COALESCE(a.pubDate, a.addedDate) DESC
     """
     )
-    fun getAllArticlesWithFeed(): Flow<List<ArticleWithFeed>>
+    fun getArticleSummaries(
+        category: String?,
+        feedId: Long?,
+        query: String,
+        unreadOnly: Boolean
+    ): Flow<List<ArticleSummaryWithFeed>>
 
     @Transaction
-    @Query("SELECT * FROM articles WHERE savedDate IS NOT NULL ORDER BY savedDate DESC")
-    fun getSavedArticlesWithFeed(): Flow<List<ArticleWithFeed>>
+    @Query(
+        """
+        SELECT id, feedId, title, description, addedDate, pubDate, lastReadDate, savedDate
+        FROM articles WHERE savedDate IS NOT NULL ORDER BY savedDate DESC
+    """
+    )
+    fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>>
+
+    // Feeds without unread articles are left out
+    @Query("SELECT feedId, COUNT(*) AS unread FROM articles WHERE lastReadDate IS NULL GROUP BY feedId")
+    fun getUnreadCounts(): Flow<Map<@MapColumn("feedId") Long, @MapColumn("unread") Int>>
 
     @Query("SELECT COUNT(*) FROM articles WHERE feedId = :feedId AND savedDate IS NOT NULL")
     suspend fun countSavedInFeed(feedId: Long): Int
-
-    @Query("SELECT * FROM articles WHERE feedId = :feedId")
-    fun getArticlesByFeed(feedId: Long): Flow<List<Article>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticle(article: Article): Long

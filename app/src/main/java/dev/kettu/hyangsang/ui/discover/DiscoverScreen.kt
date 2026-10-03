@@ -58,8 +58,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
-import dev.kettu.hyangsang.data.local.entity.Article
-import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.data.local.entity.ArticleSummary
+import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
@@ -70,14 +70,14 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
-    articlesWithFeed: List<ArticleWithFeed>,
+    articlesWithFeed: List<ArticleSummaryWithFeed>,
     filterTitle: String,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onArticleClick: (Long) -> Unit,
-    onSaveClick: (ArticleWithFeed) -> Unit,
+    onSaveClick: (ArticleSummaryWithFeed) -> Unit,
     onMenuClick: () -> Unit,
     onSettingsClick: () -> Unit,
     showUnreadOnly: Boolean,
@@ -375,14 +375,16 @@ fun DiscoverScreenPreview() {
     HyangsangTheme {
         DiscoverScreen(
             articlesWithFeed = listOf(
-                ArticleWithFeed(
-                    article = Article(
+                ArticleSummaryWithFeed(
+                    article = ArticleSummary(
                         id = 1,
                         feedId = 1,
                         title = "스타크래프트 2: 자유의 날개 다시 보기",
                         description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
                         pubDate = Clock.System.now().toString(),
-                        sourceUrl = "https://www.source.url/article"
+                        addedDate = Clock.System.now().toString(),
+                        lastReadDate = null,
+                        savedDate = null
                     ),
                     feed = RssFeed(
                         0,
