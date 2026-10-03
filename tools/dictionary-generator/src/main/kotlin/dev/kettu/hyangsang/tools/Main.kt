@@ -171,12 +171,12 @@ fun insertLexicalEntry(
     // Lemma feat handling
     for (lemma in entry.lemma) {
         if (lemma.feat.att == "writtenForm") {
-            word = lemma.feat.valX
+            word = lemma.feat.valX.decodeHtmlEntities()
         }
     }
     for (lemma in entry.lemma) {
         if (lemma.feat.att == "origin") {
-            origin = lemma.feat.valX
+            origin = lemma.feat.valX.decodeHtmlEntities()
         }
     }
 
@@ -286,4 +286,28 @@ fun insertLexicalEntry(
     }
 }
 
-fun List<Feat>.findFeat(att: String): String? = find { it.att == att }?.valX
+fun List<Feat>.findFeat(att: String): String? = find { it.att == att }?.valX?.decodeHtmlEntities()
+
+private val htmlEntityRegex = Regex("&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);")
+private val namedHtmlEntities = mapOf(
+    "quot" to "\"",
+    "apos" to "'",
+    "amp" to "&",
+    "lt" to "<",
+    "gt" to ">",
+    "nbsp" to "\u00A0"
+)
+
+// The source JSON carries HTML-escaped text (e.g. &quot; in English definitions).
+// Single pass, so "&amp;quot;" becomes "&quot;" rather than being decoded twice.
+fun String.decodeHtmlEntities(): String {
+    if ('&' !in this) return this
+    return htmlEntityRegex.replace(this) { match ->
+        val name = match.groupValues[1]
+        when {
+            name.startsWith("#x", ignoreCase = true) -> name.substring(2).toIntOrNull(16)?.takeIf(Character::isValidCodePoint)?.let { String(Character.toChars(it)) }
+            name.startsWith("#") -> name.substring(1).toIntOrNull()?.takeIf(Character::isValidCodePoint)?.let { String(Character.toChars(it)) }
+            else -> namedHtmlEntities[name]
+        } ?: match.value
+    }
+}

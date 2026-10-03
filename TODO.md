@@ -51,7 +51,6 @@ Vocabulary screen?
 
 ## Bugfixes
 
-* Affixes have character entities in them, maybe from original JSON dictionary source
 * Opening the feed drawer will sometimes result in a blank screen - possibly fixed in `3059613`
   * Rare, not reproducible on demand; seen on both emulator and device
   * Content area goes blank while the bottom navigation bar stays visible; switching bottom tab recovers
