@@ -1,5 +1,7 @@
 # Hyangsang (향상)
 
+[![Tests](https://github.com/Gawkat/hyangsang/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Gawkat/hyangsang/actions/workflows/tests.yml)
+
 A reader app for Korean learners: Korean news from many categories, with tap-to-look-up
 dictionary support.
 
