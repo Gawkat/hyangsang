@@ -6,7 +6,7 @@ import kotlin.time.ExperimentalTime
 
 plugins {
     alias(libs.plugins.android.application)
-    id("com.google.android.gms.oss-licenses-plugin")
+    alias(libs.plugins.aboutlibraries.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
@@ -121,5 +121,5 @@ dependencies {
     implementation(project(":parser"))
 
     // For OSS licensing
-    implementation(libs.play.services.oss.licenses)
+    implementation(libs.aboutlibraries.compose.m3)
 }

@@ -1,6 +1,5 @@
 package dev.kettu.hyangsang
 
-import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
@@ -22,7 +21,6 @@ import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -50,7 +48,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
@@ -62,6 +59,7 @@ import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.saved.SavedScreen
+import dev.kettu.hyangsang.ui.settings.LicensesScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
@@ -180,6 +178,7 @@ private object Routes {
     const val FEEDS = "manage_feeds"
     const val SETTINGS = "settings"
     const val TEXT_LAYOUT = "text_layout"
+    const val LICENSES = "licenses"
     const val READER = "reader/{articleId}"
 
     fun reader(articleId: Long) = "reader/$articleId"
@@ -404,9 +403,12 @@ fun MainApp(
                         onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }
+                composable(Routes.LICENSES) { entry ->
+                    LicensesScreen(
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } }
+                    )
+                }
                 composable(Routes.SETTINGS) { entry ->
-                    val colorScheme = MaterialTheme.colorScheme
-                    val typography = MaterialTheme.typography
                     SettingsScreen(
                         currentTheme = currentTheme,
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
@@ -437,10 +439,7 @@ fun MainApp(
                             entry.ifResumed { navController.navigate(Routes.FEEDS) }
                         },
                         onOssLicensesClick = {
-                            OssLicensesMenuActivity.setTheme(colorScheme, colorScheme, typography)
-                            context.startActivity(
-                                Intent(context, OssLicensesMenuActivity::class.java)
-                            )
+                            entry.ifResumed { navController.navigate(Routes.LICENSES) }
                         },
                         onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )

@@ -16,7 +16,7 @@ datastore = "1.2.1"
 work = "2.12.0"
 appcompat = "1.8.0"
 openKoreanText = "2.3.1"
-playServicesOssLicenses = "17.5.2"
+aboutLibraries = "15.2.0"
 retrofit = "3.0.0"
 room = "2.8.5"
 ksp = "2.3.6"
@@ -54,7 +54,7 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "logging-interceptor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 open-korean-text = { module = "org.openkoreantext:open-korean-text", version.ref = "openKoreanText" }
-play-services-oss-licenses = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "playServicesOssLicenses" }
+aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 
 [plugins]
@@ -62,5 +62,6 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+aboutlibraries-android = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 
