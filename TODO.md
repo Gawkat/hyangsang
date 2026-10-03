@@ -48,9 +48,3 @@ Vocabulary screen?
   * Total Immersion Time
 
 ## Bugfixes
-
-* Opening the feed drawer will sometimes result in a blank screen - possibly fixed in `3059613`
-  * Rare, not reproducible on demand; seen on both emulator and device
-  * Content area goes blank while the bottom navigation bar stays visible; switching bottom tab recovers
-  * Still present after updating to Compose BOM 2026.09.00 (material3 1.4.0)
-  * Suspects: left-edge predictive back gesture (targetSdk 36) competing with drawer swipe, or NavHost content not being redrawn
