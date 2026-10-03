@@ -30,6 +30,7 @@ class UserPreferencesRepository(private val context: Context) {
         val READER_MARGIN = stringPreferencesKey("reader_margin")
         val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
         val CONTENT_RETENTION = stringPreferencesKey("content_retention")
+        val FEED_SYNC_INTERVAL = stringPreferencesKey("feed_sync_interval")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -59,6 +60,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setShowUnreadCounts(show: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_UNREAD_COUNTS] = show }
+    }
+
+    val feedSyncIntervalFlow: Flow<FeedSyncInterval> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.FEED_SYNC_INTERVAL], FeedSyncInterval.DEFAULT)
+    }.distinctUntilChanged()
+
+    suspend fun setFeedSyncInterval(interval: FeedSyncInterval) {
+        context.dataStore.edit { it[Keys.FEED_SYNC_INTERVAL] = interval.name }
     }
 
     val contentRetentionFlow: Flow<ContentRetention> = context.dataStore.data.map { preferences ->

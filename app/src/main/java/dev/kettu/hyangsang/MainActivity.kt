@@ -53,6 +53,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.prefs.ContentRetention
+import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
@@ -85,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             val palette = ThemePalette.fromKey(paletteKey)
             val readerSettings by prefsRepository.readerSettingsFlow.collectAsState(initial = ReaderSettings())
             val showUnreadCounts by prefsRepository.showUnreadCountsFlow.collectAsState(initial = false)
+            val feedSyncInterval by prefsRepository.feedSyncIntervalFlow
+                .collectAsState(initial = FeedSyncInterval.DEFAULT)
             val contentRetention by prefsRepository.contentRetentionFlow
                 .collectAsState(initial = ContentRetention.DEFAULT)
 
@@ -152,6 +155,7 @@ class MainActivity : AppCompatActivity() {
                     currentPalette = palette,
                     readerSettings = readerSettings,
                     showUnreadCounts = showUnreadCounts,
+                    feedSyncInterval = feedSyncInterval,
                     contentRetention = contentRetention
                 )
             }
@@ -194,6 +198,7 @@ fun MainApp(
     currentPalette: ThemePalette,
     readerSettings: ReaderSettings,
     showUnreadCounts: Boolean,
+    feedSyncInterval: FeedSyncInterval,
     contentRetention: ContentRetention
 ) {
     val navController = rememberNavController()
@@ -408,6 +413,10 @@ fun MainApp(
                         showUnreadCounts = showUnreadCounts,
                         onShowUnreadCountsChange = {
                             scope.launch { prefsRepository.setShowUnreadCounts(it) }
+                        },
+                        feedSyncInterval = feedSyncInterval,
+                        onFeedSyncIntervalChange = {
+                            scope.launch { prefsRepository.setFeedSyncInterval(it) }
                         },
                         contentRetention = contentRetention,
                         onContentRetentionChange = {

@@ -15,7 +15,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -134,9 +136,13 @@ class RssFeedRepository(
         rssFeedDao.setEnabled(feed.id, !feed.isEnabled)
     }
 
+    // Only one refresh runs at a time, so a background sync and the refresh on app start don't
+    // both fetch a feed before either has recorded the attempt
+    private val refreshMutex = Mutex()
+
     // Only fetch for enabled feeds
     @OptIn(ExperimentalTime::class)
-    suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) {
+    suspend fun refreshEnabledFeeds(forceRefresh: Boolean = false) = refreshMutex.withLock {
         val enabledFeeds = rssFeedDao.getEnabledFeeds().first()
         val now = Clock.System.now()
 

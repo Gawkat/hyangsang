@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -69,6 +70,7 @@ import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.ContentRetention
+import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderFont
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.ui.reader.formatLineSpacing
@@ -77,7 +79,7 @@ import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
 private enum class SettingsDialog {
-    THEME, PALETTE, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
+    THEME, PALETTE, FEED_SYNC_INTERVAL, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +93,8 @@ fun SettingsScreen(
     onTextLayoutClick: () -> Unit,
     showUnreadCounts: Boolean,
     onShowUnreadCountsChange: (Boolean) -> Unit,
+    feedSyncInterval: FeedSyncInterval,
+    onFeedSyncIntervalChange: (FeedSyncInterval) -> Unit,
     contentRetention: ContentRetention,
     onContentRetentionChange: (ContentRetention) -> Unit,
     feeds: List<RssFeed>,
@@ -116,6 +120,12 @@ fun SettingsScreen(
         }
     }
 
+    val feedSyncOptions = listOf(
+        FeedSyncInterval.OFF to stringResource(R.string.background_refresh_off),
+        FeedSyncInterval.SIX_HOURS to stringResource(R.string.background_refresh_6_hours),
+        FeedSyncInterval.TWELVE_HOURS to stringResource(R.string.background_refresh_12_hours),
+        FeedSyncInterval.DAILY to stringResource(R.string.background_refresh_daily)
+    )
     val contentRetentionOptions = listOf(
         ContentRetention.ONE_WEEK to stringResource(R.string.retention_one_week),
         ContentRetention.TWO_WEEKS to stringResource(R.string.retention_two_weeks),
@@ -187,6 +197,12 @@ fun SettingsScreen(
                 leadingContent = { Icon(Icons.Outlined.RssFeed, contentDescription = null) },
                 trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onManageFeedsClick)
+            )
+            SettingsItem(
+                icon = Icons.Outlined.Sync,
+                title = stringResource(R.string.background_refresh_setting),
+                summary = feedSyncOptions.labelFor(feedSyncInterval),
+                onClick = { openDialog = SettingsDialog.FEED_SYNC_INTERVAL }
             )
             ListItem(
                 headlineContent = { Text(stringResource(R.string.unread_counts_setting)) },
@@ -274,6 +290,14 @@ fun SettingsScreen(
             options = paletteOptions,
             selected = currentPalette,
             onSelect = { onPaletteChange(it); dismiss() },
+            onDismiss = dismiss
+        )
+
+        SettingsDialog.FEED_SYNC_INTERVAL -> ChoiceDialog(
+            title = stringResource(R.string.background_refresh_setting),
+            options = feedSyncOptions,
+            selected = feedSyncInterval,
+            onSelect = { onFeedSyncIntervalChange(it); dismiss() },
             onDismiss = dismiss
         )
 
@@ -438,6 +462,8 @@ fun SettingsScreenPreview() {
             onTextLayoutClick = {},
             showUnreadCounts = false,
             onShowUnreadCountsChange = {},
+            feedSyncInterval = FeedSyncInterval.DEFAULT,
+            onFeedSyncIntervalChange = {},
             contentRetention = ContentRetention.DEFAULT,
             onContentRetentionChange = {},
             feeds = emptyList(),

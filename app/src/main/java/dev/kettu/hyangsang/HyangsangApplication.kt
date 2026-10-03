@@ -13,6 +13,7 @@ import dev.kettu.hyangsang.data.repository.DictionaryRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
 import dev.kettu.hyangsang.network.RssFeedService
+import dev.kettu.hyangsang.sync.FeedSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -68,6 +69,12 @@ class HyangsangApplication : Application() {
         // otherwise delay the first lookup
         applicationScope.launch {
             dictionaryDatabase.openHelper.writableDatabase
+        }
+
+        applicationScope.launch {
+            userPreferencesRepository.feedSyncIntervalFlow.collect { interval ->
+                FeedSyncWorker.schedule(this@HyangsangApplication, interval)
+            }
         }
 
         // Runs at startup and again when the setting changes

@@ -57,6 +57,11 @@
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
+    <string name="background_refresh_setting">Background refresh</string>
+    <string name="background_refresh_off">Off</string>
+    <string name="background_refresh_6_hours">Every 6 hours</string>
+    <string name="background_refresh_12_hours">Every 12 hours</string>
+    <string name="background_refresh_daily">Once a day</string>
     <string name="storage_section">Storage</string>
     <string name="content_retention_setting">Downloaded article text</string>
     <string name="content_retention_summary">Removed from unsaved articles not opened for %1$s</string>
