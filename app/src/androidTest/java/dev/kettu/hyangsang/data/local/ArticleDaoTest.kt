@@ -7,10 +7,12 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.repository.escapeLike
+import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,6 +106,25 @@ class ArticleDaoTest {
     @Test
     fun countsUnreadPerFeed(): Unit = runBlocking {
         assertEquals(mapOf(newsFeed to 1, sportsFeed to 2), dao.getUnreadCounts().first())
+    }
+
+    @Test
+    fun clearsContentOfUnsavedArticlesNotOpenedSinceCutoff(): Unit = runBlocking {
+        val content = listOf(ContentBlock.Text("본문"))
+        (1L..4L).forEach { dao.replaceContent(it, content, maxPosition = 0, parserVersion = 5) }
+        dao.updateProgress(1, position = 0, timestamp = "2026-10-02T00:00:00Z") // opened recently
+        dao.updateProgress(2, position = 0, timestamp = "2026-09-01T00:00:00Z") // opened long ago
+        dao.updateSavedDate(3, "2026-09-01T00:00:00Z") // saved
+        // 4 was never opened and was added on 2026-09-30
+
+        val cleared = dao.clearContentNotOpenedSince("2026-10-01T00:00:00Z")
+
+        assertEquals(2, cleared)
+        assertEquals(content, dao.getArticleById(1)?.content)
+        assertNull(dao.getArticleById(2)?.content)
+        assertEquals(0, dao.getArticleById(2)?.parserVersion)
+        assertEquals(content, dao.getArticleById(3)?.content)
+        assertNull(dao.getArticleById(4)?.content)
     }
 
     @Test

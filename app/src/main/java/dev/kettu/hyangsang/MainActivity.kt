@@ -52,6 +52,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
+import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
@@ -84,6 +85,8 @@ class MainActivity : AppCompatActivity() {
             val palette = ThemePalette.fromKey(paletteKey)
             val readerSettings by prefsRepository.readerSettingsFlow.collectAsState(initial = ReaderSettings())
             val showUnreadCounts by prefsRepository.showUnreadCountsFlow.collectAsState(initial = false)
+            val contentRetention by prefsRepository.contentRetentionFlow
+                .collectAsState(initial = ContentRetention.DEFAULT)
 
             val darkTheme = when (theme) {
                 "Light" -> false
@@ -148,7 +151,8 @@ class MainActivity : AppCompatActivity() {
                     currentTheme = theme,
                     currentPalette = palette,
                     readerSettings = readerSettings,
-                    showUnreadCounts = showUnreadCounts
+                    showUnreadCounts = showUnreadCounts,
+                    contentRetention = contentRetention
                 )
             }
         }
@@ -189,7 +193,8 @@ fun MainApp(
     currentTheme: String,
     currentPalette: ThemePalette,
     readerSettings: ReaderSettings,
-    showUnreadCounts: Boolean
+    showUnreadCounts: Boolean,
+    contentRetention: ContentRetention
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -403,6 +408,10 @@ fun MainApp(
                         showUnreadCounts = showUnreadCounts,
                         onShowUnreadCountsChange = {
                             scope.launch { prefsRepository.setShowUnreadCounts(it) }
+                        },
+                        contentRetention = contentRetention,
+                        onContentRetentionChange = {
+                            scope.launch { prefsRepository.setContentRetention(it) }
                         },
                         feeds = feeds,
                         onManageFeedsClick = {

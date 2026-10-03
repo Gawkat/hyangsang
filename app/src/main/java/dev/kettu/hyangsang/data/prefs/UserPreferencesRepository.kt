@@ -29,6 +29,7 @@ class UserPreferencesRepository(private val context: Context) {
         val READER_LINE_SPACING = floatPreferencesKey("reader_line_spacing")
         val READER_MARGIN = stringPreferencesKey("reader_margin")
         val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
+        val CONTENT_RETENTION = stringPreferencesKey("content_retention")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -58,6 +59,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setShowUnreadCounts(show: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_UNREAD_COUNTS] = show }
+    }
+
+    val contentRetentionFlow: Flow<ContentRetention> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.CONTENT_RETENTION], ContentRetention.DEFAULT)
+    }.distinctUntilChanged()
+
+    suspend fun setContentRetention(retention: ContentRetention) {
+        context.dataStore.edit { it[Keys.CONTENT_RETENTION] = retention.name }
     }
 
     suspend fun setTheme(theme: String) {

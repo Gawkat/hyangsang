@@ -57,6 +57,14 @@
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
+    <string name="storage_section">Storage</string>
+    <string name="content_retention_setting">Downloaded article text</string>
+    <string name="content_retention_summary">Removed from unsaved articles not opened for %1$s</string>
+    <string name="content_retention_summary_forever">Kept for all articles</string>
+    <string name="retention_one_week">1 week</string>
+    <string name="retention_two_weeks">2 weeks</string>
+    <string name="retention_one_month">1 month</string>
+    <string name="retention_forever">Forever</string>
     <string name="feeds_enabled_summary">%1$d of %2$d on</string>
     <plurals name="feeds_failed_summary">
         <item quantity="one">%1$d couldn\'t update</item>

@@ -70,6 +70,13 @@ class HyangsangApplication : Application() {
             dictionaryDatabase.openHelper.writableDatabase
         }
 
+        // Runs at startup and again when the setting changes
+        applicationScope.launch {
+            userPreferencesRepository.contentRetentionFlow.collect { retention ->
+                articleRepository.clearUnopenedContent(retention)
+            }
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             applicationScope.launch {
                 userPreferencesRepository.themeFlow.distinctUntilChanged().collect { theme ->

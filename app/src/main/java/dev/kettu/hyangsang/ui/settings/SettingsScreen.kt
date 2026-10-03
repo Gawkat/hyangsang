@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.RssFeed
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -67,6 +68,7 @@ import dev.kettu.hyangsang.BuildConfig
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.ReaderFont
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.ui.reader.formatLineSpacing
@@ -74,7 +76,9 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
-private enum class SettingsDialog { THEME, PALETTE, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION }
+private enum class SettingsDialog {
+    THEME, PALETTE, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +91,8 @@ fun SettingsScreen(
     onTextLayoutClick: () -> Unit,
     showUnreadCounts: Boolean,
     onShowUnreadCountsChange: (Boolean) -> Unit,
+    contentRetention: ContentRetention,
+    onContentRetentionChange: (ContentRetention) -> Unit,
     feeds: List<RssFeed>,
     onManageFeedsClick: () -> Unit,
     onOssLicensesClick: () -> Unit,
@@ -109,6 +115,13 @@ fun SettingsScreen(
             add(ThemePalette.DYNAMIC to stringResource(R.string.palette_dynamic))
         }
     }
+
+    val contentRetentionOptions = listOf(
+        ContentRetention.ONE_WEEK to stringResource(R.string.retention_one_week),
+        ContentRetention.TWO_WEEKS to stringResource(R.string.retention_two_weeks),
+        ContentRetention.ONE_MONTH to stringResource(R.string.retention_one_month),
+        ContentRetention.FOREVER to stringResource(R.string.retention_forever)
+    )
 
     Scaffold(
         topBar = {
@@ -187,6 +200,21 @@ fun SettingsScreen(
                 )
             )
 
+            SectionHeader(stringResource(R.string.storage_section))
+            SettingsItem(
+                icon = Icons.Outlined.Storage,
+                title = stringResource(R.string.content_retention_setting),
+                summary = if (contentRetention == ContentRetention.FOREVER) {
+                    stringResource(R.string.content_retention_summary_forever)
+                } else {
+                    stringResource(
+                        R.string.content_retention_summary,
+                        contentRetentionOptions.labelFor(contentRetention)
+                    )
+                },
+                onClick = { openDialog = SettingsDialog.CONTENT_RETENTION }
+            )
+
             SectionHeader(stringResource(R.string.about_label))
             SettingsItem(
                 icon = Icons.AutoMirrored.Outlined.Article,
@@ -246,6 +274,14 @@ fun SettingsScreen(
             options = paletteOptions,
             selected = currentPalette,
             onSelect = { onPaletteChange(it); dismiss() },
+            onDismiss = dismiss
+        )
+
+        SettingsDialog.CONTENT_RETENTION -> ChoiceDialog(
+            title = stringResource(R.string.content_retention_setting),
+            options = contentRetentionOptions,
+            selected = contentRetention,
+            onSelect = { onContentRetentionChange(it); dismiss() },
             onDismiss = dismiss
         )
 
@@ -402,6 +438,8 @@ fun SettingsScreenPreview() {
             onTextLayoutClick = {},
             showUnreadCounts = false,
             onShowUnreadCountsChange = {},
+            contentRetention = ContentRetention.DEFAULT,
+            onContentRetentionChange = {},
             feeds = emptyList(),
             onManageFeedsClick = {},
             onOssLicensesClick = {},

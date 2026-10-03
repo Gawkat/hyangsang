@@ -4,6 +4,7 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
+import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
 import kotlinx.coroutines.CancellationException
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 class ArticleRepository(private val articleDao: ArticleDao) {
@@ -60,8 +62,19 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
         return try {
             val content = fetchContent(article)
-            articleDao.updateContent(article.id, content, ArticleParser.VERSION)
-            article.copy(content = content, parserVersion = ArticleParser.VERSION)
+            // The content may have been cleared and is now downloaded again, so a stored position
+            // has to be clamped to the new content like a refresh does
+            articleDao.replaceContent(
+                article.id,
+                content,
+                maxPosition = content.lastIndex,
+                parserVersion = ArticleParser.VERSION
+            )
+            article.copy(
+                content = content,
+                parserVersion = ArticleParser.VERSION,
+                scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+            )
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -94,6 +107,14 @@ class ArticleRepository(private val articleDao: ArticleDao) {
             parserVersion = ArticleParser.VERSION
         )
         return ContentRefresh.Updated
+    }
+
+    // Returns how many articles had their content cleared
+    @OptIn(ExperimentalTime::class)
+    suspend fun clearUnopenedContent(retention: ContentRetention): Int {
+        val days = retention.days ?: return 0
+        val cutoff = Clock.System.now() - days.days
+        return articleDao.clearContentNotOpenedSince(cutoff.toString())
     }
 
     // Stored content from an older parser, which may have missed what a fix now extracts

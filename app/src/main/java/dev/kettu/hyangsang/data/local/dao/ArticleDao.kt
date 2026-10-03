@@ -79,10 +79,8 @@ interface ArticleDao {
     suspend fun deleteArticle(article: Article)
 
     // Targeted updates, so a stale Article copy can't overwrite columns changed elsewhere
-    @Query("UPDATE articles SET content = :content, parserVersion = :parserVersion WHERE id = :id")
-    suspend fun updateContent(id: Long, content: List<ContentBlock>?, parserVersion: Int)
 
-    // Replaces re-fetched content, clamping the saved position (a content block index) so it
+    // Stores downloaded content, clamping the saved position (a content block index) so it
     // still points into the new, possibly shorter, content
     @Query(
         "UPDATE articles SET content = :content, parserVersion = :parserVersion, " +
@@ -94,6 +92,17 @@ interface ArticleDao {
         maxPosition: Int,
         parserVersion: Int
     )
+
+    // Drops the downloaded text of unsaved articles not opened since the cutoff; it's downloaded
+    // again on the next open. Content fetched without being opened falls back to addedDate
+    @Query(
+        """
+        UPDATE articles SET content = NULL, parserVersion = 0
+        WHERE savedDate IS NULL AND content IS NOT NULL
+            AND COALESCE(lastReadDate, addedDate) < :cutoff
+    """
+    )
+    suspend fun clearContentNotOpenedSince(cutoff: String): Int
 
     @Query("UPDATE articles SET parserVersion = :parserVersion WHERE id = :id")
     suspend fun updateParserVersion(id: Long, parserVersion: Int)
