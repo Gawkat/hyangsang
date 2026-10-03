@@ -1,7 +1,58 @@
 # Contributing
 
-Notes for working on Hyangsang: how the project is laid out, how to test it, and what else needs
-to change when you change certain things.
+Notes for working on Hyangsang: guidelines for contributing, how the project is laid out, how to
+test it, and what else needs to change when you change certain things.
+
+## Contribution guidelines
+
+Thank you for considering contributing to Hyangsang!
+
+### Suggesting features
+
+Missing something that should be there?
+
+* Check the [discussions](https://github.com/Gawkat/hyangsang/discussions) to see if someone
+  has already suggested it.
+* Describe the feature in as much detail as possible.
+* Explain why it's useful and how it fits in with the rest of the app.
+
+### Reporting issues
+
+Found a bug?
+
+* Check the [open issues](https://github.com/Gawkat/hyangsang/issues) to make sure it
+  hasn't been reported already.
+* Make sure the bug hasn't been fixed already. Use the latest version of the app to reproduce it.
+* Open a new issue and describe the bug in as much detail as possible. Also include steps to
+  reproduce it and details about your environment (e.g. app version, Android version, screen size).
+
+### Submitting pull requests
+
+Want to contribute with a patch?
+
+1. Before writing any major code, please comment on an existing issue or discussion, or open a new
+   one to sync with the maintainers.
+2. Fork the repository to your own GitHub account and clone it locally.
+3. Always base your branch off `main`. Use a clear naming convention:
+   ```bash
+   git checkout -b feature/your-feature-name
+   # or
+   git checkout -b fix/short-bug-description
+   ```
+4. Implement your changes. Make sure the project still builds/runs and that you haven't broken
+   existing functionality. Run the tests (see [Tests](#tests)) and check
+   [When you change...](#when-you-change) for anything else your change needs. CI runs the tests on
+   every pull request too.
+5. Write clean, concise commit messages.
+6. Submit your PR against our `main` branch. Provide a brief description of what you changed and
+   link it to the relevant issue (e.g., `Closes #12`).
+
+### Licensing
+
+Hyangsang is licensed under the GNU General Public License, version 3 or later (see
+[LICENSE](LICENSE)). By submitting a pull request, you agree that your contribution is licensed
+under the same terms. Don't include code or content that you can't license that way, such as
+articles copied from news sites.
 
 ## Project layout
 
