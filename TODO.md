@@ -2,8 +2,6 @@
 
 ## General
 
-* **Background Sync**: Implement `WorkManager` to prune old articles (e.g., delete bodies of unread
-  articles older than 7 days) to save space, maybe pull from feeds in background? (Feeds contain the latest articles, so not pulling for a few days will result in missing articles)
 * Use Dagger for Dependency Injection?
 * Add initial startup configuration screens to allow user to select preferred feeds
 * Let user add own content
