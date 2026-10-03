@@ -52,7 +52,9 @@ class DictionaryRepository(
 
         javaTokens.forEachIndexed { index, token ->
             val pos = token.pos.toString()
-            val stem = if (!token.stem.isNullOrEmpty()) token.stem else token.text
+            // Open Korean Text stems 됐다 and 돼 as 돼다 instead of 되다
+            val stem = (if (!token.stem.isNullOrEmpty()) token.stem else token.text)
+                .let { if (it.endsWith("돼다")) it.dropLast(2) + "되다" else it }
             terms.putIfAbsent(stem, pos)
 
             // A word after a number is almost always a counter (3명, 134개), possibly after a unit
@@ -261,7 +263,8 @@ class DictionaryRepository(
                         // 2. Particles and endings last. Many have noun homonyms (과, 이), so
                         //    the entries' POS alone would put them first.
                         // 3. Counters first, as the word after a number is what's being counted
-                        // 4. POS Priority (Nouns > Verbs > Adverbs > Grammatical markers)
+                        // 4. POS priority of the entry shown first (Nouns > Verbs > Adverbs >
+                        //    Grammatical markers)
                         // 5. Longest sub-strings next
                         .sortedWith(
                             compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
@@ -271,7 +274,7 @@ class DictionaryRepository(
                             }.thenByDescending {
                                 it.first in lookup.searchTerms.counters
                             }.thenBy {
-                                getPosPriority(it.second)
+                                getPosPriority(it.second.first())
                             }.thenByDescending {
                                 it.first.length
                             }
@@ -282,23 +285,20 @@ class DictionaryRepository(
             .flowOn(Dispatchers.Default)
     }
 
-    private fun getPosPriority(entries: List<DictionaryWithSenses>): Int {
-        val poses = entries.mapNotNull { it.entry.partOfSpeech }.distinct()
-        if (poses.isEmpty()) return 10 // Default low priority
-
-        return poses.minOf { pos ->
-            when (pos) {
-                // Nominals / Core semantic units
-                "Noun", "Pronoun", "Numeral", "Bound Noun" -> 1
-                // Predicates (Unsure if auxiliary verb/adjective POS are present in db)
-                "Verb", "Adjective", "Auxiliary Verb", "Auxiliary Adjective" -> 2
-                // Modifiers
-                "Adverb", "Determiner", "Interjection" -> 3
-                // Functional / Grammatical markers (Unsure if ending is present in db)
-                "Affix", "Particle", "Ending", "Postpositional Particle" -> 4
-                else -> 5
-            }
-        }
+    // Ranks by the top homonym, which the overlay shows first, since the others' POS can differ
+    // (도 the particle also has noun homonyms)
+    private fun getPosPriority(entry: DictionaryWithSenses): Int = when (entry.entry.partOfSpeech) {
+        // Nominals / Core semantic units
+        "Noun", "Pronoun", "Numeral", "Bound Noun" -> 1
+        // Predicates
+        "Verb", "Adjective", "Auxiliary Verb", "Auxiliary Adjective" -> 2
+        // Modifiers
+        "Adverb", "Determiner", "Interjection" -> 3
+        // Functional / Grammatical markers. Entries without a POS (품사 없음) are mostly
+        // grammar patterns (-ㄴ 것 같다), multi-word phrases and conjugated stems (쳐다봐-).
+        "Affix", "Particle", "Ending", "품사 없음" -> 4
+        null -> 10 // Idioms and proverbs
+        else -> 5
     }
 
     private companion object {

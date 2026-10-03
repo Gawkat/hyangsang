@@ -164,6 +164,25 @@ class DictionaryRepositoryTest {
         assertEquals("만", keys.first())
     }
 
+    @Test
+    fun `됐다 is looked up as 되다`() = runBlocking {
+        val keys = lookUp("발표됐다", listOf("발표", "되다", "돼다"))
+        assertEquals(setOf("발표", "되다"), keys)
+    }
+
+    @Test
+    fun `words are ranked by the POS of their first homonym`() = runBlocking {
+        // A noun homonym of 시키다 shouldn't put it level with 결정, where it would win on length
+        val entries = listOf(
+            createEntry("결정", "Noun"),
+            createEntry("시키다", "Verb"),
+            createEntry("시키다", "Noun")
+        )
+        val keys = DictionaryRepository(FakeDictionaryDao(entries))
+            .getDefinitionsForWord("결정시켰다").first().keys
+        assertEquals(listOf("결정", "시키다"), keys.toList())
+    }
+
     private fun createEntry(word: String, pos: String): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
