@@ -40,9 +40,9 @@ abstract class DictionaryDatabase : RoomDatabase() {
                 )
                     .createFromAsset("dictionary.db")
                     // With no migrations, a version change deletes the installed copy and
-                    // copies the asset again
+                    // copies the asset again, on downgrades too. Adding
+                    // fallbackToDestructiveMigrationOnDowngrade would turn this off for upgrades.
                     .fallbackToDestructiveMigration(dropAllTables = true)
-                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                     .build()
                     .also { Instance = it }
             }
