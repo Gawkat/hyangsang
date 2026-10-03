@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,20 +22,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -63,6 +72,7 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.data.repository.ContentRefresh
 import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.settings.openInBrowser
@@ -89,6 +99,10 @@ fun ReaderScreen(
     onThemeChange: (String) -> Unit,
     onSaveToggle: (saved: Boolean) -> Unit,
     onMoreTextSettingsClick: () -> Unit,
+    isRefreshing: Boolean,
+    refreshResult: ContentRefresh?,
+    onRefreshClick: () -> Unit,
+    onRefreshResultShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
@@ -113,6 +127,10 @@ fun ReaderScreen(
         onThemeChange = onThemeChange,
         onSaveToggle = onSaveToggle,
         onMoreTextSettingsClick = onMoreTextSettingsClick,
+        isRefreshing = isRefreshing,
+        refreshResult = refreshResult,
+        onRefreshClick = onRefreshClick,
+        onRefreshResultShown = onRefreshResultShown,
         modifier = modifier
     )
 }
@@ -132,6 +150,10 @@ fun ReaderContent(
     onThemeChange: (String) -> Unit,
     onSaveToggle: (saved: Boolean) -> Unit,
     onMoreTextSettingsClick: () -> Unit,
+    isRefreshing: Boolean,
+    refreshResult: ContentRefresh?,
+    onRefreshClick: () -> Unit,
+    onRefreshResultShown: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
@@ -152,10 +174,13 @@ fun ReaderContent(
         (lookupSheetMaxPx - DRAG_HANDLE_HEIGHT.toPx() - navigationBarBottom).toDp()
     }
 
-    var selection by remember { mutableStateOf<WordSelection?>(null) }
+    // Selections point at block indices, so a reload with new content drops them
+    var selection by remember(contentBlocks) { mutableStateOf<WordSelection?>(null) }
     var lookupWord by remember { mutableStateOf("") }
     var showLookupSheet by remember { mutableStateOf(false) }
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
     // The article snapshot doesn't update, so the saved state is tracked locally
     var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
     val showTitleInBar by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
@@ -185,6 +210,18 @@ fun ReaderContent(
     val fontFamily = readerSettings.font.fontFamily()
     val margin = readerSettings.margin.dp.dp
     val paragraphSpacing = (readerSettings.textSize * readerSettings.lineSpacing * 0.5f).dp
+
+    LaunchedEffect(refreshResult) {
+        val message = when (refreshResult) {
+            ContentRefresh.Updated -> R.string.article_reloaded
+            ContentRefresh.Unchanged -> R.string.article_reload_unchanged
+            ContentRefresh.Failed -> R.string.article_reload_failed
+            null -> return@LaunchedEffect
+        }
+        // Launched outside this effect, which clearing the result below restarts
+        scope.launch { snackbarHostState.showSnackbar(context.getString(message)) }
+        onRefreshResultShown()
+    }
 
     Scaffold(
         topBar = {
@@ -230,16 +267,46 @@ fun ReaderContent(
                             contentDescription = stringResource(R.string.text_layout_title)
                         )
                     }
-                    IconButton(onClick = { openInBrowser(context, article.sourceUrl) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = stringResource(R.string.open_in_browser_button)
-                        )
+                    // Material's top app bar fits three actions; the rest go in the overflow menu
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                Icons.Filled.MoreVert,
+                                contentDescription = stringResource(R.string.more_options)
+                            )
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.open_in_browser_button)) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.OpenInNew,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    openInBrowser(context, article.sourceUrl)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.reload_article)) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Refresh, contentDescription = null)
+                                },
+                                enabled = !isRefreshing,
+                                onClick = {
+                                    showMenu = false
+                                    onRefreshClick()
+                                }
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
         LazyColumn(
@@ -344,6 +411,15 @@ fun ReaderContent(
             item(key = "bottom-spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
 
+        // Drawn over the top of the article while a reload runs
+        if (isRefreshing) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxWidth()
+            )
+        }
+
         if (showLookupSheet) {
             // No scrim and no half-expanded state: the article stays visible, and one back
             // press closes the sheet
@@ -427,7 +503,11 @@ fun ReaderScreenPreview() {
             currentTheme = "System default",
             onThemeChange = {},
             onSaveToggle = {},
-            onMoreTextSettingsClick = {}
+            onMoreTextSettingsClick = {},
+            isRefreshing = false,
+            refreshResult = null,
+            onRefreshClick = {},
+            onRefreshResultShown = {}
         )
     }
 }

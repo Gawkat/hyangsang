@@ -25,6 +25,10 @@
     <string name="oss_licenses_nav">Open source licenses</string>
     <string name="feeds_title">Feeds</string>
     <string name="open_in_browser_button">Open in browser</string>
+    <string name="reload_article">Reload article</string>
+    <string name="article_reloaded">Article reloaded</string>
+    <string name="article_reload_unchanged">No changes to the article</string>
+    <string name="article_reload_failed">Couldn\'t reload the article</string>
     <string name="article_not_found_label">Article not found</string>
     <string name="report_issue_nav">Report an issue</string>
     <string name="dictionary_attribution_label">Dictionary attribution</string>

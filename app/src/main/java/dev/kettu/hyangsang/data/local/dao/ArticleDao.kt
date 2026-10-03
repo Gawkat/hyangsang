@@ -62,6 +62,14 @@ interface ArticleDao {
     @Query("UPDATE articles SET content = :content WHERE id = :id")
     suspend fun updateContent(id: Long, content: List<ContentBlock>?)
 
+    // Replaces re-fetched content, clamping the saved position (a content block index) so it
+    // still points into the new, possibly shorter, content
+    @Query(
+        "UPDATE articles SET content = :content, " +
+                "scrollPosition = MAX(0, MIN(scrollPosition, :maxPosition)) WHERE id = :id"
+    )
+    suspend fun replaceContent(id: Long, content: List<ContentBlock>, maxPosition: Int)
+
     @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id")
     suspend fun updateSavedDate(id: Long, savedDate: String?)
 

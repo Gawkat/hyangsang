@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
+import dev.kettu.hyangsang.data.repository.ContentRefresh
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // selectedCategory and selectedFeedId are mutually exclusive; both null means all articles
@@ -24,7 +26,12 @@ data class ArticleFilterCriteria(
 
 sealed class ArticleUiState {
     object Loading : ArticleUiState()
-    data class Success(val articleWithFeed: ArticleWithFeed) : ArticleUiState()
+    data class Success(
+        val articleWithFeed: ArticleWithFeed,
+        val isRefreshing: Boolean = false,
+        // Outcome of the last reload, until the reader has shown it
+        val refreshResult: ContentRefresh? = null
+    ) : ArticleUiState()
     data class Error(val message: String) : ArticleUiState()
 }
 
@@ -155,6 +162,52 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             )
 
             _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
+        }
+    }
+
+    fun refreshArticle() {
+        val current = _currentArticleState.value as? ArticleUiState.Success ?: return
+        if (current.isRefreshing) return
+        val articleId = current.articleWithFeed.article.id
+        updateSuccess(articleId) { it.copy(isRefreshing = true, refreshResult = null) }
+
+        viewModelScope.launch {
+            // Start from the stored article, so a refresh compares against what's saved
+            val stored = articleRepository.getArticleWithFeedById(articleId)
+            val result = stored?.let { articleRepository.refreshArticleContent(it.article) }
+                ?: ContentRefresh.Failed
+            val updated = if (result == ContentRefresh.Updated) {
+                articleRepository.getArticleWithFeedById(articleId)
+            } else {
+                null
+            }
+            updateSuccess(articleId) {
+                it.copy(
+                    articleWithFeed = updated ?: it.articleWithFeed,
+                    isRefreshing = false,
+                    refreshResult = result
+                )
+            }
+        }
+    }
+
+    fun onRefreshResultShown() {
+        _currentArticleState.update {
+            if (it is ArticleUiState.Success) it.copy(refreshResult = null) else it
+        }
+    }
+
+    // Leaves the state alone if another article was opened in the meantime
+    private fun updateSuccess(
+        articleId: Long,
+        transform: (ArticleUiState.Success) -> ArticleUiState.Success
+    ) {
+        _currentArticleState.update {
+            if (it is ArticleUiState.Success && it.articleWithFeed.article.id == articleId) {
+                transform(it)
+            } else {
+                it
+            }
         }
     }
 }

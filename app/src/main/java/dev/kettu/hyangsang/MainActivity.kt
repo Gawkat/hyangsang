@@ -470,7 +470,11 @@ fun ReaderRoute(
                 currentTheme = currentTheme,
                 onThemeChange = onThemeChange,
                 onSaveToggle = { saved -> articleViewModel.setSaved(article.id, saved) },
-                onMoreTextSettingsClick = onMoreTextSettingsClick
+                onMoreTextSettingsClick = onMoreTextSettingsClick,
+                isRefreshing = state.isRefreshing,
+                refreshResult = state.refreshResult,
+                onRefreshClick = articleViewModel::refreshArticle,
+                onRefreshResultShown = articleViewModel::onRefreshResultShown
             )
         }
     }
