@@ -42,12 +42,23 @@ object DictionaryMapper {
     fun mapUnit(ko: String?) = unitMap[ko] ?: ko
 }
 
+private const val DEFAULT_INPUT_DIR = "tools/dictionary-generator/data"
+
 fun main(args: Array<String>) {
     // The app recopies the bundled dictionary when this changes, see DictionaryDatabase
     val version = args.firstOrNull()?.toIntOrNull()
-        ?: error("Usage: dictionary-generator <version>, the NIKL release date and a two-digit revision such as 2026091901")
-    val inputDir = File("app/src/main/assets/dictionary") // TODO update me
+        ?: error(
+            "Usage: dictionary-generator <version> [input dir], where version is the NIKL release " +
+                    "date and a two-digit revision such as 2026091901, and the input dir holds the " +
+                    "NIKL JSON files (default $DEFAULT_INPUT_DIR)"
+        )
+    // Relative paths resolve from the repository root, which the Gradle run task uses as its
+    // working directory. The source data stays out of the app's assets, which would package it
+    val inputDir = File(args.getOrNull(1) ?: DEFAULT_INPUT_DIR)
     val outputFile = File("app/src/main/assets/dictionary.db")
+
+    val inputFiles = inputDir.listFiles { _, name -> name.endsWith(".json") }.orEmpty()
+    check(inputFiles.isNotEmpty()) { "No JSON files in ${inputDir.absolutePath}" }
 
     // Tables are created if missing, so a leftover file would get every entry twice
     check(!outputFile.exists() || outputFile.delete()) {
@@ -69,7 +80,7 @@ fun main(args: Array<String>) {
             "INSERT INTO dictionary_examples (senseId, example, type) VALUES (?, ?, ?)"
         )
 
-        inputDir.listFiles { _, name -> name.endsWith(".json") }?.forEach { file ->
+        inputFiles.forEach { file ->
             println("Processing ${file.absolutePath}...")
             try {
                 parseAndInsert(file, entryStmt, senseStmt, exampleStmt)

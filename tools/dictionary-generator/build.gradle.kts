@@ -19,3 +19,8 @@ kotlin {
 application {
     mainClass.set("dev.kettu.hyangsang.tools.MainKt")
 }
+
+// The generator's paths are relative to the repository root
+tasks.named<JavaExec>("run") {
+    workingDir = rootDir
+}

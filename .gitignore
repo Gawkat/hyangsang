@@ -17,3 +17,4 @@
 local.properties
 /tools/dictionary-generator/build/
 /app/src/main/assets/dictionary.db
+/tools/dictionary-generator/data/
