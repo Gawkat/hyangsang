@@ -12,6 +12,7 @@
 
 * Research other extraction techniques for generic sources
 * Add parsers for other sources
+* BBC articles, article title is often duplicated in the body, should be removed from body if it perfectly matches article title
 
 ## Reader
 
