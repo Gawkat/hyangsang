@@ -23,7 +23,6 @@
 
 ## Lookup overlay
 
-* Revisit the order of stem chips?
 * Improve the Lesk-style sentence overlap (`contextOverlap` in `HomonymRanking.kt`)?
 
 ## Saved
