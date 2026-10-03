@@ -6,7 +6,9 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 interface ContentsParser {
-    fun extractContents(document: Document): List<ContentBlock>
+    // The title is the one shown above the article, from the feed, for parsers that need to
+    // drop a copy of it from the body
+    fun extractContents(document: Document, title: String? = null): List<ContentBlock>
 }
 
 fun Element.parseBlocks(): List<ContentBlock> {

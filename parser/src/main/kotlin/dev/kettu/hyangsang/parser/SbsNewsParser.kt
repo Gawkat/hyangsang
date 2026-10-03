@@ -11,7 +11,7 @@ class SbsNewsParser : ContentsParser {
         private const val CAPTION_MARKER = "▲"
     }
 
-    override fun extractContents(document: Document): List<ContentBlock> {
+    override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         val blocks = mutableListOf<ContentBlock>()
 
         // Byline

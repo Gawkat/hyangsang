@@ -10,7 +10,7 @@ class YonhapNewsParser : ContentsParser {
         private val emailSeparatorRegex = Regex("""[\s,/]+""")
     }
 
-    override fun extractContents(document: Document): List<ContentBlock> {
+    override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         document.select("aside, script, meta, .writer-zone01, .related-zone, #newsWriterCarousel01")
             .remove()
 

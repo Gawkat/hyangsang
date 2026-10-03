@@ -3,7 +3,7 @@ package dev.kettu.hyangsang.parser
 import org.jsoup.nodes.Document
 
 class BbcNewsParser : ContentsParser {
-    override fun extractContents(document: Document): List<ContentBlock> {
+    override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         // 1. Handle Byline specifically
         val byline = document.select("section[data-testid=byline]").firstOrNull()
         var bylineBlock: ContentBlock.Dateline? = null
@@ -25,7 +25,15 @@ class BbcNewsParser : ContentsParser {
         val main = document.select("main").firstOrNull() ?: document.body()
         val blocks = main.parseBlocks().toMutableList()
 
-        // 3. Prepend byline if found
+        // 3. Drop the page's own copy of the title, already shown in the article header
+        if (!title.isNullOrBlank()) {
+            val titleIndex = blocks.indexOfFirst {
+                it is ContentBlock.Heading && it.text == title.trim()
+            }
+            if (titleIndex != -1) blocks.removeAt(titleIndex)
+        }
+
+        // 4. Prepend byline if found
         if (bylineBlock != null) {
             blocks.add(0, bylineBlock)
         }

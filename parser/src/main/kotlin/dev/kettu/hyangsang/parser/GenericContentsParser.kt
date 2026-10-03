@@ -3,7 +3,7 @@ package dev.kettu.hyangsang.parser
 import org.jsoup.nodes.Document
 
 class GenericContentsParser : ContentsParser {
-    override fun extractContents(document: Document): List<ContentBlock> {
+    override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         /*
          look at these:
          https://www.ccs.neu.edu/home/vip/teach/IRcourse/6_ML/other_notes/Boilerplate%20Detection%20using%20Shallow%20Text%20Features.pdf

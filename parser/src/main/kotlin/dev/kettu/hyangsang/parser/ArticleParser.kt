@@ -7,7 +7,7 @@ class ArticleParser {
     companion object {
         // Raise when a parser change should reach articles already stored. Older ones are
         // parsed again the next time they're opened
-        const val VERSION = 1
+        const val VERSION = 2
     }
 
     private val defaultParser = GenericContentsParser()
@@ -19,7 +19,7 @@ class ArticleParser {
         "news.sbs.co.kr" to SbsNewsParser()
     )
 
-    fun parse(url: String, document: Document): List<ContentBlock> {
+    fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> {
         val host = try {
             URI(url).host.removePrefix("www.")
         } catch (_: Exception) {
@@ -27,6 +27,6 @@ class ArticleParser {
         }
 
         val strategy = parsers[host] ?: defaultParser
-        return strategy.extractContents(document)
+        return strategy.extractContents(document, title)
     }
 }

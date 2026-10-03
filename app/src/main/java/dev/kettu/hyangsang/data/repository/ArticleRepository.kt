@@ -46,7 +46,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         if (!article.content.isNullOrEmpty()) return article
 
         return try {
-            val content = fetchContent(article.sourceUrl)
+            val content = fetchContent(article)
             articleDao.updateContent(article.id, content, ArticleParser.VERSION)
             article.copy(content = content, parserVersion = ArticleParser.VERSION)
         } catch (e: CancellationException) {
@@ -60,7 +60,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // The stored content is only replaced when the new parse looks complete
     suspend fun refreshArticleContent(article: Article): ContentRefresh {
         val content = try {
-            fetchContent(article.sourceUrl)
+            fetchContent(article)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -87,9 +87,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     fun needsReparse(article: Article): Boolean =
         !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
 
-    private suspend fun fetchContent(url: String): List<ContentBlock> =
+    private suspend fun fetchContent(article: Article): List<ContentBlock> =
         withContext(Dispatchers.IO) {
-            ArticleParser().parse(url, Jsoup.connect(url).get())
+            val url = article.sourceUrl
+            ArticleParser().parse(url, Jsoup.connect(url).get(), article.title)
         }
 }
 
