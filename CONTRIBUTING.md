@@ -81,10 +81,16 @@ skipped, and Gradle reports them as skipped. To run them, save an article page f
 under the name the test reads, such as `bbc_sample.html`. They check details of specific
 articles, so expect to adjust the assertions for a different article.
 
-`LookupEvaluationTest` measures how often word lookups show the right dictionary entry. It needs
-the bundled dictionary and a set of cases in `app/src/test/resources/lookup-eval.tsv`. The cases
-are sentences from real articles, so the file is ignored by git as well, and the test is skipped
-without either one. Its format is described in the test.
+`LookupEvaluationTest` measures how often word lookups show the right dictionary entry, and is
+skipped without the bundled dictionary. It runs three sets of cases in `app/src/test/resources`:
+
+* `lookup-eval-krdict-dev.tsv` and `lookup-eval-krdict-test.tsv` - example sentences from the
+  dictionary, for nouns with more than one common meaning.
+* `lookup-eval.tsv` - sentences from real articles, with the category of their feed. The file is
+  ignored by git like the saved articles, and its test is skipped without it.
+
+The format of the sets is described in the test. See [Dictionary lookup
+ranking](#dictionary-lookup-ranking) for how to use them.
 
 ## Release builds
 
@@ -148,6 +154,30 @@ Installed copies are only replaced when `DICTIONARY_VERSION` changes, so raise i
 asset is regenerated. The version is the NIKL release date followed by a two-digit revision, such
 as `2026091901`, and must match the version given to the generator. `DictionaryAssetTest` checks
 that they match.
+
+Then run `LookupEvaluationTest`, since a new release can break the lookup evaluation sets (see
+[Dictionary lookup ranking](#dictionary-lookup-ranking)).
+
+### Dictionary lookup ranking
+
+When a word has several dictionary entries, `HomonymRanking` decides which one a lookup shows
+first. Measure ranking changes with `LookupEvaluationTest` (see [Tests](#tests)):
+
+1. Work against the dev set, `lookup-eval-krdict-dev.tsv`, using its per-case report in
+   `app/build/reports`.
+2. Use the test set, `lookup-eval-krdict-test.tsv`, only to confirm the finished change, so the
+   change isn't tuned to the cases it's measured on.
+3. Raise the baselines in `LookupEvaluationTest` for the sets the change improves. Each set fails
+   below its baseline.
+
+The dictionary sets are generated from the dictionary's example sentences and refer to entries
+by homonym number, which can change between dictionary releases. If the test reports entries
+missing from the dictionary after it's regenerated, generate the sets again and measure the
+baselines again:
+
+```bash
+./gradlew :tools:dictionary-generator:generateEvalSet
+```
 
 ### User-facing text
 

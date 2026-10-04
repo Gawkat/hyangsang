@@ -66,4 +66,6 @@ The dictionary bundled with the app is not covered by this license. It is built 
 Institute of Korean Language's Korean-English Learners' Dictionary, which is provided under the
 Creative Commons Attribution-ShareAlike license (see
 the [copyright terms](https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)), and the
-generated dictionary database is distributed under the same license.
+generated dictionary database, along with the lookup evaluation sets made from its example
+sentences (`app/src/test/resources/lookup-eval-krdict-*.tsv`), is distributed under the same
+license.

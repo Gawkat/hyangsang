@@ -22,16 +22,25 @@ import java.sql.Connection
 import java.sql.DriverManager
 
 /**
- * Measures how often lookups show the right dictionary entry, using the cases in
- * `lookup-eval.tsv` against the bundled dictionary. Writes a per-case report to
- * `build/reports/lookup-eval.txt`, and fails if accuracy drops below [BASELINE_CORRECT], so
- * ranking changes can't make lookups worse unnoticed. Raise the baseline when they get better.
+ * Measures how often lookups show the right dictionary entry, using sets of cases against the
+ * bundled dictionary. Writes a per-case report for each set to `build/reports`, and fails if a
+ * set's accuracy drops below its baseline, so ranking changes can't make lookups worse
+ * unnoticed. Raise the baselines when they get better.
  *
- * The cases come from real news articles, so the file isn't committed, and the test is skipped
- * without it. It's tab-separated, with `#` comment lines and a header row, and these columns:
- * the feed category, the word as tapped, the expected entries as `word#homonymNumber` with `|`
- * between equally right ones, a gloss of the intended meaning for people reading the file, and
- * the sentence the word was tapped in.
+ * The sets:
+ * - `lookup-eval-krdict-dev.tsv` and `lookup-eval-krdict-test.tsv`: example sentences from the
+ *   dictionary itself, made by the dictionary generator's `generateEvalSet` task. Work on ranking
+ *   changes against the dev set, and use the test set only to confirm them.
+ * - `lookup-eval.tsv`: sentences from real news articles. It isn't committed, so its test is
+ *   skipped without it. Only this set has feed categories.
+ *
+ * The files are tab-separated, with `#` comment lines and a header row, and these columns: the
+ * feed category (empty for none), the word as tapped, the expected entries as
+ * `word#homonymNumber` with `|` between equally right ones, a gloss of the intended meaning for
+ * people reading the file, and the sentence the word was tapped in.
+ *
+ * Each case's sentence is left out of the dictionary's examples while ranking, since an example
+ * sentence would otherwise match its own entry.
  */
 class LookupEvaluationTest {
 
@@ -46,9 +55,9 @@ class LookupEvaluationTest {
         val expectedWords = expected.map { it.substringBefore('#') }.toSet()
     }
 
-    private fun loadCases(): List<Case> {
-        val text = javaClass.classLoader!!.getResource("lookup-eval.tsv")?.readText()
-        assumeTrue("lookup-eval.tsv not found in src/test/resources, skipping", text != null)
+    private fun loadCases(name: String): List<Case> {
+        val text = javaClass.classLoader!!.getResource("$name.tsv")?.readText()
+        assumeTrue("$name.tsv not found in src/test/resources, skipping", text != null)
         val lines = text!!.lines()
         return lines
             .filter { it.isNotBlank() && !it.startsWith("#") }
@@ -62,9 +71,20 @@ class LookupEvaluationTest {
     private fun DictionaryWithSenses.id() = "${entry.word}#${entry.homonymNumber}"
 
     @Test
-    fun `lookups show the expected entries`() = runBlocking {
-        val repository = DictionaryRepository(JdbcDictionaryDao(connection))
-        val cases = loadCases()
+    fun `news lookups show the expected entries`() = evaluate("lookup-eval", BASELINE_NEWS)
+
+    @Test
+    fun `dictionary example lookups show the expected entries, dev set`() =
+        evaluate("lookup-eval-krdict-dev", BASELINE_KRDICT_DEV)
+
+    @Test
+    fun `dictionary example lookups show the expected entries, test set`() =
+        evaluate("lookup-eval-krdict-test", BASELINE_KRDICT_TEST)
+
+    private fun evaluate(name: String, baseline: Int) = runBlocking {
+        val dao = JdbcDictionaryDao(connection)
+        val repository = DictionaryRepository(dao)
+        val cases = loadCases(name)
 
         // Catch typos in the expected entries, which would otherwise just look like misses
         val unknown = cases.flatMap { it.expected }.filter { expected ->
@@ -86,6 +106,7 @@ class LookupEvaluationTest {
             val category = DefaultCategory.entries.firstOrNull {
                 it.name == case.category.uppercase().replace(' ', '_')
             }
+            dao.excludedExample = case.sentence
             val results = repository
                 .getDefinitionsForWord(case.word, LookupContext(case.sentence, category))
                 .first()
@@ -117,17 +138,23 @@ class LookupEvaluationTest {
         val summary = "Correct $correct/${cases.size}, right stem shown $stemsRight/${cases.size}, " +
             "expected entry first within its stem $entriesRight/${cases.size}"
         File("build/reports").mkdirs()
-        File("build/reports/lookup-eval.txt").writeText("$summary\n\n$report")
-        println(summary)
+        File("build/reports/$name.txt").writeText("$summary\n\n$report")
+        println("$name: $summary")
 
         assertTrue(
-            "$summary, below the baseline of $BASELINE_CORRECT. See build/reports/lookup-eval.txt",
-            correct >= BASELINE_CORRECT
+            "$summary, below the baseline of $baseline. See build/reports/$name.txt",
+            correct >= baseline
         )
     }
 
     /** Reads entries the way Room's [DictionaryWithSenses] relations would. */
     private class JdbcDictionaryDao(private val connection: Connection) : DictionaryDao {
+        /** An example sentence to leave out, compared ignoring differences in whitespace */
+        var excludedExample: String? = null
+            set(value) {
+                field = value?.normalized()
+            }
+
         override fun getEntriesForTerms(words: List<String>): Flow<List<DictionaryWithSenses>> =
             entriesWhere("word", words)
 
@@ -189,9 +216,11 @@ class LookupEvaluationTest {
                             example = it.getString("example"),
                             type = it.getString("type")
                         )
-                    }.toList()
+                    }.filter { it.example.normalized() != excludedExample }.toList()
                 }
             }
+
+        private fun String.normalized() = replace(Regex("\\s+"), " ").trim()
 
         override suspend fun insertEntry(entry: DictionaryEntry) = Unit
         override suspend fun insertSenses(senses: List<DictionarySense>) = Unit
@@ -202,8 +231,10 @@ class LookupEvaluationTest {
     }
 
     companion object {
-        // Correct cases in lookup-eval.tsv as of the last ranking change
-        private const val BASELINE_CORRECT = 64
+        // Correct cases in each set as of the last ranking change
+        private const val BASELINE_NEWS = 64
+        private const val BASELINE_KRDICT_DEV = 268
+        private const val BASELINE_KRDICT_TEST = 274
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
         private lateinit var copy: File
