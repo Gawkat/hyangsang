@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # The Kotlin plugins are versioned together in libs.versions.toml, so update them together
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+      # Major updates still get their own pull requests
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
