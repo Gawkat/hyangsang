@@ -2,13 +2,17 @@
 
 [![Tests](https://github.com/Gawkat/hyangsang/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Gawkat/hyangsang/actions/workflows/tests.yml)
 
-A reader app for Korean learners: Korean news from many categories, with tap-to-look-up
-dictionary support.
+A reader app for Korean learners: Korean news from many categories, with tap-to-look-up dictionary
+support.
 
 ## Screenshots
 
-<img alt="Screenshot showing the tap-to-look-up feature in Hyangsang" height="585" src="docs/screenshots/hyangsang-lookup.png" width="270"/>
-<img alt="Screenshot showing the feed drawer in Hyangsang" height="585" src="docs/screenshots/hyangsang-feeds.png" width="270"/>
+<table>
+  <tr>
+    <td><img alt="Screenshot showing the tap-to-look-up feature in Hyangsang" height="585" src="docs/screenshots/hyangsang-lookup.png" width="270"/></td>
+    <td><img alt="Screenshot showing the feed drawer in Hyangsang" height="585" src="docs/screenshots/hyangsang-feeds.png" width="270"/></td>
+  </tr>
+</table>
 
 ## Features
 
@@ -41,16 +45,15 @@ For signed release builds and running the tests, see [CONTRIBUTING.md](CONTRIBUT
 
 ## Contributing
 
-Hyangsang is currently in early development and accepting bug reports through issues. Pull
-requests for bug fixes reported through issues are always welcome. Open a
-[discussion](https://github.com/Gawkat/hyangsang/discussions) before creating pull requests
-for new features. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+Hyangsang is currently in early development and accepting bug reports through issues. Pull requests
+for bug fixes reported through issues are always welcome. Open a
+[discussion](https://github.com/Gawkat/hyangsang/discussions) before creating pull requests for new
+features. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 ## Acknowledgements
 
-* [National Institute of Korean Language's
-  Korean-English Learners' Dictionary](https://krdict.korean.go.kr/eng/mainAction) for offline
-  dictionary lookups
+* [National Institute of Korean Language's Korean-English Learners' Dictionary](https://krdict.korean.go.kr/eng/mainAction)
+  for offline dictionary lookups
 * [open-korean-text](https://github.com/open-korean-text/open-korean-text) for lemmatization
 
 ## License
@@ -61,6 +64,6 @@ License, or (at your option) any later version. See [LICENSE](LICENSE) for the f
 
 The dictionary bundled with the app is not covered by this license. It is built from the National
 Institute of Korean Language's Korean-English Learners' Dictionary, which is provided under the
-Creative Commons Attribution-ShareAlike license (see the [copyright
-terms](https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)), and the generated
-dictionary database is distributed under the same license.
+Creative Commons Attribution-ShareAlike license (see
+the [copyright terms](https://krdict.korean.go.kr/eng/kboardPolicy/copyRightTermsInfo)), and the
+generated dictionary database is distributed under the same license.
