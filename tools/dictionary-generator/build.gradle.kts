@@ -9,7 +9,7 @@ repositories {
 
 dependencies {
     implementation(libs.sqlite.jdbc)
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.14.0")
 }
 
 kotlin {
