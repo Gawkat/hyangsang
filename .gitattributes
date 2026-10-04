@@ -1,0 +1,8 @@
+# Store text files with LF line endings, whatever the contributor's core.autocrlf setting
+* text=auto
+
+# The start scripts break with the other platform's line endings
+/gradlew text eol=lf
+*.bat text eol=crlf
+
+*.jar binary

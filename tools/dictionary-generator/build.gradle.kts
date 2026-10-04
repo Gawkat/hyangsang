@@ -24,3 +24,11 @@ application {
 tasks.named<JavaExec>("run") {
     workingDir = rootDir
 }
+
+// Builds the lookup evaluation sets from the generated dictionary, see EvalSetGenerator.kt
+tasks.register<JavaExec>("generateEvalSet") {
+    group = "application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.kettu.hyangsang.tools.EvalSetGeneratorKt")
+    workingDir = rootDir
+}
