@@ -121,14 +121,24 @@ class RssFeedRepository(
 
     suspend fun countSavedArticles(feed: RssFeed): Int = articleDao.countSavedInFeed(feed.id)
 
-    // Re-adds built-in feeds the user removed; existing ones are left as they are
+    // Re-adds built-in feeds the user removed and moves the rest back to their built-in
+    // categories. Names and on/off states are left as they are. Returns how many feeds changed
     suspend fun restoreDefaultFeeds(): Int {
-        val restored = defaultFeeds().mapNotNull { feed ->
+        val existingByUrl = rssFeedDao.getAllFeeds().first().associateBy { it.url }
+        val (present, missing) = defaultFeeds().partition { it.url in existingByUrl }
+
+        val moved = present.mapNotNull { feed ->
+            val existing = existingByUrl.getValue(feed.url)
+            existing.takeIf { it.category != feed.category }?.also {
+                rssFeedDao.updateFeedDetails(it.id, it.title, feed.category)
+            }
+        }
+        val restored = missing.mapNotNull { feed ->
             val id = rssFeedDao.insertFeed(feed)
             if (id != -1L) feed.copy(id = id) else null
         }
         fetchConcurrently(restored)
-        return restored.size
+        return moved.size + restored.size
     }
 
     // Toggle feed status

@@ -98,7 +98,7 @@
     <plurals name="restored_feeds">
         <item quantity="other">피드 %1$d개 복원됨</item>
     </plurals>
-    <string name="restore_nothing">기본 피드가 모두 추가되어 있습니다</string>
+    <string name="restore_nothing">기본 피드가 모두 원래 카테고리에 추가되어 있습니다</string>
     <string name="feed_status_off">꺼짐</string>
     <string name="feed_status_never">아직 업데이트되지 않음</string>
     <string name="feed_status_updated">%1$s 업데이트됨</string>

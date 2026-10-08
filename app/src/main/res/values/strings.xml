@@ -102,7 +102,7 @@
         <item quantity="one">Restored %1$d feed</item>
         <item quantity="other">Restored %1$d feeds</item>
     </plurals>
-    <string name="restore_nothing">All built-in feeds are already added</string>
+    <string name="restore_nothing">All built-in feeds are already added and in their categories</string>
     <string name="feed_status_off">Off</string>
     <string name="feed_status_never">Not updated yet</string>
     <string name="feed_status_updated">Updated %1$s</string>
