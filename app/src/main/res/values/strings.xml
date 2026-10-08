@@ -132,6 +132,18 @@
         <item quantity="one">This includes %1$d saved article.</item>
         <item quantity="other">This includes %1$d saved articles.</item>
     </plurals>
+    <string name="feed_status_updating">Updating…</string>
+    <string name="refresh">Refresh</string>
+    <string name="refresh_feed">Refresh %1$s</string>
+    <string name="feed_refreshed_none">Updated · no new articles</string>
+    <plurals name="feed_refreshed">
+        <item quantity="one">Updated · %1$d new article</item>
+        <item quantity="other">Updated · %1$d new articles</item>
+    </plurals>
+    <string name="category_options">Options for %1$s</string>
+    <string name="refresh_category">Refresh category</string>
+    <string name="rename_category">Rename category</string>
+    <string name="category_turned_off">%1$s turned off</string>
     <string name="text_layout_title">Text &amp; layout</string>
     <string name="text_layout_summary">%1$d sp · %2$s · %3$s spacing</string>
     <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>

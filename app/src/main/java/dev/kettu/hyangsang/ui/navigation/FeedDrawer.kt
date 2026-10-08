@@ -12,28 +12,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.CandlestickChart
 import androidx.compose.material.icons.outlined.DynamicFeed
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.Factory
-import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.HealthAndSafety
-import androidx.compose.material.icons.outlined.Movie
-import androidx.compose.material.icons.outlined.Newspaper
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SportsSoccer
-import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,18 +33,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
-import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.FeedAvatar
 import dev.kettu.hyangsang.ui.components.HyangsangLogo
+import dev.kettu.hyangsang.ui.components.rememberCategoryIcons
 
 /**
  * Feed and category picker for Discover. Categories with a single feed act as that feed;
@@ -84,7 +66,7 @@ fun FeedDrawerContent(
     val feedsByCategory = remember(feeds) {
         feeds.filter { it.isEnabled }.groupBy { it.category }.toSortedMap()
     }
-    val categoryIcons = rememberCategoryIcons()
+    val categoryIcon = rememberCategoryIcons()
     // Start with the selected feed's category open, so the selection is visible
     var expanded by rememberSaveable {
         mutableStateOf(
@@ -155,11 +137,7 @@ fun FeedDrawerContent(
                         )
                     },
                     icon = {
-                        Icon(
-                            imageVector = categoryIcons[category]
-                                ?: Icons.AutoMirrored.Outlined.Label,
-                            contentDescription = null
-                        )
+                        Icon(imageVector = categoryIcon(category), contentDescription = null)
                     },
                     selected = selectedCategory == category,
                     onClick = { onSelectCategory(category) },
@@ -263,32 +241,4 @@ private fun LabelWithError(text: String, hasError: Boolean) {
 @Composable
 private fun CountBadge(count: Int) {
     Text(text = count.toString(), style = MaterialTheme.typography.labelMedium)
-}
-
-/** Icons for the built-in categories, keyed by their name in every app language. */
-@Composable
-private fun rememberCategoryIcons(): Map<String, ImageVector> {
-    val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    return remember(configuration) {
-        DefaultCategory.byLabel(context).mapValues { it.value.icon() }
-    }
-}
-
-private fun DefaultCategory.icon(): ImageVector = when (this) {
-    DefaultCategory.NEWS -> Icons.Outlined.Newspaper
-    DefaultCategory.POLITICS -> Icons.Outlined.AccountBalance
-    DefaultCategory.NORTH_KOREA -> Icons.Outlined.Flag
-    DefaultCategory.ECONOMY -> Icons.AutoMirrored.Outlined.TrendingUp
-    DefaultCategory.MARKET -> Icons.Outlined.CandlestickChart
-    DefaultCategory.INDUSTRY -> Icons.Outlined.Factory
-    DefaultCategory.SOCIETY -> Icons.Outlined.Groups
-    DefaultCategory.LOCAL -> Icons.Outlined.Place
-    DefaultCategory.INTERNATIONAL -> Icons.Outlined.Public
-    DefaultCategory.CULTURE -> Icons.Outlined.TheaterComedy
-    DefaultCategory.HEALTH -> Icons.Outlined.HealthAndSafety
-    DefaultCategory.ENTERTAINMENT -> Icons.Outlined.Movie
-    DefaultCategory.SPORTS -> Icons.Outlined.SportsSoccer
-    DefaultCategory.OPINION -> Icons.Outlined.Forum
-    DefaultCategory.PEOPLE -> Icons.Outlined.Person
 }

@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,18 @@ interface RssFeedDao {
 
     @Query("UPDATE rss_feeds SET isEnabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE rss_feeds SET isEnabled = :enabled WHERE id IN (:ids)")
+    suspend fun setEnabledForIds(ids: List<Long>, enabled: Boolean)
+
+    @Transaction
+    suspend fun setEnabledStates(enabledIds: List<Long>, disabledIds: List<Long>) {
+        setEnabledForIds(enabledIds, true)
+        setEnabledForIds(disabledIds, false)
+    }
+
+    @Query("UPDATE rss_feeds SET category = :newName WHERE category = :oldName")
+    suspend fun renameCategory(oldName: String, newName: String)
 
     @Query("UPDATE rss_feeds SET lastSynced = :timestamp, lastSyncAttempt = :timestamp, lastSyncError = NULL WHERE id = :id")
     suspend fun markSyncSucceeded(id: Long, timestamp: String)
