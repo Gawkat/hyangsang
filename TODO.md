@@ -31,7 +31,6 @@
 
 ## Feeds
 
-* Allow refreshing individual feeds
 * Support Atom feeds?
 
 ## Vocabulary/Statistics (maybe)

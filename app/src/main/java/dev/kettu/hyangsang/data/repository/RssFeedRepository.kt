@@ -136,6 +136,24 @@ class RssFeedRepository(
         rssFeedDao.setEnabled(feed.id, !feed.isEnabled)
     }
 
+    suspend fun setFeedsEnabled(feeds: List<RssFeed>, enabled: Boolean) {
+        rssFeedDao.setEnabledForIds(feeds.map { it.id }, enabled)
+    }
+
+    // Sets each feed back to the state it has in [feeds], such as before a category was turned off
+    suspend fun restoreEnabledStates(feeds: List<RssFeed>) {
+        val (enabled, disabled) = feeds.partition { it.isEnabled }
+        rssFeedDao.setEnabledStates(enabled.map { it.id }, disabled.map { it.id })
+    }
+
+    suspend fun renameCategory(oldName: String, newName: String) {
+        rssFeedDao.renameCategory(oldName, newName)
+    }
+
+    // Fetches the given feeds now, regardless of when they were last updated. Returns the number
+    // of new articles for each feed, or null for the ones that failed
+    suspend fun refreshFeeds(feeds: List<RssFeed>): List<Int?> = fetchConcurrently(feeds)
+
     // Only one refresh runs at a time, so a background sync and the refresh on app start don't
     // both fetch a feed before either has recorded the attempt
     private val refreshMutex = Mutex()
@@ -163,9 +181,9 @@ class RssFeedRepository(
 
     // Fetches feeds in parallel; each fetch records its own failure, so one bad feed doesn't
     // cancel the rest. The cap bounds how many feed bodies are downloaded and parsed at once
-    private suspend fun fetchConcurrently(feeds: List<RssFeed>) {
+    private suspend fun fetchConcurrently(feeds: List<RssFeed>): List<Int?> {
         val semaphore = Semaphore(MAX_CONCURRENT_FEED_FETCHES)
-        coroutineScope {
+        return coroutineScope {
             feeds.map { feed ->
                 async { semaphore.withPermit { fetchAndSaveRss(feed) } }
             }.awaitAll()
@@ -176,9 +194,10 @@ class RssFeedRepository(
         rssFeedDao.deleteFeed(feed)
     }
 
+    // Returns the number of new articles, or null when the fetch failed
     @OptIn(ExperimentalTime::class)
-    suspend fun fetchAndSaveRss(feed: RssFeed) {
-        withContext(Dispatchers.IO) {
+    suspend fun fetchAndSaveRss(feed: RssFeed): Int? {
+        return withContext(Dispatchers.IO) {
             val attemptTime = Clock.System.now().toString()
             try {
                 val response = rssService.getRssFeed(feed.url)
@@ -198,11 +217,13 @@ class RssFeedRepository(
                                 pubDate = parseToIso8601(item.pubDate)
                             )
                         }
-                    articleDao.insertArticles(articles)
+                    val newCount = articleDao.insertArticles(articles).count { it != -1L }
 
                     rssFeedDao.markSyncSucceeded(feed.id, attemptTime)
+                    newCount
                 } else {
                     rssFeedDao.markSyncFailed(feed.id, attemptTime, "HTTP ${response.code()}")
+                    null
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -213,6 +234,7 @@ class RssFeedRepository(
                     attemptTime,
                     e.message ?: e::class.simpleName ?: "Unknown error"
                 )
+                null
             }
         }
     }
