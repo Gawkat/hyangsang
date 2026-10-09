@@ -109,6 +109,17 @@ class ArticleDaoTest {
     }
 
     @Test
+    fun leavesOutFeedsThatAreOff(): Unit = runBlocking {
+        db.rssFeedDao().setEnabled(sportsFeed, false)
+        dao.updateSavedDate(3, "2026-10-03T01:00:00Z")
+
+        assertEquals(listOf(2L, 1L), ids())
+        assertEquals(mapOf(newsFeed to 1), dao.getUnreadCounts().first())
+        // Saved articles still show on the saved screen
+        assertEquals(listOf(3L), dao.getSavedArticleSummaries().first().map { it.article.id })
+    }
+
+    @Test
     fun clearsContentOfUnsavedArticlesNotOpenedSinceCutoff(): Unit = runBlocking {
         val content = listOf(ContentBlock.Text("본문"))
         (1L..4L).forEach { dao.replaceContent(it, content, maxPosition = 0, parserVersion = 5) }

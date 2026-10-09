@@ -25,8 +25,8 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleWithFeedById(id: Long): ArticleWithFeed?
 
-    // A null category or feed matches all; a blank query matches all and otherwise is a LIKE
-    // pattern, escaped with a backslash
+    // Articles from feeds that are off are left out. A null category or feed matches all; a
+    // blank query matches all and otherwise is a LIKE pattern, escaped with a backslash
     @Transaction
     @Query(
         """
@@ -34,7 +34,8 @@ interface ArticleDao {
             a.savedDate
         FROM articles a
         INNER JOIN rss_feeds f ON f.id = a.feedId
-        WHERE (:category IS NULL OR f.category = :category)
+        WHERE f.isEnabled = 1
+            AND (:category IS NULL OR f.category = :category)
             AND (:feedId IS NULL OR a.feedId = :feedId)
             AND (:unreadOnly = 0 OR a.lastReadDate IS NULL)
             AND (:query = '' OR a.title LIKE '%' || :query || '%' ESCAPE '\'
@@ -58,8 +59,16 @@ interface ArticleDao {
     )
     fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>>
 
-    // Feeds without unread articles are left out
-    @Query("SELECT feedId, COUNT(*) AS unread FROM articles WHERE lastReadDate IS NULL GROUP BY feedId")
+    // Feeds without unread articles, and feeds that are off, are left out
+    @Query(
+        """
+        SELECT a.feedId, COUNT(*) AS unread
+        FROM articles a
+        INNER JOIN rss_feeds f ON f.id = a.feedId
+        WHERE f.isEnabled = 1 AND a.lastReadDate IS NULL
+        GROUP BY a.feedId
+    """
+    )
     fun getUnreadCounts(): Flow<Map<@MapColumn("feedId") Long, @MapColumn("unread") Int>>
 
     @Query("SELECT COUNT(*) FROM articles WHERE feedId = :feedId AND savedDate IS NOT NULL")

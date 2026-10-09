@@ -127,6 +127,22 @@ fun FeedsScreen(
     }
     val collapsedCategories = collapsed.orEmpty()
 
+    // Says where the articles of feeds just turned off went, and offers to put [before], the
+    // feeds as they were, back
+    fun showTurnedOff(name: String, before: List<RssFeed>) {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.feeds_turned_off, name),
+                actionLabel = context.getString(R.string.undo),
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.restoreEnabledStates(before)
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -230,22 +246,10 @@ fun FeedsScreen(
                             },
                             onSetEnabled = { enabled ->
                                 viewModel.setFeedsEnabled(categoryFeeds, enabled)
-                                // Turning off a category with only some feeds on loses which
-                                // ones were on, so offer to bring them back
-                                val isMixed = categoryFeeds.any { it.isEnabled } &&
-                                    categoryFeeds.any { !it.isEnabled }
-                                if (!enabled && isMixed) {
-                                    scope.launch {
-                                        snackbarHostState.currentSnackbarData?.dismiss()
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = context.getString(R.string.category_turned_off, category),
-                                            actionLabel = context.getString(R.string.undo),
-                                            duration = SnackbarDuration.Long
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.restoreEnabledStates(categoryFeeds)
-                                        }
-                                    }
+                                // Undo brings back which feeds were on, which a category with
+                                // only some feeds on would otherwise lose
+                                if (!enabled && categoryFeeds.any { it.isEnabled }) {
+                                    showTurnedOff(category, categoryFeeds)
                                 }
                             },
                             onRefresh = {
@@ -263,7 +267,10 @@ fun FeedsScreen(
                                 feed = feed,
                                 isRefreshing = feed.id in refreshingFeedIds,
                                 onClick = { editingFeedId = feed.id },
-                                onToggle = { viewModel.toggleFeed(feed) },
+                                onToggle = {
+                                    viewModel.toggleFeed(feed)
+                                    if (feed.isEnabled) showTurnedOff(feed.title, listOf(feed))
+                                },
                                 onRetry = { viewModel.refreshFeeds(listOf(feed)) },
                                 modifier = Modifier.animateItem()
                             )

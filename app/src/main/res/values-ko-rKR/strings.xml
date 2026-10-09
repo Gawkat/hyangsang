@@ -136,7 +136,7 @@
     <string name="category_options">%1$s 옵션</string>
     <string name="refresh_category">카테고리 새로고침</string>
     <string name="rename_category">카테고리 이름 바꾸기</string>
-    <string name="category_turned_off">%1$s 꺼짐</string>
+    <string name="feeds_turned_off">%1$s 꺼짐 · 탐색에서 기사가 숨겨집니다</string>
     <string name="text_layout_title">글자 및 레이아웃</string>
     <string name="text_layout_summary">%1$d sp · %2$s · 줄 간격 %3$s</string>
     <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
