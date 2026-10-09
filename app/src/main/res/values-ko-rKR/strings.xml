@@ -189,9 +189,11 @@
     <string name="category_international">세계</string>
     <string name="category_culture">문화</string>
     <string name="category_health">건강</string>
+    <string name="category_science">과학</string>
     <string name="category_entertainment">연예</string>
     <string name="category_sports">스포츠</string>
     <string name="category_opinion">오피니언</string>
     <string name="category_people">사람들</string>
     <string name="source_sbs_news">SBS 뉴스</string>
+    <string name="source_hankyoreh">한겨레</string>
 </resources>

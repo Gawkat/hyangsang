@@ -1,8 +1,8 @@
 # Feed Backlog
 
-Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean and SBS feeds. Everything
-below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated recently, and a
-sample article was run through `ArticleParser` to see how much Korean text came out.
+Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS and 한겨레 feeds.
+Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
+recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
 Tiers are based on how much parser work each feed needs:
 
@@ -20,28 +20,18 @@ Sources that add a register or topic the current feeds don't cover:
 
 * **어린이동아**: children's newspaper, short sentences and simple vocabulary; the easiest reading
   of any live feed found (Tier 2)
-* **한겨레 미래&과학 / 동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature
-  articles
+* **동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature articles
 * **VOA 한국어 세계 / 한반도, RFA 자유아시아방송**: broadcast scripts (`진행자)`, `앵커:`), so a
   spoken register
 * **찾기쉬운 생활법령정보**: government plain-language explanations of everyday law (Tier 3)
 * **한겨레21, 주간경향, 시사저널, 미디어오늘**: weekly magazine long reads
-* **사설/칼럼 feeds** (한겨레, 경향, 동아): hardest register, good for advanced users
+* **사설/칼럼 feeds** (경향, 동아): hardest register, good for advanced users
 
 ## Tier 1: works with the generic parser
 
 | Source | Category | URL | Notes |
 |---|---|---|---|
-| 한겨레 | News | https://www.hani.co.kr/rss/ | Date: no item dates at all |
-| 한겨레 | Politics | https://www.hani.co.kr/rss/politics/ | Same for all 한겨레 sections |
-| 한겨레 | Society | https://www.hani.co.kr/rss/society/ | |
-| 한겨레 | Economy | https://www.hani.co.kr/rss/economy/ | |
-| 한겨레 | International | https://www.hani.co.kr/rss/international/ | |
-| 한겨레 | Culture | https://www.hani.co.kr/rss/culture/ | |
-| 한겨레 | Opinion | https://www.hani.co.kr/rss/opinion/ | 사설·칼럼 |
-| 한겨레 | Science (new) | https://www.hani.co.kr/rss/science/ | 미래&과학, long articles |
-| 한겨레 | Sports | https://www.hani.co.kr/rss/sports/ | |
-| 한겨레21 | Magazine (new) | https://h21.hani.co.kr/rss/ | Date: none |
+| 한겨레21 | Magazine (new) | https://h21.hani.co.kr/rss/ | Date: none. Article pages differ from www.hani.co.kr, so `HaniNewsParser` doesn't cover them |
 | 경향신문 | Politics | https://www.khan.co.kr/rss/rssdata/politic_news.xml | Date: `dc:date` only. Text-to-speech widget text ("기사 읽기 요약 기사를 재생 중이에요") leaks into the first block |
 | 경향신문 | Culture | https://www.khan.co.kr/rss/rssdata/culture_news.xml | Same as above for all 경향 feeds |
 | 경향신문 | Opinion | https://www.khan.co.kr/rss/rssdata/opinion_news.xml | |

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.runtime.Composable
@@ -53,6 +54,7 @@ private fun DefaultCategory.icon(): ImageVector = when (this) {
     DefaultCategory.INTERNATIONAL -> Icons.Outlined.Public
     DefaultCategory.CULTURE -> Icons.Outlined.TheaterComedy
     DefaultCategory.HEALTH -> Icons.Outlined.HealthAndSafety
+    DefaultCategory.SCIENCE -> Icons.Outlined.Science
     DefaultCategory.ENTERTAINMENT -> Icons.Outlined.Movie
     DefaultCategory.SPORTS -> Icons.Outlined.SportsSoccer
     DefaultCategory.OPINION -> Icons.Outlined.Forum
