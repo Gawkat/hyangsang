@@ -16,7 +16,8 @@ class ArticleParser {
         "feeds.bbci.co.uk" to BbcNewsParser(),
         "bbc.com" to BbcNewsParser(),
         "yna.co.kr" to YonhapNewsParser(),
-        "news.sbs.co.kr" to SbsNewsParser()
+        "news.sbs.co.kr" to SbsNewsParser(),
+        "hani.co.kr" to HaniNewsParser()
     )
 
     fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> {

@@ -19,6 +19,7 @@ enum class DefaultCategory(@StringRes val label: Int) {
     INTERNATIONAL(R.string.category_international),
     CULTURE(R.string.category_culture),
     HEALTH(R.string.category_health),
+    SCIENCE(R.string.category_science),
     ENTERTAINMENT(R.string.category_entertainment),
     SPORTS(R.string.category_sports),
     OPINION(R.string.category_opinion),
@@ -87,7 +88,16 @@ object DefaultData {
         sbs("07", DefaultCategory.INTERNATIONAL),
         sbs("08", DefaultCategory.CULTURE),
         sbs("14", DefaultCategory.ENTERTAINMENT),
-        sbs("09", DefaultCategory.SPORTS)
+        sbs("09", DefaultCategory.SPORTS),
+        // As with Yonhap, the main /rss/ feed is left out, as it combines the section feeds
+        hani("politics", DefaultCategory.POLITICS),
+        hani("economy", DefaultCategory.ECONOMY),
+        hani("society", DefaultCategory.SOCIETY),
+        hani("international", DefaultCategory.INTERNATIONAL),
+        hani("culture", DefaultCategory.CULTURE),
+        hani("science", DefaultCategory.SCIENCE),
+        hani("sports", DefaultCategory.SPORTS),
+        hani("opinion", DefaultCategory.OPINION)
     )
 
     // Titles and categories are stored as plain text, since the user can edit them,
@@ -141,6 +151,12 @@ object DefaultData {
     private fun sbs(sectionId: String, category: DefaultCategory) = DefaultFeed(
         source = R.string.source_sbs_news,
         url = "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=$sectionId&plink=RSSREADER",
+        category = category
+    )
+
+    private fun hani(section: String, category: DefaultCategory) = DefaultFeed(
+        source = R.string.source_hankyoreh,
+        url = "https://www.hani.co.kr/rss/$section",
         category = category
     )
 }

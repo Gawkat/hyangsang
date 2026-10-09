@@ -149,6 +149,7 @@ internal class HomonymRanking(
                 "삶 > 병과 증상", "삶 > 약품류", "삶 > 치료", "인간 > 신체", "인간 > 생리 현상",
                 "인간 > 체력 상태", "식생활 > 영양"
             )
+            DefaultCategory.SCIENCE -> listOf("과학")
             DefaultCategory.ENTERTAINMENT -> listOf(
                 "문화 > 대중 문화", "문화 > 음악", "문화 > 예술", "문화 > 문화 활동", "삶 > 여가"
             )

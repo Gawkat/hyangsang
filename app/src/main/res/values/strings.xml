@@ -201,6 +201,7 @@
     <string name="category_international">International</string>
     <string name="category_culture">Culture</string>
     <string name="category_health">Health</string>
+    <string name="category_science">Science</string>
     <string name="category_entertainment">Entertainment</string>
     <string name="category_sports">Sports</string>
     <string name="category_opinion">Opinion</string>
@@ -232,4 +233,5 @@
         THE SOFTWARE.]]>
     </string>
     <string name="source_sbs_news">SBS News</string>
+    <string name="source_hankyoreh">Hankyoreh</string>
 </resources>
