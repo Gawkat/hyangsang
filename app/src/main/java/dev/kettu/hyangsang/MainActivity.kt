@@ -51,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
+import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
@@ -92,6 +93,8 @@ class MainActivity : AppCompatActivity() {
                 .collectAsState(initial = ArticleRetention.DEFAULT)
             val contentRetention by prefsRepository.contentRetentionFlow
                 .collectAsState(initial = ContentRetention.DEFAULT)
+            val feedGrouping by prefsRepository.feedGroupingFlow
+                .collectAsState(initial = FeedGrouping.CATEGORY)
 
             val darkTheme = when (theme) {
                 "Light" -> false
@@ -159,7 +162,8 @@ class MainActivity : AppCompatActivity() {
                     showUnreadCounts = showUnreadCounts,
                     feedSyncInterval = feedSyncInterval,
                     articleRetention = articleRetention,
-                    contentRetention = contentRetention
+                    contentRetention = contentRetention,
+                    feedGrouping = feedGrouping
                 )
             }
         }
@@ -204,7 +208,8 @@ fun MainApp(
     showUnreadCounts: Boolean,
     feedSyncInterval: FeedSyncInterval,
     articleRetention: ArticleRetention,
-    contentRetention: ContentRetention
+    contentRetention: ContentRetention,
+    feedGrouping: FeedGrouping
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
@@ -374,6 +379,8 @@ fun MainApp(
                 composable(Routes.FEEDS) { entry ->
                     FeedsScreen(
                         viewModel = rssFeedViewModel,
+                        grouping = feedGrouping,
+                        onGroupingChange = { scope.launch { prefsRepository.setFeedGrouping(it) } },
                         onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }

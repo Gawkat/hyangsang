@@ -37,3 +37,9 @@ enum class ArticleRetention(val days: Int?) {
         val DEFAULT = THREE_MONTHS
     }
 }
+
+// How the feeds screen groups feeds: by their category, or by the site they come from
+enum class FeedGrouping {
+    CATEGORY,
+    SOURCE
+}

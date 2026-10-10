@@ -32,6 +32,7 @@ class UserPreferencesRepository(private val context: Context) {
         val CONTENT_RETENTION = stringPreferencesKey("content_retention")
         val FEED_SYNC_INTERVAL = stringPreferencesKey("feed_sync_interval")
         val ARTICLE_RETENTION = stringPreferencesKey("article_retention")
+        val FEED_GROUPING = stringPreferencesKey("feed_grouping")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -85,6 +86,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setArticleRetention(retention: ArticleRetention) {
         context.dataStore.edit { it[Keys.ARTICLE_RETENTION] = retention.name }
+    }
+
+    val feedGroupingFlow: Flow<FeedGrouping> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.FEED_GROUPING], FeedGrouping.CATEGORY)
+    }.distinctUntilChanged()
+
+    suspend fun setFeedGrouping(grouping: FeedGrouping) {
+        context.dataStore.edit { it[Keys.FEED_GROUPING] = grouping.name }
     }
 
     suspend fun setTheme(theme: String) {

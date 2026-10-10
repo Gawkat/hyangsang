@@ -139,6 +139,9 @@
     <string name="category_options">%1$s 옵션</string>
     <string name="refresh_category">카테고리 새로고침</string>
     <string name="rename_category">카테고리 이름 바꾸기</string>
+    <string name="refresh_source">출처 새로고침</string>
+    <string name="group_by_source">출처별로 묶기</string>
+    <string name="group_by_category">카테고리별로 묶기</string>
     <string name="feeds_turned_off">%1$s 꺼짐 · 탐색에서 기사가 숨겨집니다</string>
     <string name="text_layout_title">글자 및 레이아웃</string>
     <string name="text_layout_summary">%1$d sp · %2$s · 줄 간격 %3$s</string>
