@@ -87,7 +87,15 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
     fun traverse(node: Node) {
         when (node) {
             is TextNode -> {
-                sb.append(node.text())
+                val text = node.text()
+                sb.append(if (sb.endsWith('\n')) text.trimStart() else text)
+            }
+
+            // A line break within the paragraph, such as between the lines of a poem. More than
+            // two in a row are kept as two, a blank line
+            is Element if node.tagName() == "br" -> {
+                while (sb.endsWith(' ')) sb.setLength(sb.length - 1)
+                if (sb.isNotBlank() && !sb.endsWith("\n\n")) sb.append('\n')
             }
 
             is Element -> {
@@ -113,5 +121,12 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
     for (child in this.childNodes()) {
         traverse(child)
     }
-    return sb.toString().trim() to spans
+    // Spans can end in whitespace that's trimmed, such as before a <br>
+    val text = sb.toString().trim()
+    val leading = sb.length - sb.trimStart().length
+    return text to spans.mapNotNull {
+        val start = (it.start - leading).coerceIn(0, text.length)
+        val end = (it.end - leading).coerceIn(0, text.length)
+        if (end > start) it.copy(start = start, end = end) else null
+    }
 }

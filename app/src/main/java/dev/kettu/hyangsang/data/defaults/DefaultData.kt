@@ -107,6 +107,20 @@ object DefaultData {
             category = DefaultCategory.KIDS,
             isSection = false
         ),
+        // News for children, plus children's poems and stories (동시·동화)
+        DefaultFeed(
+            source = R.string.source_kids_hankook,
+            url = "https://www.kidshankook.kr/rss/allArticle.xml",
+            category = DefaultCategory.KIDS,
+            isSection = false
+        ),
+        // A weekly that explains economic ideas to children
+        DefaultFeed(
+            source = R.string.source_econoi,
+            url = "https://www.econoi.com/rss/allArticle.xml",
+            category = DefaultCategory.KIDS,
+            isSection = false
+        ),
         // The government's plain-language guide to everyday law, as its feed of updated pages
         DefaultFeed(
             source = R.string.source_easylaw,

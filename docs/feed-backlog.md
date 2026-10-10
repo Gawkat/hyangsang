@@ -1,7 +1,7 @@
 # Feed Backlog
 
-Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 어린이동아 and
-찾기쉬운 생활법령정보 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
+Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 어린이동아,
+소년한국일보, 어린이 경제신문 and 찾기쉬운 생활법령정보 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
 recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
 Tiers are based on how much parser work each feed needs:
@@ -22,8 +22,6 @@ Sources that add a register or topic the current feeds don't cover:
 * **동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature articles
 * **VOA 한국어 한반도, RFA 자유아시아방송**: broadcast scripts (`진행자)`, `앵커:`), so a
   spoken register
-* **소년한국일보, 어린이 경제신문**: easy texts next to 어린이동아, and 소년한국일보 also publishes
-  children's poems and stories (동시·동화)
 * **한겨레21, 주간경향, 시사저널, 미디어오늘**: weekly magazine long reads
 * **사설/칼럼 feeds** (경향, 동아): hardest register, good for advanced users
 
@@ -69,8 +67,6 @@ Found on 2026-10-10 and on the same CMS, but not yet checked against `NdSoftNews
 
 | Source | Category | URL | Notes |
 |---|---|---|---|
-| 소년한국일보 | Kids | https://www.kidshankook.kr/rss/allArticle.xml | News for children plus 동시·동화. Publishes in batches, with one timestamp for a whole batch |
-| 어린이 경제신문 | Kids | https://www.econoi.com/rss/allArticle.xml | Weekly. Explains economic ideas (바벨전략, 북극항로) in simple language |
 | 헬로디디 | Science | https://www.hellodd.com/rss/allArticle.xml | Science and research news from Daedeok |
 
 Unverified, but on the same CMS according to [newswatcher's list](https://github.com/seokhoonj/newswatcher/blob/main/docs/korean-news-rss.md):
@@ -141,11 +137,11 @@ in some headlines. That argues for adding 한반도 turned off, or with the sour
 
 Reviewed on 2026-10-10 against the built-in feeds, leaving parser work aside.
 
-* **Difficulty levels**: 어린이동아 is the only easy source, and after it everything jumps to
-  newspaper level. 소년한국일보 and 어린이 경제신문 add more easy texts. There are explainers
+* **Difficulty levels**: the children's papers (어린이동아, 소년한국일보, 어린이 경제신문) are the
+  only easy sources, and after them everything jumps to newspaper level. There are explainers
   (슬로우뉴스) for an intermediate level, but no RSS feed of easy Korean news for adult learners
   turned up, only apps.
-* **Fiction and poetry**: none built in. The only feed found is 소년한국일보's 동시·동화. Literary
+* **Fiction and poetry**: only 소년한국일보's 동시·동화, the only feed found. Literary
   webzines such as 문장웹진 have no feed, and Brunch only has per-author feeds.
 * **Spoken register**: only VOA 한반도 and RFA, both about North Korea. No feed of everyday
   conversation or interviews was found.
@@ -175,6 +171,8 @@ Other things to weigh when picking defaults:
 * Fixed: `RssFeedParser` now falls back to `dc:date` (경향신문, 주간경향), and `parseToIso8601`
   handles every date variant above, reading dates without a zone as Korean time. 한겨레 and 한겨레21
   still have no item dates at all, so those articles sort by `addedDate`
+* 소년한국일보's daily 초등 속담 팩트체크 and 초등한자 따라 쓰기, and its comics, are images with no
+  text, so they show up as articles with nothing to look up
 * Several sites (동아일보, 노컷뉴스, 뉴시스, TV조선) separate paragraphs with `<br>` inside a single
   container rather than using `<p>`, so splitting paragraphs on `<br><br>` would help more than one
   parser
