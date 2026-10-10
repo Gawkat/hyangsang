@@ -160,6 +160,7 @@ internal class HomonymRanking(
             DefaultCategory.NEWS,
             DefaultCategory.LOCAL,
             DefaultCategory.OPINION,
+            DefaultCategory.KIDS,
             null -> emptyList()
         }
     }

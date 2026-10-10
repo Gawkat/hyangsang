@@ -27,6 +27,26 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `should use NdSoftNewsParser for pages on the ND Soft CMS`() {
+        val url = "https://www.mediatoday.co.kr/news/articleView.html?idxno=1"
+        val doc = Jsoup.parse(
+            """
+            <html><body>
+                <nav><p>Navigation</p></nav>
+                <article id="article-view-content-div"><p>ND Soft Contents</p></article>
+                <article class="article-copy">Copyright</article>
+            </body></html>
+            """.trimIndent()
+        )
+
+        val result = articleParser.parse(url, doc)
+        assertEquals(
+            listOf(ContentBlock.Text("ND Soft Contents"), ContentBlock.Footer("Copyright")),
+            result
+        )
+    }
+
+    @Test
     fun `should use GenericContentsParser for unknown URLs`() {
         val url = "https://example.com/article"
         val doc =

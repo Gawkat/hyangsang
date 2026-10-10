@@ -11,6 +11,7 @@ class ArticleParser {
     }
 
     private val defaultParser = GenericContentsParser()
+    private val ndSoftParser = NdSoftNewsParser()
 
     private val parsers = mapOf(
         "feeds.bbci.co.uk" to BbcNewsParser(),
@@ -27,7 +28,10 @@ class ArticleParser {
             ""
         }
 
-        val strategy = parsers[host] ?: defaultParser
+        // Sites on ND Soft's CMS are recognised by the page rather than listed, as there are many
+        val strategy = parsers[host]
+            ?: ndSoftParser.takeIf { document.getElementById(NdSoftNewsParser.BODY_ID) != null }
+            ?: defaultParser
         return strategy.extractContents(document, title)
     }
 }
