@@ -29,6 +29,9 @@
     <string name="article_reloaded">Article reloaded</string>
     <string name="article_reload_unchanged">No changes to the article</string>
     <string name="article_reload_failed">Couldn\'t reload the article</string>
+    <string name="article_download_failed">Couldn\'t download the article. Check your connection and try again, or open it in the browser.</string>
+    <string name="article_no_text">No text was found in this article. It may be a photo or video page.</string>
+    <string name="try_again_button">Try again</string>
     <string name="article_not_found_label">Article not found</string>
     <string name="report_issue_nav">Report an issue</string>
     <string name="dictionary_attribution_label">Dictionary attribution</string>

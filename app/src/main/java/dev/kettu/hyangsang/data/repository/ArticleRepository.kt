@@ -58,7 +58,9 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     suspend fun restoreSavedDate(id: Long, savedDate: String) =
         articleDao.updateSavedDate(id, savedDate)
 
-    suspend fun fetchAndSaveArticleContent(article: Article): Article {
+    // Downloads the article the first time it's opened. Returns null when the download fails,
+    // so the reader can offer to try again
+    suspend fun fetchAndSaveArticleContent(article: Article): Article? {
         if (!article.content.isNullOrEmpty()) return article
 
         return try {
@@ -79,7 +81,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            article // Return original on failure
+            null
         }
     }
 
