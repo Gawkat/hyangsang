@@ -27,6 +27,26 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `should use EasyLawParser for easylaw URLs`() {
+        val url = "https://www.easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&csmSeq=1"
+        val doc = Jsoup.parse("<html><body><div id=\"ovDiv\"><div class='plv3'>EasyLaw Contents</div></div></body></html>")
+
+        val result = articleParser.parse(url, doc)
+        assertEquals(listOf(ContentBlock.Text("EasyLaw Contents")), result)
+    }
+
+    @Test
+    fun `articleUrl leaves links from other sites as they are`() {
+        val url = "http://www.yna.co.kr/view/AKR1"
+        assertEquals(url, ArticleParser.articleUrl(url))
+    }
+
+    @Test
+    fun `articleUrl drops easylaw links without an article`() {
+        assertEquals(null, ArticleParser.articleUrl("https://www.easylaw.go.kr/CSP/EasyLawInfoR.laf?easySeq=1"))
+    }
+
+    @Test
     fun `should use NdSoftNewsParser for pages on the ND Soft CMS`() {
         val url = "https://www.mediatoday.co.kr/news/articleView.html?idxno=1"
         val doc = Jsoup.parse(

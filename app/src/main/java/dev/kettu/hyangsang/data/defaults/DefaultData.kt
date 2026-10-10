@@ -24,7 +24,8 @@ enum class DefaultCategory(@StringRes val label: Int) {
     SPORTS(R.string.category_sports),
     OPINION(R.string.category_opinion),
     PEOPLE(R.string.category_people),
-    KIDS(R.string.category_kids);
+    KIDS(R.string.category_kids),
+    LAW(R.string.category_law);
 
     companion object {
         /**
@@ -104,6 +105,13 @@ object DefaultData {
             source = R.string.source_kids_donga,
             url = "https://kids.donga.com/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
+            isSection = false
+        ),
+        // The government's plain-language guide to everyday law, as its feed of updated pages
+        DefaultFeed(
+            source = R.string.source_easylaw,
+            url = "https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7",
+            category = DefaultCategory.LAW,
             isSection = false
         )
     )

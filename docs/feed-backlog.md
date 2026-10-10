@@ -1,7 +1,7 @@
 # Feed Backlog
 
-Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레 and 어린이동아
-feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
+Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 어린이동아 and
+찾기쉬운 생활법령정보 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
 recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
 Tiers are based on how much parser work each feed needs:
@@ -22,7 +22,6 @@ Sources that add a register or topic the current feeds don't cover:
 * **동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature articles
 * **VOA 한국어 세계 / 한반도, RFA 자유아시아방송**: broadcast scripts (`진행자)`, `앵커:`), so a
   spoken register
-* **찾기쉬운 생활법령정보**: government plain-language explanations of everyday law (Tier 3)
 * **한겨레21, 주간경향, 시사저널, 미디어오늘**: weekly magazine long reads
 * **사설/칼럼 feeds** (경향, 동아): hardest register, good for advanced users
 
@@ -87,7 +86,6 @@ Unverified, but on the same CMS according to [newswatcher's list](https://github
 | 매일경제 | Economy | https://www.mk.co.kr/rss/30000001/ | Generic parser only got part of the body. Date: `+09:00` offset in RFC 1123 |
 | 서울신문 | News | https://www.seoul.co.kr/xml/rss/google_plan.xml | Generic parser picks up the font-size menu |
 | 코메디닷컴 | Health | https://kormedi.com/feed/ | WordPress `.entry-content`; the generic parser stops at an empty `<article>` first |
-| 찾기쉬운 생활법령정보 | Law (new) | https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7 | Plain-language government explainers; the generic parser picks up navigation. Date: `KST` zone name |
 | MBC | News | https://imnews.imbc.com/rss/google_news/narrativeNews.rss | Body is barely in the static HTML; check whether a JSON endpoint exists |
 
 ## Checked and rejected
@@ -111,3 +109,7 @@ Unverified, but on the same CMS according to [newswatcher's list](https://github
 * Several sites (동아일보, 노컷뉴스, 뉴시스, TV조선) separate paragraphs with `<br>` inside a single
   container rather than using `<p>`, so splitting paragraphs on `<br><br>` would help more than one
   parser
+* 찾기쉬운 생활법령정보 links every 솔로몬의 재판 case to `SolomonRetrieveLst.laf`, the case currently
+  being voted on, so the cases are left out: they'd share one URL, and later cases would be skipped
+  as duplicates. Each case has its own page, `SolomonRetrieve.laf?trialNo=<n>`, but the trial
+  number isn't in the feed, so the sync would have to fetch the current case's page to find it

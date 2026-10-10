@@ -154,6 +154,7 @@ internal class HomonymRanking(
                 "문화 > 대중 문화", "문화 > 음악", "문화 > 예술", "문화 > 문화 활동", "삶 > 여가"
             )
             DefaultCategory.SPORTS -> listOf("스포츠", "삶 > 여가 활동")
+            DefaultCategory.LAW -> listOf("정치와 행정 > 사법 및 치안", "정치와 행정 > 정치 및 행정")
             DefaultCategory.PEOPLE -> listOf(
                 "인간 > 사람의 종류", "사회 생활 > 직업", "사회 생활 > 직위", "삶 > 친족 관계"
             )

@@ -5,6 +5,7 @@ import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.network.RssFeedService
+import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.RssFeedParser
 import dev.kettu.hyangsang.parser.parseToIso8601
 import kotlinx.coroutines.CancellationException
@@ -217,12 +218,13 @@ class RssFeedRepository(
 
                     val articles = items
                         .filter { it.title.isNotEmpty() && it.link.isNotEmpty() }
-                        .map { item ->
+                        .mapNotNull { item ->
+                            val url = ArticleParser.articleUrl(item.link) ?: return@mapNotNull null
                             // Clean title and description from HTML tags and entities
                             Article(
                                 title = Parser.unescapeEntities(item.title, false),
                                 description = Jsoup.parse(item.description).text(),
-                                sourceUrl = item.link,
+                                sourceUrl = url,
                                 feedId = feed.id,
                                 pubDate = parseToIso8601(item.pubDate)
                             )
