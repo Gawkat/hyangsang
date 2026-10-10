@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -83,7 +85,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.defaults.FeedSources
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.repository.FeedCheckError
 import dev.kettu.hyangsang.data.repository.FeedCheckResult
 import dev.kettu.hyangsang.ui.components.FeedAvatar
@@ -96,6 +100,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun FeedsScreen(
     viewModel: RssFeedViewModel,
+    grouping: FeedGrouping,
+    onGroupingChange: (FeedGrouping) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -106,6 +112,7 @@ fun FeedsScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val categoryIcon = rememberCategoryIcons()
+    val sources = rememberFeedSources()
 
     var showMenu by remember { mutableStateOf(false) }
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
@@ -113,19 +120,26 @@ fun FeedsScreen(
     var removingFeedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var renamingCategory by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Same order as the drawer: categories by name, feeds by title
-    val feedsByCategory = remember(feeds) { feeds.groupBy { it.category }.toSortedMap() }
-    val categories = feedsByCategory.keys.toList()
+    val categories = remember(feeds) { feeds.map { it.category }.distinct().sorted() }
+    val groups = remember(feeds, grouping, sources) { groupFeeds(feeds, grouping, sources) }
 
-    // Categories that are all off start collapsed. The set is taken once, when the feeds first
-    // load, so turning a category off doesn't hide its feeds under the user's finger
+    // Groups that are all off start collapsed, in both groupings. The set is taken once, when
+    // the feeds first load, so turning a group off doesn't hide its feeds under the user's finger
     var collapsed by rememberSaveable { mutableStateOf<List<String>?>(null) }
-    LaunchedEffect(feedsByCategory) {
-        if (collapsed == null && feedsByCategory.isNotEmpty()) {
-            collapsed = feedsByCategory.filterValues { group -> group.none { it.isEnabled } }.keys.toList()
+    LaunchedEffect(feeds) {
+        if (collapsed == null && feeds.isNotEmpty()) {
+            collapsed = FeedGrouping.entries
+                .flatMap { groupFeeds(feeds, it, sources) }
+                .filter { group -> group.feeds.none { it.isEnabled } }
+                .map { it.key }
         }
     }
-    val collapsedCategories = collapsed.orEmpty()
+    val collapsedGroups = collapsed.orEmpty()
+
+    // Opens the groups a feed with this URL and category is in, so it shows in either grouping
+    fun expandGroupsOf(url: String, category: String) {
+        collapsed = collapsedGroups - categoryKey(category) - sourceKey(sources.nameOf(url))
+    }
 
     // Says where the articles of feeds just turned off went, and offers to put [before], the
     // feeds as they were, back
@@ -164,6 +178,28 @@ fun FeedsScreen(
                             )
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            when (grouping) {
+                                                FeedGrouping.CATEGORY -> R.string.group_by_source
+                                                FeedGrouping.SOURCE -> R.string.group_by_category
+                                            }
+                                        )
+                                    )
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.ViewAgenda, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onGroupingChange(
+                                        when (grouping) {
+                                            FeedGrouping.CATEGORY -> FeedGrouping.SOURCE
+                                            FeedGrouping.SOURCE -> FeedGrouping.CATEGORY
+                                        }
+                                    )
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.refresh_all_feeds)) },
                                 leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
@@ -229,42 +265,65 @@ fun FeedsScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-                feedsByCategory.forEach { (category, categoryFeeds) ->
-                    val isExpanded = category !in collapsedCategories
-                    item(key = "category:$category") {
-                        CategoryHeader(
-                            category = category,
-                            icon = categoryIcon(category),
-                            feeds = categoryFeeds,
+                groups.forEach { group ->
+                    val isExpanded = group.key !in collapsedGroups
+                    item(key = group.key) {
+                        GroupHeader(
+                            name = group.name,
+                            leadingContent = {
+                                when (grouping) {
+                                    FeedGrouping.CATEGORY -> Icon(categoryIcon(group.name), contentDescription = null)
+                                    FeedGrouping.SOURCE -> FeedAvatar(
+                                        title = group.name,
+                                        size = 40.dp,
+                                        textStyle = MaterialTheme.typography.titleSmall
+                                    )
+                                }
+                            },
+                            feeds = group.feeds,
                             isExpanded = isExpanded,
+                            refreshLabel = stringResource(
+                                when (grouping) {
+                                    FeedGrouping.CATEGORY -> R.string.refresh_category
+                                    FeedGrouping.SOURCE -> R.string.refresh_source
+                                }
+                            ),
                             onToggleExpanded = {
                                 collapsed = if (isExpanded) {
-                                    collapsedCategories + category
+                                    collapsedGroups + group.key
                                 } else {
-                                    collapsedCategories - category
+                                    collapsedGroups - group.key
                                 }
                             },
                             onSetEnabled = { enabled ->
-                                viewModel.setFeedsEnabled(categoryFeeds, enabled)
-                                // Undo brings back which feeds were on, which a category with
+                                viewModel.setFeedsEnabled(group.feeds, enabled)
+                                // Undo brings back which feeds were on, which a group with
                                 // only some feeds on would otherwise lose
-                                if (!enabled && categoryFeeds.any { it.isEnabled }) {
-                                    showTurnedOff(category, categoryFeeds)
+                                if (!enabled && group.feeds.any { it.isEnabled }) {
+                                    showTurnedOff(group.name, group.feeds)
                                 }
                             },
                             onRefresh = {
                                 viewModel.refreshFeeds(
-                                    categoryFeeds.filter { it.isEnabled && it.id !in refreshingFeedIds }
+                                    group.feeds.filter { it.isEnabled && it.id !in refreshingFeedIds }
                                 )
                             },
-                            onRename = { renamingCategory = category },
+                            // Sources come from the feed URLs, so only categories can be renamed
+                            onRename = if (grouping == FeedGrouping.CATEGORY) {
+                                { renamingCategory = group.name }
+                            } else {
+                                null
+                            },
                             modifier = Modifier.animateItem()
                         )
                     }
                     if (isExpanded) {
-                        items(categoryFeeds, key = { it.id }) { feed ->
+                        items(group.feeds, key = { it.id }) { feed ->
                             FeedRow(
                                 feed = feed,
+                                grouping = grouping,
+                                groupName = group.name,
+                                categoryIcon = categoryIcon(feed.category),
                                 isRefreshing = feed.id in refreshingFeedIds,
                                 onClick = { editingFeedId = feed.id },
                                 onToggle = {
@@ -287,8 +346,8 @@ fun FeedsScreen(
             onCheck = viewModel::checkFeed,
             onAdd = { url, title, category ->
                 viewModel.addFeed(url, title, category)
-                // Show the new feed, even if its category was collapsed
-                collapsed = collapsedCategories - category
+                // Show the new feed, even if its group was collapsed
+                expandGroupsOf(url, category)
                 showAddSheet = false
             },
             onDismiss = { showAddSheet = false }
@@ -303,7 +362,7 @@ fun FeedsScreen(
             onRefresh = { viewModel.refreshFeed(feed) },
             onSave = { title, category ->
                 viewModel.updateFeedDetails(feed, title, category)
-                collapsed = collapsedCategories - category
+                expandGroupsOf(feed.url, category)
                 editingFeedId = null
             },
             onRemove = {
@@ -326,14 +385,14 @@ fun FeedsScreen(
         )
     }
 
-    renamingCategory?.takeIf { it in feedsByCategory }?.let { category ->
+    renamingCategory?.takeIf { it in categories }?.let { category ->
         RenameCategoryDialog(
             category = category,
             onConfirm = { newName ->
                 viewModel.renameCategory(category, newName)
                 // Keep the category open or closed under its new name
-                if (category in collapsedCategories) {
-                    collapsed = collapsedCategories - category + newName
+                if (categoryKey(category) in collapsedGroups) {
+                    collapsed = collapsedGroups - categoryKey(category) + categoryKey(newName)
                 }
                 renamingCategory = null
             },
@@ -342,17 +401,45 @@ fun FeedsScreen(
     }
 }
 
+private data class FeedGroup(val key: String, val name: String, val feeds: List<RssFeed>)
+
+private fun categoryKey(category: String) = "category:$category"
+
+private fun sourceKey(source: String) = "source:$source"
+
+// Same order as the drawer: categories by name, with their feeds by title. Sources are by name
+// too, with their feeds by category
+private fun groupFeeds(feeds: List<RssFeed>, grouping: FeedGrouping, sources: FeedSources): List<FeedGroup> =
+    when (grouping) {
+        FeedGrouping.CATEGORY -> feeds.groupBy { it.category }.toSortedMap().map { (category, group) ->
+            FeedGroup(categoryKey(category), category, group.sortedBy { it.title })
+        }
+
+        FeedGrouping.SOURCE -> feeds.groupBy { sources.nameOf(it.url) }.toSortedMap().map { (source, group) ->
+            FeedGroup(sourceKey(source), source, group.sortedWith(compareBy({ it.category }, { it.title })))
+        }
+    }
+
+// Source names follow the app language, like the built-in categories
+@Composable
+private fun rememberFeedSources(): FeedSources {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    return remember(configuration) { FeedSources.from(context) }
+}
+
 // "Sports · 1 of 2 on", with a switch that turns every feed in it on or off
 @Composable
-private fun CategoryHeader(
-    category: String,
-    icon: ImageVector,
+private fun GroupHeader(
+    name: String,
+    leadingContent: @Composable () -> Unit,
     feeds: List<RssFeed>,
     isExpanded: Boolean,
+    refreshLabel: String,
     onToggleExpanded: () -> Unit,
     onSetEnabled: (Boolean) -> Unit,
     onRefresh: () -> Unit,
-    onRename: () -> Unit,
+    onRename: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val enabledCount = feeds.count { it.isEnabled }
@@ -368,7 +455,7 @@ private fun CategoryHeader(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = category,
+                        text = name,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -406,9 +493,9 @@ private fun CategoryHeader(
                 }
             },
             leadingContent = {
-                // As wide as the feed avatars, so category and feed names line up
+                // As wide as the feed avatars, so group and feed names line up
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
-                    Icon(icon, contentDescription = null)
+                    leadingContent()
                 }
             },
             trailingContent = {
@@ -417,12 +504,12 @@ private fun CategoryHeader(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 Icons.Filled.MoreVert,
-                                contentDescription = stringResource(R.string.category_options, category)
+                                contentDescription = stringResource(R.string.category_options, name)
                             )
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.refresh_category)) },
+                                text = { Text(refreshLabel) },
                                 leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
                                 enabled = enabledCount > 0,
                                 onClick = {
@@ -430,27 +517,29 @@ private fun CategoryHeader(
                                     onRefresh()
                                 }
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.rename_category)) },
-                                leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
-                                onClick = {
-                                    showMenu = false
-                                    onRename()
-                                }
-                            )
+                            if (onRename != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rename_category)) },
+                                    leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        onRename()
+                                    }
+                                )
+                            }
                         }
                     }
                     Switch(
                         checked = enabledCount > 0,
                         onCheckedChange = onSetEnabled,
-                        modifier = Modifier.semantics { contentDescription = category }
+                        modifier = Modifier.semantics { contentDescription = name }
                     )
                 }
             },
             modifier = Modifier.clickable(
                 onClickLabel = stringResource(
                     if (isExpanded) R.string.collapse_category else R.string.expand_category,
-                    category
+                    name
                 ),
                 onClick = onToggleExpanded
             )
@@ -461,6 +550,9 @@ private fun CategoryHeader(
 @Composable
 private fun FeedRow(
     feed: RssFeed,
+    grouping: FeedGrouping,
+    groupName: String,
+    categoryIcon: ImageVector,
     isRefreshing: Boolean,
     onClick: () -> Unit,
     onToggle: () -> Unit,
@@ -468,22 +560,42 @@ private fun FeedRow(
     modifier: Modifier = Modifier
 ) {
     val hasError = feed.isEnabled && feed.lastSyncError != null
-    // The category header already names the category, so "Yonhap News - Sports" is shown as
-    // "Yonhap News". Titles without the category are shown as they are
-    val categorySuffix = stringResource(R.string.default_feed_title, "", feed.category)
-    val title = feed.title.removeSuffix(categorySuffix).ifBlank { feed.title }
+    // The group header already names the category or source, so "Yonhap News - Sports" is shown
+    // as "Yonhap News" under Sports, and as "Sports" under Yonhap News. Other titles are shown as
+    // they are, except that a feed titled just as its source is shown by its category
+    val title = when (grouping) {
+        FeedGrouping.CATEGORY -> {
+            val categorySuffix = stringResource(R.string.default_feed_title, "", groupName)
+            feed.title.removeSuffix(categorySuffix).ifBlank { feed.title }
+        }
+
+        FeedGrouping.SOURCE -> {
+            val sourcePrefix = stringResource(R.string.default_feed_title, groupName, "")
+            feed.title.removePrefix(sourcePrefix)
+                .takeUnless { it.isBlank() || it == groupName }
+                ?: feed.category
+        }
+    }
+    // Under a source, name the category unless the title already does
+    val category = feed.category.takeIf { grouping == FeedGrouping.SOURCE && it != title }
 
     ListItem(
         headlineContent = {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
-        supportingContent = { FeedStatus(feed, isRefreshing) },
+        supportingContent = { FeedStatus(feed, category, isRefreshing) },
         leadingContent = {
-            FeedAvatar(
-                title = feed.title,
-                size = 40.dp,
-                textStyle = MaterialTheme.typography.titleSmall
-            )
+            when (grouping) {
+                FeedGrouping.CATEGORY -> FeedAvatar(
+                    title = feed.title,
+                    size = 40.dp,
+                    textStyle = MaterialTheme.typography.titleSmall
+                )
+
+                FeedGrouping.SOURCE -> Box(contentAlignment = Alignment.Center, modifier = Modifier.size(40.dp)) {
+                    Icon(categoryIcon, contentDescription = null)
+                }
+            }
         },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -506,9 +618,10 @@ private fun FeedRow(
     )
 }
 
-// "Updated 14 min. ago", with failures in the error colour
+// "Updated 14 min. ago", or "Culture · Updated 14 min. ago" with a [category], with failures
+// in the error colour
 @Composable
-private fun FeedStatus(feed: RssFeed, isRefreshing: Boolean) {
+private fun FeedStatus(feed: RssFeed, category: String?, isRefreshing: Boolean) {
     val hasError = !isRefreshing && feed.isEnabled && feed.lastSyncError != null
     val status = when {
         isRefreshing -> stringResource(R.string.feed_status_updating)
@@ -529,6 +642,9 @@ private fun FeedStatus(feed: RssFeed, isRefreshing: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (category != null) {
+            Text("$category ·", maxLines = 1)
+        }
         if (isRefreshing) {
             CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
         }

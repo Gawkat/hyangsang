@@ -146,6 +146,9 @@
     <string name="category_options">Options for %1$s</string>
     <string name="refresh_category">Refresh category</string>
     <string name="rename_category">Rename category</string>
+    <string name="refresh_source">Refresh source</string>
+    <string name="group_by_source">Group by source</string>
+    <string name="group_by_category">Group by category</string>
     <string name="feeds_turned_off">%1$s turned off · its articles are hidden from Discover</string>
     <string name="text_layout_title">Text &amp; layout</string>
     <string name="text_layout_summary">%1$d sp · %2$s · %3$s spacing</string>
