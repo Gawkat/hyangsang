@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.CandlestickChart
+import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.Factory
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Forum
@@ -59,4 +60,5 @@ private fun DefaultCategory.icon(): ImageVector = when (this) {
     DefaultCategory.SPORTS -> Icons.Outlined.SportsSoccer
     DefaultCategory.OPINION -> Icons.Outlined.Forum
     DefaultCategory.PEOPLE -> Icons.Outlined.Person
+    DefaultCategory.KIDS -> Icons.Outlined.ChildCare
 }

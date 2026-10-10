@@ -194,6 +194,8 @@
     <string name="category_sports">스포츠</string>
     <string name="category_opinion">오피니언</string>
     <string name="category_people">사람들</string>
+    <string name="category_kids">어린이</string>
     <string name="source_sbs_news">SBS 뉴스</string>
     <string name="source_hankyoreh">한겨레</string>
+    <string name="source_kids_donga">어린이동아</string>
 </resources>

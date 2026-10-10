@@ -1,14 +1,15 @@
 # Feed Backlog
 
-Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS and 한겨레 feeds.
-Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
+Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레 and 어린이동아
+feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
 recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
 Tiers are based on how much parser work each feed needs:
 
 * **Tier 1**: `GenericContentsParser` already extracts the article body
-* **Tier 2**: needs one shared parser for the ND Soft CMS (`#article-view-content-div`), which covers
-  every site with `/rss/allArticle.xml` style feeds
+* **Tier 2**: on the ND Soft CMS (`#article-view-content-div`), which covers every site with
+  `/rss/allArticle.xml` style feeds. `NdSoftNewsParser` handles them, picked by `ArticleParser` from
+  the page itself, so these only need adding to the default feeds
 * **Tier 3**: needs its own parser
 
 "Date" notes the item date format where it differs from standard RSS. All of them except a missing
@@ -18,8 +19,6 @@ date are handled now (see [App gaps](#app-gaps-found-while-checking)).
 
 Sources that add a register or topic the current feeds don't cover:
 
-* **어린이동아**: children's newspaper, short sentences and simple vocabulary; the easiest reading
-  of any live feed found (Tier 2)
 * **동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature articles
 * **VOA 한국어 세계 / 한반도, RFA 자유아시아방송**: broadcast scripts (`진행자)`, `앵커:`), so a
   spoken register
@@ -51,20 +50,21 @@ Sources that add a register or topic the current feeds don't cover:
 | 바이라인네트워크 | Tech (new) | https://byline.network/feed/ | |
 | 전북일보 | Local | https://www.jjan.kr/news/rssAll | |
 
-## Tier 2: one ND Soft CMS parser
+## Tier 2: ND Soft CMS
 
-All of these put the body in `#article-view-content-div`. The generic parser returns nothing or
-navigation text for most of them. They also share the date format `2026-09-27 19:00:00` (no zone).
+All of these put the body in `#article-view-content-div`, which `NdSoftNewsParser` reads. The
+generic parser returned nothing or navigation text for most of them. They also share the date format
+`2026-09-27 19:00:00` (no zone). Each one below had a sample article checked against
+`NdSoftNewsParser` on 2026-10-10.
 
 | Source | Category | URL | Notes |
 |---|---|---|---|
-| 어린이동아 | Kids (new) | https://cdn.kids.donga.com/rss/gns_allArticle.xml | Top learner pick |
 | 미디어오늘 | Society | https://www.mediatoday.co.kr/rss/allArticle.xml | |
 | 시사저널 | Magazine (new) | https://www.sisajournal.com/rss/allArticle.xml | |
 | 블로터 | Tech (new) | https://www.bloter.net/rss/allArticle.xml | |
 | 교수신문 | Education (new) | https://www.kyosu.net/rss/allArticle.xml | Academic register |
 | 경남도민일보 | Local | https://www.idomin.com/rss/allArticle.xml | |
-| 제주일보 | Local | https://www.jejunews.com/rss/allArticle.xml | Generic parser already works partly |
+| 제주일보 | Local | https://www.jejunews.com/rss/allArticle.xml | Older skin: share buttons and reporter box sit inside the body |
 
 Unverified, but on the same CMS according to [newswatcher's list](https://github.com/seokhoonj/newswatcher/blob/main/docs/korean-news-rss.md):
 강원도민일보 `kado.net`, 대전일보 `daejonilbo.com`, 인천일보 `incheonilbo.com`, 충청투데이

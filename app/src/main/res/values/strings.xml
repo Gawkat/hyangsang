@@ -206,6 +206,7 @@
     <string name="category_sports">Sports</string>
     <string name="category_opinion">Opinion</string>
     <string name="category_people">People</string>
+    <string name="category_kids">Kids</string>
     <string name="palette_attribution_label">Colour palettes</string>
     <string name="palette_attribution_text">
         <![CDATA[Solarized - Copyright (c) 2011 Ethan Schoonover<br><a href="https://ethanschoonover.com/solarized/">ethanschoonover.com/solarized</a>
@@ -234,4 +235,5 @@
     </string>
     <string name="source_sbs_news">SBS News</string>
     <string name="source_hankyoreh">Hankyoreh</string>
+    <string name="source_kids_donga">Kids Dong-A</string>
 </resources>

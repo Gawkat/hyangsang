@@ -23,7 +23,8 @@ enum class DefaultCategory(@StringRes val label: Int) {
     ENTERTAINMENT(R.string.category_entertainment),
     SPORTS(R.string.category_sports),
     OPINION(R.string.category_opinion),
-    PEOPLE(R.string.category_people);
+    PEOPLE(R.string.category_people),
+    KIDS(R.string.category_kids);
 
     companion object {
         /**
@@ -97,7 +98,14 @@ object DefaultData {
         hani("culture", DefaultCategory.CULTURE),
         hani("science", DefaultCategory.SCIENCE),
         hani("sports", DefaultCategory.SPORTS),
-        hani("opinion", DefaultCategory.OPINION)
+        hani("opinion", DefaultCategory.OPINION),
+        // A children's newspaper, with the simplest language of the built-in feeds
+        DefaultFeed(
+            source = R.string.source_kids_donga,
+            url = "https://kids.donga.com/rss/allArticle.xml",
+            category = DefaultCategory.KIDS,
+            isSection = false
+        )
     )
 
     // Titles and categories are stored as plain text, since the user can edit them,
