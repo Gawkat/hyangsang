@@ -35,7 +35,8 @@ class ArticleParser {
         "news.sbs.co.kr" to SbsNewsParser(),
         "hani.co.kr" to HaniNewsParser(),
         EasyLawParser.HOST to EasyLawParser(),
-        SlowNewsParser.HOST to SlowNewsParser()
+        SlowNewsParser.HOST to SlowNewsParser(),
+        DongaNewsParser.HOST to DongaNewsParser()
     )
 
     fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> {

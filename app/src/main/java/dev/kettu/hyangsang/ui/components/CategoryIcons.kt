@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.HealthAndSafety
+import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Person
@@ -63,4 +64,5 @@ private fun DefaultCategory.icon(): ImageVector = when (this) {
     DefaultCategory.PEOPLE -> Icons.Outlined.Person
     DefaultCategory.KIDS -> Icons.Outlined.ChildCare
     DefaultCategory.LAW -> Icons.Outlined.Gavel
+    DefaultCategory.LIFE -> Icons.Outlined.LocalCafe
 }
