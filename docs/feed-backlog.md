@@ -1,6 +1,6 @@
 # Feed Backlog
 
-Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 어린이동아,
+Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 동아일보, 어린이동아,
 소년한국일보, 어린이 경제신문, 찾기쉬운 생활법령정보 and 슬로우뉴스 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
 recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
@@ -19,11 +19,10 @@ date are handled now (see [App gaps](#app-gaps-found-while-checking)).
 
 Sources that add a register or topic the current feeds don't cover:
 
-* **동아일보 과학·문학/출판·여행·건강**: non-news vocabulary with longer feature articles
 * **VOA 한국어 한반도, RFA 자유아시아방송**: broadcast scripts (`진행자)`, `앵커:`), so a
   spoken register
 * **한겨레21, 주간경향, 시사저널, 미디어오늘**: weekly magazine long reads
-* **사설/칼럼 feeds** (경향, 동아): hardest register, good for advanced users
+* **경향 사설/칼럼**: hardest register, good for advanced users
 
 ## Tier 1: works with the generic parser
 
@@ -78,7 +77,6 @@ Unverified, but on the same CMS according to [newswatcher's list](https://github
 
 | Source | Category | URL | Body location / notes |
 |---|---|---|---|
-| 동아일보 | News | https://rss.donga.com/total.xml | `.news_view`, `<br>`-separated text. Also has `politics`, `national`, `economy`, `international`, `culture`, `sports`, `editorials`, `science`, `book`, `travel`, `health`, `leisure`, `lifeinfo`, `inmul` feeds at `rss.donga.com/<section>.xml` |
 | 조선일보 | News | https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml | Arc/Fusion: body is JSON in `Fusion.globalContent` (`content_elements`), not in the HTML |
 | 조선비즈 | Economy | https://biz.chosun.com/arc/outboundfeeds/rss/?outputType=xml | Same Arc parser as 조선일보 |
 | 노컷뉴스 | News | https://rss.nocutnews.co.kr/news/news.xml | `#pnlContent`, `<br>`-separated. Date: `27 09 2026` (numeric month). Sections: `/category/<politics\|economy\|society\|world\|culture>.xml` |
@@ -119,9 +117,11 @@ in some headlines. That argues for adding 한반도 turned off, or with the sour
 
 * **No working public feed**: KBS, YTN, 중앙일보, 한국일보, 문화일보, 뉴스1 (403), 채널A, NHK
   WORLD 한국어, 정책브리핑 korea.kr (documented `/rss/policy.xml` returns 404), 동아사이언스
-* **Stale**: 어린이조선일보 (last item 2020), 시사IN (2024-06, article pages time out), JTBC
-  `fs.jtbc.co.kr` newsflash (2024-10), VOA 한국어 program feeds (March 2025, see
-  [VOA 한국어](#voa-한국어))
+* **Duplicates**: 동아일보 도서 `rss.donga.com/book.xml`, as its articles are all in the 문화 feed
+  too. Articles are stored once per URL, so it ended up with almost none of its own
+* **Stale**: 어린이조선일보 (last item 2020), 동아일보 레포츠 `rss.donga.com/leisure.xml` (2018),
+  시사IN (2024-06, article pages time out), JTBC `fs.jtbc.co.kr` newsflash (2024-10), VOA 한국어
+  program feeds (March 2025, see [VOA 한국어](#voa-한국어))
 * **No feed found (2026-10-10)**: 사이언스타임즈, ㅍㅍㅅㅅ, 대학내일, 뉴닉, 문장웹진, KBS WORLD 한국어,
   텐아시아, 엑스포츠뉴스, 마이데일리, 대한민국 구석구석, 국립국어원, 국가유산청, EBS, 위키백과 (the
   featured article feeds aren't set up for Korean)
@@ -144,14 +144,12 @@ Reviewed on 2026-10-10 against the built-in feeds, leaving parser work aside.
   webzines such as 문장웹진 have no feed, and Brunch only has per-author feeds.
 * **Spoken register**: only VOA 한반도 and RFA, both about North Korea. No feed of everyday
   conversation or interviews was found.
-* **Political balance**: 한겨레 is the only newspaper built in, and it's progressive. A
-  conservative paper (동아일보 or 조선일보) would balance it. 동아 also has the section feeds that
-  fill other gaps: science, books, travel, health and lifestyle.
-* **Lifestyle and pop culture**: food, travel and hobbies have no source outside 동아's sections.
-  Pop culture only comes from the Yonhap and SBS entertainment feeds, since the dedicated outlets
-  checked have no feed or a broken one.
-* **Science**: only 한겨레 science is built in. 헬로디디 and the 동아 and 경향 science sections are
-  the candidates, as 동아사이언스 and 사이언스타임즈 have no feed.
+* **Political balance**: 동아일보 is the conservative counterpart to the progressive 한겨레.
+* **Lifestyle and pop culture**: food, travel and hobbies only come from 동아's travel and
+  생활정보 sections. Pop culture only comes from the Yonhap and SBS entertainment feeds, since the
+  dedicated outlets checked have no feed or a broken one.
+* **Science**: 한겨레 and 동아 science are built in. 헬로디디 and 경향 science are the candidates,
+  as 동아사이언스 and 사이언스타임즈 have no feed.
 
 Other things to weigh when picking defaults:
 
@@ -162,7 +160,7 @@ Other things to weigh when picking defaults:
   makes that worse, while a low-volume weekly like 어린이 경제신문 gets buried.
 * **Government broadcasters**: VOA and RFA are US government funded, and Yonhap is Korean state
   funded. That's fine for reading, but the source should be clear to users.
-* **New categories**: Magazine, Tech, Education and Life would each need a `DefaultCategory`
+* **New categories**: Magazine, Tech and Education would each need a `DefaultCategory`
   with strings in both languages, so it's worth adding them only for more than one feed.
 
 ## App gaps found while checking
@@ -173,8 +171,8 @@ Other things to weigh when picking defaults:
 * 소년한국일보's daily 초등 속담 팩트체크 and 초등한자 따라 쓰기, and its comics, are images with no
   text, so they show up as articles with nothing to look up
 * Several sites (동아일보, 노컷뉴스, 뉴시스, TV조선) separate paragraphs with `<br>` inside a single
-  container rather than using `<p>`, so splitting paragraphs on `<br><br>` would help more than one
-  parser
+  container rather than using `<p>`. `DongaNewsParser` splits them on `<br><br>`, which could be
+  shared with the parsers for the others
 * 찾기쉬운 생활법령정보 links every 솔로몬의 재판 case to `SolomonRetrieveLst.laf`, the case currently
   being voted on, so the cases are left out: they'd share one URL, and later cases would be skipped
   as duplicates. Each case has its own page, `SolomonRetrieve.laf?trialNo=<n>`, but the trial

@@ -199,6 +199,7 @@
     <string name="category_people">사람들</string>
     <string name="category_kids">어린이</string>
     <string name="category_law">법률</string>
+    <string name="category_life">생활</string>
     <string name="source_sbs_news">SBS 뉴스</string>
     <string name="source_hankyoreh">한겨레</string>
     <string name="source_kids_donga">어린이동아</string>
@@ -206,4 +207,6 @@
     <string name="source_kids_hankook">소년한국일보</string>
     <string name="source_econoi">어린이 경제신문</string>
     <string name="source_slownews">슬로우뉴스</string>
+    <string name="source_donga">동아일보</string>
+    <string name="section_travel">여행</string>
 </resources>

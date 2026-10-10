@@ -25,7 +25,8 @@ enum class DefaultCategory(@StringRes val label: Int) {
     OPINION(R.string.category_opinion),
     PEOPLE(R.string.category_people),
     KIDS(R.string.category_kids),
-    LAW(R.string.category_law);
+    LAW(R.string.category_law),
+    LIFE(R.string.category_life);
 
     companion object {
         /**
@@ -52,13 +53,15 @@ private fun localizedContexts(context: Context): List<Context> = APP_LOCALES.map
 }
 
 /**
- * A built-in feed. Section feeds are titled "<source> - <category>", other feeds just "<source>".
+ * A built-in feed. Section feeds are titled "<source> - <section>", other feeds just "<source>".
+ * The section is the category, unless the source has more than one feed in that category.
  */
 data class DefaultFeed(
     @StringRes val source: Int,
     val url: String,
     val category: DefaultCategory,
-    val isSection: Boolean = true
+    val isSection: Boolean = true,
+    @StringRes val section: Int? = null
 )
 
 object DefaultData {
@@ -135,7 +138,22 @@ object DefaultData {
             url = "https://slownews.kr/feed?cat=-12795",
             category = DefaultCategory.OPINION,
             isSection = false
-        )
+        ),
+        // A conservative paper, to balance 한겨레. The 전체기사 feed is left out, as it combines
+        // the section feeds, and so is 도서, as its articles are all in 문화. Its sports
+        // subsections are from the separate 스포츠동아
+        donga("politics", DefaultCategory.POLITICS),
+        donga("national", DefaultCategory.SOCIETY),
+        donga("economy", DefaultCategory.ECONOMY),
+        donga("international", DefaultCategory.INTERNATIONAL),
+        donga("culture", DefaultCategory.CULTURE),
+        donga("science", DefaultCategory.SCIENCE),
+        donga("health", DefaultCategory.HEALTH),
+        donga("sports", DefaultCategory.SPORTS),
+        donga("editorials", DefaultCategory.OPINION),
+        donga("inmul", DefaultCategory.PEOPLE),
+        donga("travel", DefaultCategory.LIFE, R.string.section_travel),
+        donga("lifeinfo", DefaultCategory.LIFE)
     )
 
     // Titles and categories are stored as plain text, since the user can edit them,
@@ -146,7 +164,8 @@ object DefaultData {
         val source = context.getString(feed.source)
         RssFeed(
             title = if (feed.isSection) {
-                context.getString(R.string.default_feed_title, source, category)
+                val section = feed.section?.let { context.getString(it) } ?: category
+                context.getString(R.string.default_feed_title, source, section)
             } else {
                 source
             },
@@ -196,5 +215,16 @@ object DefaultData {
         source = R.string.source_hankyoreh,
         url = "https://www.hani.co.kr/rss/$section",
         category = category
+    )
+
+    private fun donga(
+        section: String,
+        category: DefaultCategory,
+        @StringRes sectionName: Int? = null
+    ) = DefaultFeed(
+        source = R.string.source_donga,
+        url = "https://rss.donga.com/$section.xml",
+        category = category,
+        section = sectionName
     )
 }

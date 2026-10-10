@@ -51,6 +51,19 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `should use DongaNewsParser for donga URLs`() {
+        val url = "https://www.donga.com/news/Politics/article/all/20261010/134817496/1"
+        val doc = Jsoup.parse(
+            """
+            <html><body><section class="news_view">Donga Contents<br><br><div class='view_m_adK'><div class='a1'></div></div></section></body></html>
+            """.trimIndent()
+        )
+
+        val result = articleParser.parse(url, doc)
+        assertEquals(listOf(ContentBlock.Text("Donga Contents")), result)
+    }
+
+    @Test
     fun `articleUrl leaves links from other sites as they are`() {
         val url = "http://www.yna.co.kr/view/AKR1"
         assertEquals(url, ArticleParser.articleUrl(url))
