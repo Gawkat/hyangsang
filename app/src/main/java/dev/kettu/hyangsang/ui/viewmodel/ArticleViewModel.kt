@@ -32,7 +32,9 @@ sealed class ArticleUiState {
         val articleWithFeed: ArticleWithFeed,
         val isRefreshing: Boolean = false,
         // Outcome of the last reload, until the reader has shown it
-        val refreshResult: ContentRefresh? = null
+        val refreshResult: ContentRefresh? = null,
+        // The article has no content because downloading it failed
+        val downloadFailed: Boolean = false
     ) : ArticleUiState()
     data class Error(val message: String) : ArticleUiState()
 }
@@ -128,10 +130,15 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 return@launch
             }
 
+            var downloadFailed = false
             if (articleWithFeed.article.content.isNullOrEmpty()) {
                 val updatedArticle =
                     articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
-                articleWithFeed = articleWithFeed.copy(article = updatedArticle)
+                if (updatedArticle != null) {
+                    articleWithFeed = articleWithFeed.copy(article = updatedArticle)
+                } else {
+                    downloadFailed = true
+                }
             }
 
             articleRepository.updateProgress(
@@ -139,11 +146,34 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 position = articleWithFeed.article.scrollPosition
             )
 
-            _currentArticleState.value = ArticleUiState.Success(articleWithFeed)
+            _currentArticleState.value =
+                ArticleUiState.Success(articleWithFeed, downloadFailed = downloadFailed)
 
             // Shows the stored content right away and swaps in the new parse if it differs
             if (articleRepository.needsReparse(articleWithFeed.article)) {
                 startRefresh(articleId, reportResult = false)
+            }
+        }
+    }
+
+    // Downloads an article again after the first download failed
+    fun retryDownload() {
+        val current = _currentArticleState.value as? ArticleUiState.Success ?: return
+        if (current.isRefreshing) return
+        val articleId = current.articleWithFeed.article.id
+        updateSuccess(articleId) { it.copy(isRefreshing = true) }
+
+        refreshJob = viewModelScope.launch {
+            val updated =
+                articleRepository.fetchAndSaveArticleContent(current.articleWithFeed.article)
+            updateSuccess(articleId) {
+                it.copy(
+                    articleWithFeed = updated
+                        ?.let { article -> it.articleWithFeed.copy(article = article) }
+                        ?: it.articleWithFeed,
+                    isRefreshing = false,
+                    downloadFailed = updated == null
+                )
             }
         }
     }
@@ -173,7 +203,11 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 null
             }
             updateSuccess(articleId) {
-                val withContent = it.copy(articleWithFeed = updated ?: it.articleWithFeed)
+                val withContent = if (updated != null) {
+                    it.copy(articleWithFeed = updated, downloadFailed = false)
+                } else {
+                    it
+                }
                 if (reportResult) {
                     withContent.copy(isRefreshing = false, refreshResult = result)
                 } else {

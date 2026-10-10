@@ -501,7 +501,9 @@ fun ReaderRoute(
                 isRefreshing = state.isRefreshing,
                 refreshResult = state.refreshResult,
                 onRefreshClick = articleViewModel::refreshArticle,
-                onRefreshResultShown = articleViewModel::onRefreshResultShown
+                onRefreshResultShown = articleViewModel::onRefreshResultShown,
+                downloadFailed = state.downloadFailed,
+                onRetryDownloadClick = articleViewModel::retryDownload
             )
         }
     }

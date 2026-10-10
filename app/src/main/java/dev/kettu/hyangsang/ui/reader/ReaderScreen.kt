@@ -5,8 +5,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -53,6 +58,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -61,6 +67,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -103,6 +110,8 @@ fun ReaderScreen(
     refreshResult: ContentRefresh?,
     onRefreshClick: () -> Unit,
     onRefreshResultShown: () -> Unit,
+    downloadFailed: Boolean,
+    onRetryDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
@@ -131,6 +140,8 @@ fun ReaderScreen(
         refreshResult = refreshResult,
         onRefreshClick = onRefreshClick,
         onRefreshResultShown = onRefreshResultShown,
+        downloadFailed = downloadFailed,
+        onRetryDownloadClick = onRetryDownloadClick,
         modifier = modifier
     )
 }
@@ -154,6 +165,8 @@ fun ReaderContent(
     refreshResult: ContentRefresh?,
     onRefreshClick: () -> Unit,
     onRefreshResultShown: () -> Unit,
+    downloadFailed: Boolean,
+    onRetryDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val article = articleWithFeed.article
@@ -408,6 +421,17 @@ fun ReaderContent(
                     }
                 }
             }
+            if (contentBlocks.isEmpty()) {
+                item(key = "missing-content") {
+                    MissingContent(
+                        downloadFailed = downloadFailed,
+                        isRetrying = isRefreshing,
+                        onRetryClick = onRetryDownloadClick,
+                        onOpenInBrowserClick = { openInBrowser(context, article.sourceUrl) },
+                        modifier = Modifier.padding(vertical = 24.dp)
+                    )
+                }
+            }
             item(key = "bottom-spacer") { Spacer(modifier = Modifier.height(32.dp)) }
         }
 
@@ -507,7 +531,45 @@ fun ReaderScreenPreview() {
             isRefreshing = false,
             refreshResult = null,
             onRefreshClick = {},
-            onRefreshResultShown = {}
+            onRefreshResultShown = {},
+            downloadFailed = false,
+            onRetryDownloadClick = {}
         )
+    }
+}
+
+// Shown instead of the article body when there is none: either the download failed, or the
+// page had no text the parser could find, such as a photo or video page
+@Composable
+private fun MissingContent(
+    downloadFailed: Boolean,
+    isRetrying: Boolean,
+    onRetryClick: () -> Unit,
+    onOpenInBrowserClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = stringResource(
+                if (downloadFailed) R.string.article_download_failed else R.string.article_no_text
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (downloadFailed) {
+                Button(onClick = onRetryClick, enabled = !isRetrying) {
+                    Text(stringResource(R.string.try_again_button))
+                }
+            }
+            OutlinedButton(onClick = onOpenInBrowserClick) {
+                Text(stringResource(R.string.open_in_browser_button))
+            }
+        }
     }
 }
