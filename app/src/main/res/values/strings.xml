@@ -238,4 +238,6 @@
     <string name="source_hankyoreh">Hankyoreh</string>
     <string name="source_kids_donga">Kids Dong-A</string>
     <string name="source_easylaw">EasyLaw</string>
+    <string name="source_kids_hankook">Kids Hankook</string>
+    <string name="source_econoi">Children\'s Economic Newspaper</string>
 </resources>

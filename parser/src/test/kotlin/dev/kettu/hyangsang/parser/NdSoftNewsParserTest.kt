@@ -167,4 +167,35 @@ class NdSoftNewsParserTest {
             parser.extractContents(Jsoup.parse(html, "https://www.jejunews.com/news/"))
         )
     }
+
+    @Test
+    fun `keeps line breaks, drops heading markers and moves a closing note to the footer`() {
+        // As in 소년한국일보's poems and 어린이 경제신문's issue number
+        val html = """
+            <article id="article-view-content-div">
+              <p><strong>△첫 소제목</strong></p>
+              <p style="text-align: center;">6월 들판을 보면<br /> 모두 초록빛이에요</p>
+              <p><strong>굵은 줄</strong>&nbsp;<br />다음 줄<br /><br /><br />새 단락<br /></p>
+              <p><strong>“굵게 인용한 문장이다.”</strong></p>
+              <hr />
+              <p style="text-align: center;"><strong>어린이 경제신문 1367호</strong></p>
+            </article>
+            <article class="article-copy">저작권자 &copy; 어린이 경제신문 무단전재 및 재배포 금지</article>
+        """.trimIndent()
+
+        assertEquals(
+            listOf(
+                ContentBlock.Heading("첫 소제목", 3),
+                ContentBlock.Text("6월 들판을 보면\n모두 초록빛이에요"),
+                ContentBlock.Text(
+                    "굵은 줄\n다음 줄\n\n새 단락",
+                    listOf(ContentSpan(0, 4, SpanType.BOLD))
+                ),
+                ContentBlock.Text("“굵게 인용한 문장이다.”", listOf(ContentSpan(0, 14, SpanType.BOLD))),
+                ContentBlock.Footer("어린이 경제신문 1367호"),
+                ContentBlock.Footer("저작권자 © 어린이 경제신문 무단전재 및 재배포 금지")
+            ),
+            parser.extractContents(Jsoup.parse(html, "https://www.econoi.com/news/"))
+        )
+    }
 }

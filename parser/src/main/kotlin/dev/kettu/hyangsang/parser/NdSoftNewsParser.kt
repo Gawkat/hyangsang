@@ -23,6 +23,7 @@ class NdSoftNewsParser : ContentsParser {
         // Paragraphs made up only of bold text, used as section headings within the body. Bold
         // sentences, such as quoted passages, are left as text
         private const val MAX_BOLD_HEADING_LENGTH = 60
+        private val headingMarkers = charArrayOf('△', '▲', '■', '□', '◆', '◇')
     }
 
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
@@ -52,8 +53,9 @@ class NdSoftNewsParser : ContentsParser {
 
         body.select("p").forEach { p ->
             val text = p.text().trim()
-            if (p.isAllBold() && text.length <= MAX_BOLD_HEADING_LENGTH && !text.endsWith(".")) {
-                p.replaceWith(Element("h3").text(text))
+            if (p.isAllBold() && text.length <= MAX_BOLD_HEADING_LENGTH && !text.isSentence()) {
+                // Some sites mark headings with a symbol, "△한글날 100주년··· 6~17일은 ‘한글주간’"
+                p.replaceWith(Element("h3").text(text.trimStart(*headingMarkers).trim()))
             }
         }
         // Captions on some sites start with a pointer, "▲영화 '암살자(들)'에 등장하는 ..."
@@ -68,6 +70,12 @@ class NdSoftNewsParser : ContentsParser {
         signature?.emails?.forEach { if (it !in emails) emails.add(it) }
 
         val footers = mutableListOf<String>()
+        // A heading has nothing under it at the end of the body, where it's a note such as the
+        // issue number, "어린이 경제신문 1367호"
+        (blocks.lastOrNull() as? ContentBlock.Heading)?.let {
+            blocks.removeAt(blocks.lastIndex)
+            footers.add(it.text)
+        }
         if (emails.isNotEmpty()) footers.add(emails.joinToString(", "))
         if (!copyright.isNullOrEmpty()) footers.add(copyright)
 
@@ -128,6 +136,9 @@ class NdSoftNewsParser : ContentsParser {
         return lines.map { it.toString().replace(Regex("""\s+"""), " ").trim() }
             .filter { it.isNotEmpty() }
     }
+
+    // Ends in a full stop, possibly inside quotes
+    private fun String.isSentence(): Boolean = trimEnd('”', '"', '’', '\'').endsWith(".")
 
     // Bold either through <b> and <strong>, or through the style of the paragraph or the box
     // around it
