@@ -1,7 +1,7 @@
 # Feed Backlog
 
 Candidate RSS feeds to add alongside the built-in Yonhap, BBC Korean, SBS, 한겨레, 어린이동아,
-소년한국일보, 어린이 경제신문 and 찾기쉬운 생활법령정보 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
+소년한국일보, 어린이 경제신문, 찾기쉬운 생활법령정보 and 슬로우뉴스 feeds. Everything below was fetched on 2026-09-27: the feed had to parse as RSS 2.0 and be updated
 recently, and a sample article was run through `ArticleParser` to see how much Korean text came out.
 
 Tiers are based on how much parser work each feed needs:
@@ -93,7 +93,6 @@ Unverified, but on the same CMS according to [newswatcher's list](https://github
 | MBC | News | https://imnews.imbc.com/rss/google_news/narrativeNews.rss | Body is barely in the static HTML; check whether a JSON endpoint exists |
 | VOA 한국어 한반도 | North Korea | https://www.voakorea.com/api/zoikol-vomx-tpepgjp | See [VOA 한국어](#voa-한국어) |
 | VOA 한국어 세계 | International | https://www.voakorea.com/api/zpokyl-vomx-tpe_kjt | See [VOA 한국어](#voa-한국어) |
-| 슬로우뉴스 | Opinion | https://slownews.kr/feed | WordPress, not checked against the parsers. Explainers and essays, plus a daily `Slow Letter` news digest that could be filtered out |
 
 ### VOA 한국어
 
@@ -138,9 +137,9 @@ in some headlines. That argues for adding 한반도 turned off, or with the sour
 Reviewed on 2026-10-10 against the built-in feeds, leaving parser work aside.
 
 * **Difficulty levels**: the children's papers (어린이동아, 소년한국일보, 어린이 경제신문) are the
-  only easy sources, and after them everything jumps to newspaper level. There are explainers
-  (슬로우뉴스) for an intermediate level, but no RSS feed of easy Korean news for adult learners
-  turned up, only apps.
+  only easy sources, and after them everything jumps to newspaper level, apart from
+  슬로우뉴스's explainers. No RSS feed of easy Korean news for adult learners turned up, only
+  apps.
 * **Fiction and poetry**: only 소년한국일보's 동시·동화, the only feed found. Literary
   webzines such as 문장웹진 have no feed, and Brunch only has per-author feeds.
 * **Spoken register**: only VOA 한반도 and RFA, both about North Korea. No feed of everyday

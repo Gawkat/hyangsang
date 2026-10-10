@@ -36,6 +36,21 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `should use SlowNewsParser for slownews URLs`() {
+        val url = "https://slownews.kr/167638"
+        val doc = Jsoup.parse(
+            """
+            <html><body><article class="single-entry"><div class="entry-content">
+                <p>SlowNews Contents</p><div class="social_share"><img src="share.svg"></div>
+            </div></article></body></html>
+            """.trimIndent()
+        )
+
+        val result = articleParser.parse(url, doc)
+        assertEquals(listOf(ContentBlock.Text("SlowNews Contents")), result)
+    }
+
+    @Test
     fun `articleUrl leaves links from other sites as they are`() {
         val url = "http://www.yna.co.kr/view/AKR1"
         assertEquals(url, ArticleParser.articleUrl(url))
