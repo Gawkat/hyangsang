@@ -127,6 +127,14 @@ object DefaultData {
             url = "https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7",
             category = DefaultCategory.LAW,
             isSection = false
+        ),
+        // Explainers and essays that give the context behind the news, and the daily 슬로우레터
+        // digest. The category left out is the English edition of 슬로우레터
+        DefaultFeed(
+            source = R.string.source_slownews,
+            url = "https://slownews.kr/feed?cat=-12795",
+            category = DefaultCategory.OPINION,
+            isSection = false
         )
     )
 

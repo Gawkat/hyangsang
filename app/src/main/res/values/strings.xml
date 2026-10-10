@@ -240,4 +240,5 @@
     <string name="source_easylaw">EasyLaw</string>
     <string name="source_kids_hankook">Kids Hankook</string>
     <string name="source_econoi">Children\'s Economic Newspaper</string>
+    <string name="source_slownews">Slow News</string>
 </resources>
