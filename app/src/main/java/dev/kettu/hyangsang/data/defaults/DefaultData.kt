@@ -57,7 +57,7 @@ private fun localizedContexts(context: Context): List<Context> = APP_LOCALES.map
  * The section is the category, unless the source has more than one feed in that category.
  */
 data class DefaultFeed(
-    @StringRes val source: Int,
+    val source: DefaultSource,
     val url: String,
     val category: DefaultCategory,
     val isSection: Boolean = true,
@@ -82,7 +82,7 @@ object DefaultData {
         yonhap("opinion", DefaultCategory.OPINION),
         yonhap("people", DefaultCategory.PEOPLE),
         DefaultFeed(
-            source = R.string.source_bbc_korean,
+            source = DefaultSource.BBC_KOREAN,
             url = "https://feeds.bbci.co.uk/korean/rss.xml",
             category = DefaultCategory.NEWS,
             isSection = false
@@ -105,28 +105,28 @@ object DefaultData {
         hani("opinion", DefaultCategory.OPINION),
         // A children's newspaper, with the simplest language of the built-in feeds
         DefaultFeed(
-            source = R.string.source_kids_donga,
+            source = DefaultSource.KIDS_DONGA,
             url = "https://kids.donga.com/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
             isSection = false
         ),
         // News for children, plus children's poems and stories (동시·동화)
         DefaultFeed(
-            source = R.string.source_kids_hankook,
+            source = DefaultSource.KIDS_HANKOOK,
             url = "https://www.kidshankook.kr/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
             isSection = false
         ),
         // A weekly that explains economic ideas to children
         DefaultFeed(
-            source = R.string.source_econoi,
+            source = DefaultSource.ECONOI,
             url = "https://www.econoi.com/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
             isSection = false
         ),
         // The government's plain-language guide to everyday law, as its feed of updated pages
         DefaultFeed(
-            source = R.string.source_easylaw,
+            source = DefaultSource.EASYLAW,
             url = "https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7",
             category = DefaultCategory.LAW,
             isSection = false
@@ -134,14 +134,14 @@ object DefaultData {
         // Explainers and essays that give the context behind the news, and the daily 슬로우레터
         // digest. The category left out is the English edition of 슬로우레터
         DefaultFeed(
-            source = R.string.source_slownews,
+            source = DefaultSource.SLOWNEWS,
             url = "https://slownews.kr/feed?cat=-12795",
             category = DefaultCategory.OPINION,
             isSection = false
         ),
-        // A conservative paper, to balance 한겨레. The 전체기사 feed is left out, as it combines
-        // the section feeds, and so is 도서, as its articles are all in 문화. Its sports
-        // subsections are from the separate 스포츠동아
+        // A national daily, for a balance of outlooks among the built-in newspapers. The 전체기사
+        // feed is left out, as it combines the section feeds, and so is 도서, as its articles are
+        // all in 문화. Its sports subsections are from the separate 스포츠동아
         donga("politics", DefaultCategory.POLITICS),
         donga("national", DefaultCategory.SOCIETY),
         donga("economy", DefaultCategory.ECONOMY),
@@ -161,7 +161,7 @@ object DefaultData {
     // translated by [localizeFeeds] when the language changes
     fun resolveFeeds(context: Context): List<RssFeed> = defaultFeeds.map { feed ->
         val category = context.getString(feed.category.label)
-        val source = context.getString(feed.source)
+        val source = context.getString(feed.source.label)
         RssFeed(
             title = if (feed.isSection) {
                 val section = feed.section?.let { context.getString(it) } ?: category
@@ -200,19 +200,19 @@ object DefaultData {
     }
 
     private fun yonhap(section: String, category: DefaultCategory) = DefaultFeed(
-        source = R.string.source_yonhap_news,
+        source = DefaultSource.YONHAP,
         url = "https://www.yna.co.kr/rss/$section.xml",
         category = category
     )
 
     private fun sbs(sectionId: String, category: DefaultCategory) = DefaultFeed(
-        source = R.string.source_sbs_news,
+        source = DefaultSource.SBS,
         url = "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=$sectionId&plink=RSSREADER",
         category = category
     )
 
     private fun hani(section: String, category: DefaultCategory) = DefaultFeed(
-        source = R.string.source_hankyoreh,
+        source = DefaultSource.HANKYOREH,
         url = "https://www.hani.co.kr/rss/$section",
         category = category
     )
@@ -222,7 +222,7 @@ object DefaultData {
         category: DefaultCategory,
         @StringRes sectionName: Int? = null
     ) = DefaultFeed(
-        source = R.string.source_donga,
+        source = DefaultSource.DONGA,
         url = "https://rss.donga.com/$section.xml",
         category = category,
         section = sectionName

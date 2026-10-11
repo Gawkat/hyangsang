@@ -212,4 +212,17 @@
     <string name="source_slownews">슬로우뉴스</string>
     <string name="source_donga">동아일보</string>
     <string name="section_travel">여행</string>
+    <string name="about_source">출처 정보</string>
+    <string name="source_sections">섹션: %1$s</string>
+    <string name="visit_website">웹사이트 방문</string>
+    <string name="about_yonhap_news">1980년에 설립된 통신사로, 2003년에 제정된 법률에 따라 국가기간뉴스통신사로 지정되어 있습니다. 최대 주주는 이 법률에 따라 설립된 뉴스통신진흥회이며, 정부가 뉴스 구독료를 지급합니다. 하루 내내 짧은 보도 기사가 주로 올라옵니다.</string>
+    <string name="about_bbc_korean">영국 공영방송 BBC의 국제 뉴스 서비스인 BBC 월드서비스의 한국어판으로, 2017년에 시작했습니다. BBC 월드서비스는 주로 영국의 TV 수신료와 영국 정부 예산으로 운영됩니다. 한국과 세계 소식을 다룬 보도와 해설 기사가 하나의 피드로 올라옵니다.</string>
+    <string name="about_sbs_news">1990년에 설립된 민영 TV·라디오 방송사입니다. 최대 주주는 TY홀딩스입니다. 섹션별로 보도 기사가 올라옵니다.</string>
+    <string name="about_hankyoreh">1988년에 일반 시민에게 주식을 팔아 모은 자본으로 창간한 전국 일간지입니다. 직원을 포함한 수만 명의 주주가 소유하고 있습니다. 섹션별로 보도 기사, 기획 기사, 칼럼이 올라옵니다.</string>
+    <string name="about_donga">1920년에 창간한 전국 일간지입니다. 최대 주주는 창간에 참여한 김성수의 호를 딴 재단인 인촌기념회입니다. 섹션별로 보도 기사, 기획 기사, 칼럼이 올라오며, 스포츠 기사 일부는 같은 그룹의 스포츠동아 기사입니다.</string>
+    <string name="about_kids_donga">유치원생과 초등학생을 위한 일간지로, 1964년부터 동아일보사가 발행하고 있습니다. 쉬운 말로 쓴 짧은 기사가 하나의 피드로 올라옵니다.</string>
+    <string name="about_kids_hankook">1960년에 한국일보사가 창간한 어린이 일간지로, 지금은 별도 회사가 발행합니다. 어린이를 위한 뉴스와 동시·동화가 하나의 피드로 올라옵니다.</string>
+    <string name="about_econoi">어린이에게 경제를 설명하는 주간지입니다. 1998년 서울경제신문의 ‘어린이 서울경제’로 시작해, 지금은 별도 회사가 발행합니다. 생활 속 경제 현상을 다룬 기사가 하나의 피드로 올라옵니다.</string>
+    <string name="about_easylaw">생활 속 법령을 쉬운 말로 설명하는 정부 웹사이트로, 2008년부터 법제처가 운영하고 있습니다. 뉴스가 아니며, 새로 올라오거나 고쳐진 안내 페이지가 피드로 올라옵니다.</string>
+    <string name="about_slownews">2012년에 창간한 인터넷 언론으로, 속보보다 뉴스의 맥락을 다룹니다. 유료 후원 회원제를 둔 슬로우뉴스 주식회사가 운영합니다. 해설 기사와 에세이, 매일 나오는 슬로우레터가 하나의 피드로 올라옵니다.</string>
 </resources>

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
+import dev.kettu.hyangsang.data.defaults.DefaultSource
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
@@ -82,6 +84,7 @@ import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.repository.ContentRefresh
 import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.ui.components.SourceInfoSheet
 import dev.kettu.hyangsang.ui.settings.openInBrowser
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
@@ -193,6 +196,8 @@ fun ReaderContent(
     var showLookupSheet by remember { mutableStateOf(false) }
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showSourceInfo by rememberSaveable { mutableStateOf(false) }
+    val source = remember(articleWithFeed.feed.url) { DefaultSource.forUrl(articleWithFeed.feed.url) }
     val snackbarHostState = remember { SnackbarHostState() }
     // The article snapshot doesn't update, so the saved state is tracked locally
     var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
@@ -313,6 +318,20 @@ fun ReaderContent(
                                     onRefreshClick()
                                 }
                             )
+                            // The source name in the article header looks up words, so its
+                            // description is here
+                            if (source != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.about_source)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.Info, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showSourceInfo = true
+                                    }
+                                )
+                            }
                         }
                     }
                 },
@@ -469,6 +488,10 @@ fun ReaderContent(
                     modifier = Modifier.heightIn(max = lookupContentMaxHeight)
                 )
             }
+        }
+
+        if (showSourceInfo && source != null) {
+            SourceInfoSheet(source = source, onDismiss = { showSourceInfo = false })
         }
 
         if (showTextSheet) {

@@ -2,6 +2,7 @@ package dev.kettu.hyangsang.data.defaults
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FeedSourcesTest {
@@ -39,5 +40,15 @@ class FeedSourcesTest {
         val sourcesByHost = DefaultData.defaultFeeds.groupBy({ FeedSources.hostOf(it.url) }, { it.source })
         assertNull(sourcesByHost[null])
         sourcesByHost.forEach { (host, ids) -> assertEquals(host, 1, ids.distinct().size) }
+    }
+
+    @Test
+    fun `every built-in source has a feed and is found by its feeds' URLs`() {
+        DefaultSource.entries.forEach { source ->
+            assertTrue("$source has no feeds", source.feeds.isNotEmpty())
+            source.feeds.forEach { assertEquals(source, DefaultSource.forUrl(it.url)) }
+        }
+        assertEquals(DefaultSource.YONHAP, DefaultSource.forUrl("http://YNA.co.kr/rss/other.xml"))
+        assertNull(DefaultSource.forUrl("https://www.example.com/feed"))
     }
 }

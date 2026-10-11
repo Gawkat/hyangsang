@@ -118,6 +118,12 @@ older version are parsed again in the background the next time they're opened.
 A parser change that only matters for new articles doesn't need a bump. Each bump re-fetches
 every article once, as it's opened.
 
+### The built-in feeds
+
+A feed from a new site needs a `DefaultSource`, with a description in both string files. Follow
+the rules in [docs/feed-sources.md](docs/feed-sources.md), and add a citation for each claim
+there.
+
 ### The user database schema
 
 For changes to the entities in `HyangsangDatabase` (articles, feeds, vocabulary):
