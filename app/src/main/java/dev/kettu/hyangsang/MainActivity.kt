@@ -224,6 +224,7 @@ fun MainApp(
     val unreadCounts by articleViewModel.unreadCounts.collectAsState()
     val filterCriteria by articleViewModel.filterCriteria.collectAsState()
     val feeds by rssFeedViewModel.feeds.collectAsState()
+    val newDefaultFeeds by rssFeedViewModel.newDefaultFeeds.collectAsState()
     val isRefreshing by rssFeedViewModel.isRefreshing.collectAsState()
 
     val navItems = listOf(
@@ -283,6 +284,7 @@ fun MainApp(
                     closeDrawerThen { articleViewModel.setCategory(category) }
                 },
                 onSelectFeed = { feedId -> closeDrawerThen { articleViewModel.setFeed(feedId) } },
+                hasNewDefaultFeeds = newDefaultFeeds.isNotEmpty(),
                 onManageFeedsClick = { closeDrawerThen { navController.navigate(Routes.FEEDS) } },
                 onSettingsClick = { closeDrawerThen { navController.navigate(Routes.SETTINGS) } }
             )
@@ -446,6 +448,7 @@ fun MainApp(
                             scope.launch { prefsRepository.setContentRetention(it) }
                         },
                         feeds = feeds,
+                        hasNewDefaultFeeds = newDefaultFeeds.isNotEmpty(),
                         onManageFeedsClick = {
                             entry.ifResumed { navController.navigate(Routes.FEEDS) }
                         },

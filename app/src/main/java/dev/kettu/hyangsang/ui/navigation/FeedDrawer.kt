@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.DynamicFeed
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.FeedAvatar
 import dev.kettu.hyangsang.ui.components.HyangsangLogo
+import dev.kettu.hyangsang.ui.components.ManageFeedsIcon
 import dev.kettu.hyangsang.ui.components.rememberCategoryIcons
 
 /**
@@ -59,6 +59,7 @@ fun FeedDrawerContent(
     onSelectAll: () -> Unit,
     onSelectCategory: (String) -> Unit,
     onSelectFeed: (Long) -> Unit,
+    hasNewDefaultFeeds: Boolean,
     onManageFeedsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -200,7 +201,7 @@ fun FeedDrawerContent(
 
             NavigationDrawerItem(
                 label = { Text(stringResource(R.string.manage_feeds)) },
-                icon = { Icon(Icons.Outlined.RssFeed, contentDescription = null) },
+                icon = { ManageFeedsIcon(hasNewFeeds = hasNewDefaultFeeds) },
                 selected = false,
                 onClick = onManageFeedsClick
             )

@@ -112,6 +112,7 @@
     <string name="new_built_in_feeds_description">Feeds added in app updates. Only the ones you pick are added.</string>
     <string name="built_in_feeds_title">Built-in feeds</string>
     <string name="built_in_feeds_description">Pick feeds to add. Feeds you already have are checked.</string>
+    <string name="new_built_in_feeds_available">New built-in feeds available</string>
     <string name="built_in_feed_new">New</string>
     <string name="add_feeds">Add</string>
     <plurals name="add_feeds_count">
