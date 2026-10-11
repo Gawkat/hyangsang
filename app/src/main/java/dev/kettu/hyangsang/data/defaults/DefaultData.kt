@@ -55,59 +55,77 @@ private fun localizedContexts(context: Context): List<Context> = APP_LOCALES.map
 /**
  * A built-in feed. Section feeds are titled "<source> - <section>", other feeds just "<source>".
  * The section is the category, unless the source has more than one feed in that category.
+ * [addedIn] is the [DefaultData.VERSION] the feed was added in, so existing users can be offered
+ * the feeds added since they last looked.
  */
 data class DefaultFeed(
     val source: DefaultSource,
     val url: String,
     val category: DefaultCategory,
+    val addedIn: Int,
     val isSection: Boolean = true,
     @StringRes val section: Int? = null
 )
 
 object DefaultData {
+    /**
+     * Version of the built-in feeds. Raise it when adding feeds, and give the new feeds the new
+     * version as their [DefaultFeed.addedIn]. Never lower or reuse it, even when removing feeds,
+     * or users who already saw a version wouldn't be offered the feeds added in it.
+     */
+    const val VERSION = 2
+
+    /**
+     * The version assumed for users who installed the app before versions were stored. Version 1
+     * is the built-in feeds of release 0.1.0.
+     */
+    const val BASELINE_VERSION = 1
+
     // Yonhap's main news.xml feed is left out, as its articles all appear in the section feeds
     val defaultFeeds: List<DefaultFeed> = listOf(
-        yonhap("politics", DefaultCategory.POLITICS),
-        yonhap("northkorea", DefaultCategory.NORTH_KOREA),
-        yonhap("economy", DefaultCategory.ECONOMY),
-        yonhap("market", DefaultCategory.MARKET),
-        yonhap("industry", DefaultCategory.INDUSTRY),
-        yonhap("society", DefaultCategory.SOCIETY),
-        yonhap("local", DefaultCategory.LOCAL),
-        yonhap("international", DefaultCategory.INTERNATIONAL),
-        yonhap("culture", DefaultCategory.CULTURE),
-        yonhap("health", DefaultCategory.HEALTH),
-        yonhap("entertainment", DefaultCategory.ENTERTAINMENT),
-        yonhap("sports", DefaultCategory.SPORTS),
-        yonhap("opinion", DefaultCategory.OPINION),
-        yonhap("people", DefaultCategory.PEOPLE),
+        yonhap("politics", DefaultCategory.POLITICS, addedIn = 1),
+        yonhap("northkorea", DefaultCategory.NORTH_KOREA, addedIn = 1),
+        yonhap("economy", DefaultCategory.ECONOMY, addedIn = 1),
+        yonhap("market", DefaultCategory.MARKET, addedIn = 1),
+        yonhap("industry", DefaultCategory.INDUSTRY, addedIn = 1),
+        yonhap("society", DefaultCategory.SOCIETY, addedIn = 1),
+        yonhap("local", DefaultCategory.LOCAL, addedIn = 1),
+        yonhap("international", DefaultCategory.INTERNATIONAL, addedIn = 1),
+        yonhap("culture", DefaultCategory.CULTURE, addedIn = 1),
+        yonhap("health", DefaultCategory.HEALTH, addedIn = 1),
+        yonhap("entertainment", DefaultCategory.ENTERTAINMENT, addedIn = 1),
+        yonhap("sports", DefaultCategory.SPORTS, addedIn = 1),
+        yonhap("opinion", DefaultCategory.OPINION, addedIn = 1),
+        yonhap("people", DefaultCategory.PEOPLE, addedIn = 1),
         DefaultFeed(
             source = DefaultSource.BBC_KOREAN,
             url = "https://feeds.bbci.co.uk/korean/rss.xml",
             category = DefaultCategory.NEWS,
+            addedIn = 1,
             isSection = false
         ),
-        sbs("01", DefaultCategory.POLITICS),
-        sbs("02", DefaultCategory.ECONOMY),
-        sbs("03", DefaultCategory.SOCIETY),
-        sbs("07", DefaultCategory.INTERNATIONAL),
-        sbs("08", DefaultCategory.CULTURE),
-        sbs("14", DefaultCategory.ENTERTAINMENT),
-        sbs("09", DefaultCategory.SPORTS),
+        sbs("01", DefaultCategory.POLITICS, addedIn = 1),
+        sbs("02", DefaultCategory.ECONOMY, addedIn = 1),
+        sbs("03", DefaultCategory.SOCIETY, addedIn = 1),
+        sbs("07", DefaultCategory.INTERNATIONAL, addedIn = 1),
+        sbs("08", DefaultCategory.CULTURE, addedIn = 1),
+        sbs("14", DefaultCategory.ENTERTAINMENT, addedIn = 1),
+        sbs("09", DefaultCategory.SPORTS, addedIn = 1),
         // As with Yonhap, the main /rss/ feed is left out, as it combines the section feeds
-        hani("politics", DefaultCategory.POLITICS),
-        hani("economy", DefaultCategory.ECONOMY),
-        hani("society", DefaultCategory.SOCIETY),
-        hani("international", DefaultCategory.INTERNATIONAL),
-        hani("culture", DefaultCategory.CULTURE),
-        hani("science", DefaultCategory.SCIENCE),
-        hani("sports", DefaultCategory.SPORTS),
-        hani("opinion", DefaultCategory.OPINION),
+        hani("politics", DefaultCategory.POLITICS, addedIn = 2),
+        hani("economy", DefaultCategory.ECONOMY, addedIn = 2),
+        hani("society", DefaultCategory.SOCIETY, addedIn = 2),
+        hani("international", DefaultCategory.INTERNATIONAL, addedIn = 2),
+        hani("culture", DefaultCategory.CULTURE, addedIn = 2),
+        hani("science", DefaultCategory.SCIENCE, addedIn = 2),
+        hani("sports", DefaultCategory.SPORTS, addedIn = 2),
+        hani("opinion", DefaultCategory.OPINION, addedIn = 2),
         // A children's newspaper, with the simplest language of the built-in feeds
         DefaultFeed(
             source = DefaultSource.KIDS_DONGA,
             url = "https://kids.donga.com/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
+            addedIn = 2,
             isSection = false
         ),
         // News for children, plus children's poems and stories (동시·동화)
@@ -115,6 +133,7 @@ object DefaultData {
             source = DefaultSource.KIDS_HANKOOK,
             url = "https://www.kidshankook.kr/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
+            addedIn = 2,
             isSection = false
         ),
         // A weekly that explains economic ideas to children
@@ -122,6 +141,7 @@ object DefaultData {
             source = DefaultSource.ECONOI,
             url = "https://www.econoi.com/rss/allArticle.xml",
             category = DefaultCategory.KIDS,
+            addedIn = 2,
             isSection = false
         ),
         // The government's plain-language guide to everyday law, as its feed of updated pages
@@ -129,6 +149,7 @@ object DefaultData {
             source = DefaultSource.EASYLAW,
             url = "https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7",
             category = DefaultCategory.LAW,
+            addedIn = 2,
             isSection = false
         ),
         // Explainers and essays that give the context behind the news, and the daily 슬로우레터
@@ -137,29 +158,40 @@ object DefaultData {
             source = DefaultSource.SLOWNEWS,
             url = "https://slownews.kr/feed?cat=-12795",
             category = DefaultCategory.OPINION,
+            addedIn = 2,
             isSection = false
         ),
         // A national daily, for a balance of outlooks among the built-in newspapers. The 전체기사
         // feed is left out, as it combines the section feeds, and so is 도서, as its articles are
         // all in 문화. Its sports subsections are from the separate 스포츠동아
-        donga("politics", DefaultCategory.POLITICS),
-        donga("national", DefaultCategory.SOCIETY),
-        donga("economy", DefaultCategory.ECONOMY),
-        donga("international", DefaultCategory.INTERNATIONAL),
-        donga("culture", DefaultCategory.CULTURE),
-        donga("science", DefaultCategory.SCIENCE),
-        donga("health", DefaultCategory.HEALTH),
-        donga("sports", DefaultCategory.SPORTS),
-        donga("editorials", DefaultCategory.OPINION),
-        donga("inmul", DefaultCategory.PEOPLE),
-        donga("travel", DefaultCategory.LIFE, R.string.section_travel),
-        donga("lifeinfo", DefaultCategory.LIFE)
+        donga("politics", DefaultCategory.POLITICS, addedIn = 2),
+        donga("national", DefaultCategory.SOCIETY, addedIn = 2),
+        donga("economy", DefaultCategory.ECONOMY, addedIn = 2),
+        donga("international", DefaultCategory.INTERNATIONAL, addedIn = 2),
+        donga("culture", DefaultCategory.CULTURE, addedIn = 2),
+        donga("science", DefaultCategory.SCIENCE, addedIn = 2),
+        donga("health", DefaultCategory.HEALTH, addedIn = 2),
+        donga("sports", DefaultCategory.SPORTS, addedIn = 2),
+        donga("editorials", DefaultCategory.OPINION, addedIn = 2),
+        donga("inmul", DefaultCategory.PEOPLE, addedIn = 2),
+        donga("travel", DefaultCategory.LIFE, R.string.section_travel, addedIn = 2),
+        donga("lifeinfo", DefaultCategory.LIFE, addedIn = 2)
     )
+
+    /**
+     * The built-in feeds added after [seenVersion] that aren't among [presentUrls], such as the
+     * feeds added in an app update. Feeds the user already has or added by hand are left out.
+     */
+    fun feedsAddedSince(seenVersion: Int, presentUrls: Set<String>): List<DefaultFeed> =
+        defaultFeeds.filter { it.addedIn > seenVersion && it.url !in presentUrls }
 
     // Titles and categories are stored as plain text, since the user can edit them,
     // so they're resolved in the app language at the time the feeds are added, and
     // translated by [localizeFeeds] when the language changes
-    fun resolveFeeds(context: Context): List<RssFeed> = defaultFeeds.map { feed ->
+    fun resolveFeeds(
+        context: Context,
+        feeds: List<DefaultFeed> = defaultFeeds
+    ): List<RssFeed> = feeds.map { feed ->
         val category = context.getString(feed.category.label)
         val source = context.getString(feed.source.label)
         RssFeed(
@@ -199,32 +231,37 @@ object DefaultData {
         }
     }
 
-    private fun yonhap(section: String, category: DefaultCategory) = DefaultFeed(
+    private fun yonhap(section: String, category: DefaultCategory, addedIn: Int) = DefaultFeed(
         source = DefaultSource.YONHAP,
         url = "https://www.yna.co.kr/rss/$section.xml",
-        category = category
+        category = category,
+        addedIn = addedIn
     )
 
-    private fun sbs(sectionId: String, category: DefaultCategory) = DefaultFeed(
+    private fun sbs(sectionId: String, category: DefaultCategory, addedIn: Int) = DefaultFeed(
         source = DefaultSource.SBS,
         url = "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=$sectionId&plink=RSSREADER",
-        category = category
+        category = category,
+        addedIn = addedIn
     )
 
-    private fun hani(section: String, category: DefaultCategory) = DefaultFeed(
+    private fun hani(section: String, category: DefaultCategory, addedIn: Int) = DefaultFeed(
         source = DefaultSource.HANKYOREH,
         url = "https://www.hani.co.kr/rss/$section",
-        category = category
+        category = category,
+        addedIn = addedIn
     )
 
     private fun donga(
         section: String,
         category: DefaultCategory,
-        @StringRes sectionName: Int? = null
+        @StringRes sectionName: Int? = null,
+        addedIn: Int
     ) = DefaultFeed(
         source = DefaultSource.DONGA,
         url = "https://rss.donga.com/$section.xml",
         category = category,
+        addedIn = addedIn,
         section = sectionName
     )
 }

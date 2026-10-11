@@ -13,6 +13,7 @@ import dev.kettu.hyangsang.data.local.dao.VocabularyDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.local.entity.VocabularyWord
+import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,8 +76,10 @@ abstract class HyangsangDatabase : RoomDatabase() {
             return free * 2 > total
         }
 
+        // A new install gets every built-in feed, so none of them are new to the user
         private suspend fun seedDefaultFeeds(context: Context, dao: RssFeedDao) {
             DefaultData.resolveFeeds(context).forEach { dao.insertFeed(it) }
+            UserPreferencesRepository(context.applicationContext).markDefaultFeedsSeen()
         }
     }
 }
