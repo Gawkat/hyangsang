@@ -6,7 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
-import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.dao.VocabularyDao
@@ -14,9 +13,7 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.local.entity.VocabularyWord
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @Database(
     entities = [
@@ -49,12 +46,13 @@ abstract class HyangsangDatabase : RoomDatabase() {
                     .fallbackToDestructiveMigrationFrom(dropAllTables = true, *(1..12).toList().toIntArray())
                     .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                     .addCallback(object : Callback() {
+                        // A new install starts without feeds: the user picks them in the
+                        // first-run setup. Stored before the open finishes, so the app can tell
+                        // whether to show the setup as soon as the database is open
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
-
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val dao = getDatabase(context).rssFeedDao()
-                                seedDefaultFeeds(context, dao)
+                            runBlocking {
+                                UserPreferencesRepository(context.applicationContext).setFirstRunSetupPending(true)
                             }
                         }
 
@@ -74,13 +72,6 @@ abstract class HyangsangDatabase : RoomDatabase() {
             val free = db.query("PRAGMA freelist_count").use { it.moveToFirst(); it.getLong(0) }
             val total = db.query("PRAGMA page_count").use { it.moveToFirst(); it.getLong(0) }
             return free * 2 > total
-        }
-
-        // A new install gets every built-in feed, so none of them are new to the user. Marked
-        // first, so the feeds inserted one by one don't show as new in the meantime
-        private suspend fun seedDefaultFeeds(context: Context, dao: RssFeedDao) {
-            UserPreferencesRepository(context.applicationContext).markDefaultFeedsSeen()
-            DefaultData.resolveFeeds(context).forEach { dao.insertFeed(it) }
         }
     }
 }

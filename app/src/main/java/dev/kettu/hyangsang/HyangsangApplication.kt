@@ -17,9 +17,13 @@ import dev.kettu.hyangsang.sync.FeedSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 import retrofit2.Retrofit
@@ -85,6 +89,15 @@ class HyangsangApplication : Application() {
                 }
             }
         }
+    }
+
+    /**
+     * Whether the user still has to pick their feeds. Opening the database first is what marks
+     * a new install as pending, so the answer isn't known before then.
+     */
+    val firstRunSetupPending: Flow<Boolean> = flow {
+        withContext(Dispatchers.IO) { database.openHelper.writableDatabase }
+        emitAll(userPreferencesRepository.firstRunSetupPendingFlow)
     }
 
     private val readerResourcesLoaded = AtomicBoolean(false)

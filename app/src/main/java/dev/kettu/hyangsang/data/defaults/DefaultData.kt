@@ -23,6 +23,7 @@ enum class DefaultCategory(@StringRes val label: Int) {
     ENTERTAINMENT(R.string.category_entertainment),
     SPORTS(R.string.category_sports),
     OPINION(R.string.category_opinion),
+    EXPLAINERS(R.string.category_explainers),
     PEOPLE(R.string.category_people),
     KIDS(R.string.category_kids),
     LAW(R.string.category_law),
@@ -157,7 +158,7 @@ object DefaultData {
         DefaultFeed(
             source = DefaultSource.SLOWNEWS,
             url = "https://slownews.kr/feed?cat=-12795",
-            category = DefaultCategory.OPINION,
+            category = DefaultCategory.EXPLAINERS,
             addedIn = 2,
             isSection = false
         ),

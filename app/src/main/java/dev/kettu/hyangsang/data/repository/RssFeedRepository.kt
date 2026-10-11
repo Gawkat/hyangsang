@@ -133,12 +133,15 @@ class RssFeedRepository(
 
     // Adds the built-in feeds the user picked and fetches them. Feeds already added are skipped
     suspend fun addDefaultFeeds(feeds: List<DefaultFeed>) {
-        val added = resolveDefaultFeeds(feeds).mapNotNull { feed ->
+        fetchConcurrently(insertDefaultFeeds(feeds))
+    }
+
+    // Adds the built-in feeds without fetching them, and returns the ones that weren't there yet
+    suspend fun insertDefaultFeeds(feeds: List<DefaultFeed>): List<RssFeed> =
+        resolveDefaultFeeds(feeds).mapNotNull { feed ->
             val id = rssFeedDao.insertFeed(feed)
             if (id != -1L) feed.copy(id = id) else null
         }
-        fetchConcurrently(added)
-    }
 
     // Toggle feed status
     suspend fun toggleFeed(feed: RssFeed) {
