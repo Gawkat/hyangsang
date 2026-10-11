@@ -129,6 +129,9 @@ When adding feeds, raise `DefaultData.VERSION` and give the new feeds the new ve
 use that version instead: a version that has shipped must not get more feeds, since users who saw
 it wouldn't be offered them. Never lower or reuse it, even when removing feeds.
 
+A feed in a new `DefaultCategory` also needs a place in `FeedTopic`, so the first-run setup can
+pick it. `FeedTopicTest` fails until it has one.
+
 ### The user database schema
 
 For changes to the entities in `HyangsangDatabase` (articles, feeds, vocabulary):

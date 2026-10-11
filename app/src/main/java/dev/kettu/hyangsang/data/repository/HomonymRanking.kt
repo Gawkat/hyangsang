@@ -162,6 +162,7 @@ internal class HomonymRanking(
             DefaultCategory.NEWS,
             DefaultCategory.LOCAL,
             DefaultCategory.OPINION,
+            DefaultCategory.EXPLAINERS,
             DefaultCategory.KIDS,
             null -> emptyList()
         }

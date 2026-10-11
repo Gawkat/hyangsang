@@ -35,6 +35,7 @@ class UserPreferencesRepository(private val context: Context) {
         val ARTICLE_RETENTION = stringPreferencesKey("article_retention")
         val FEED_GROUPING = stringPreferencesKey("feed_grouping")
         val DEFAULT_FEEDS_SEEN = intPreferencesKey("default_feeds_seen")
+        val FIRST_RUN_SETUP_PENDING = booleanPreferencesKey("first_run_setup_pending")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -111,6 +112,16 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit {
             if (version == null) it.remove(Keys.DEFAULT_FEEDS_SEEN) else it[Keys.DEFAULT_FEEDS_SEEN] = version
         }
+    }
+
+    // Set when the database is created, until the user has picked their feeds. Never set for users
+    // who installed the app before the setup existed
+    val firstRunSetupPendingFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[Keys.FIRST_RUN_SETUP_PENDING] ?: false
+    }.distinctUntilChanged()
+
+    suspend fun setFirstRunSetupPending(pending: Boolean) {
+        context.dataStore.edit { it[Keys.FIRST_RUN_SETUP_PENDING] = pending }
     }
 
     suspend fun setTheme(theme: String) {

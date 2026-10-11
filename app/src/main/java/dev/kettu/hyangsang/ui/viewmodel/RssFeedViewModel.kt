@@ -55,6 +55,24 @@ class RssFeedViewModel(
         }
     }
 
+    /**
+     * Adds the feeds picked in the first-run setup and fetches them, shown as a refresh so
+     * Discover shows them loading. The setup counts as done once they're stored.
+     */
+    fun finishSetup(feeds: List<DefaultFeed>) {
+        viewModelScope.launch {
+            userPreferencesRepository.markDefaultFeedsSeen()
+            val added = rssFeedRepository.insertDefaultFeeds(feeds)
+            userPreferencesRepository.setFirstRunSetupPending(false)
+            _isRefreshing.value = true
+            try {
+                rssFeedRepository.refreshFeeds(added)
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
     suspend fun checkFeed(url: String): FeedCheckResult = rssFeedRepository.checkFeed(url)
 
     fun addFeed(url: String, title: String, category: String) {

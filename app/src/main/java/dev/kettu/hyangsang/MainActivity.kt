@@ -25,6 +25,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -32,7 +33,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -63,6 +68,7 @@ import dev.kettu.hyangsang.ui.saved.SavedScreen
 import dev.kettu.hyangsang.ui.settings.LicensesScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
+import dev.kettu.hyangsang.ui.setup.SetupScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
@@ -153,22 +159,40 @@ class MainActivity : AppCompatActivity() {
                 )
             )
 
+            // Null until the database is open. Once shown, the setup stays until the user leaves
+            // it, although it stops being pending as soon as the feeds are added
+            val setupPending by remember { app.firstRunSetupPending }.collectAsState(initial = null)
+            var inSetup by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(setupPending) {
+                if (setupPending == true) inSetup = true
+            }
+
             HyangsangTheme(darkTheme = darkTheme, palette = palette) {
-                MainApp(
-                    prefsRepository = prefsRepository,
-                    articleViewModel = articleViewModel,
-                    dictionaryViewModel = dictionaryViewModel,
-                    vocabularyViewModel = vocabularyViewModel,
-                    rssFeedViewModel = feedViewModel,
-                    currentTheme = theme,
-                    currentPalette = palette,
-                    readerSettings = readerSettings,
-                    showUnreadCounts = showUnreadCounts,
-                    feedSyncInterval = feedSyncInterval,
-                    articleRetention = articleRetention,
-                    contentRetention = contentRetention,
-                    feedGrouping = feedGrouping
-                )
+                when {
+                    inSetup || setupPending == true -> SetupScreen(
+                        dictionaryViewModel = dictionaryViewModel,
+                        onAddFeeds = feedViewModel::finishSetup,
+                        onFinish = { inSetup = false }
+                    )
+
+                    setupPending == null -> Surface(modifier = Modifier.fillMaxSize()) {}
+
+                    else -> MainApp(
+                        prefsRepository = prefsRepository,
+                        articleViewModel = articleViewModel,
+                        dictionaryViewModel = dictionaryViewModel,
+                        vocabularyViewModel = vocabularyViewModel,
+                        rssFeedViewModel = feedViewModel,
+                        currentTheme = theme,
+                        currentPalette = palette,
+                        readerSettings = readerSettings,
+                        showUnreadCounts = showUnreadCounts,
+                        feedSyncInterval = feedSyncInterval,
+                        articleRetention = articleRetention,
+                        contentRetention = contentRetention,
+                        feedGrouping = feedGrouping
+                    )
+                }
             }
         }
     }
