@@ -108,6 +108,7 @@
     <string name="new_built_in_feeds_description">앱 업데이트로 추가된 피드입니다. 선택한 피드만 추가됩니다.</string>
     <string name="built_in_feeds_title">기본 피드</string>
     <string name="built_in_feeds_description">추가할 피드를 선택하세요. 이미 있는 피드는 체크되어 있습니다.</string>
+    <string name="new_built_in_feeds_available">새 기본 피드가 있습니다</string>
     <string name="built_in_feed_new">새 피드</string>
     <string name="add_feeds">추가</string>
     <plurals name="add_feeds_count">

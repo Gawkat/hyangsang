@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
@@ -69,6 +68,7 @@ import androidx.core.net.toUri
 import dev.kettu.hyangsang.BuildConfig
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.ui.components.ManageFeedsIcon
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
@@ -102,6 +102,7 @@ fun SettingsScreen(
     contentRetention: ContentRetention,
     onContentRetentionChange: (ContentRetention) -> Unit,
     feeds: List<RssFeed>,
+    hasNewDefaultFeeds: Boolean,
     onManageFeedsClick: () -> Unit,
     onOssLicensesClick: () -> Unit,
     onBackClick: () -> Unit,
@@ -204,7 +205,7 @@ fun SettingsScreen(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.manage_feeds)) },
                 supportingContent = { FeedsSummary(feeds) },
-                leadingContent = { Icon(Icons.Outlined.RssFeed, contentDescription = null) },
+                leadingContent = { ManageFeedsIcon(hasNewFeeds = hasNewDefaultFeeds) },
                 trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onManageFeedsClick)
             )
@@ -500,6 +501,7 @@ fun SettingsScreenPreview() {
             contentRetention = ContentRetention.DEFAULT,
             onContentRetentionChange = {},
             feeds = emptyList(),
+            hasNewDefaultFeeds = false,
             onManageFeedsClick = {},
             onOssLicensesClick = {},
             onBackClick = {}
