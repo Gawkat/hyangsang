@@ -1,5 +1,7 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.data.defaults.DefaultData
+import dev.kettu.hyangsang.data.defaults.DefaultFeed
 import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
@@ -14,6 +16,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -58,6 +61,12 @@ class RssFeedRepository(
     val allFeedsByCategory: Flow<Map<String, List<RssFeed>>> =
         rssFeedDao.getAllFeeds().map { feeds ->
             feeds.groupBy { it.category }
+        }
+
+    // Built-in feeds added since the version in [seenVersion] that the user doesn't have
+    fun newDefaultFeeds(seenVersion: Flow<Int>): Flow<List<DefaultFeed>> =
+        combine(allFeeds, seenVersion) { feeds, seen ->
+            DefaultData.feedsAddedSince(seen, feeds.mapTo(HashSet()) { it.url })
         }
 
     // Adds https:// when no scheme is given, since most people paste or type bare domains

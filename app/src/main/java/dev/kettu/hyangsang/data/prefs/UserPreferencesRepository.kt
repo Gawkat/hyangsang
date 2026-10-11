@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.kettu.hyangsang.data.defaults.DefaultData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -33,6 +34,7 @@ class UserPreferencesRepository(private val context: Context) {
         val FEED_SYNC_INTERVAL = stringPreferencesKey("feed_sync_interval")
         val ARTICLE_RETENTION = stringPreferencesKey("article_retention")
         val FEED_GROUPING = stringPreferencesKey("feed_grouping")
+        val DEFAULT_FEEDS_SEEN = intPreferencesKey("default_feeds_seen")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -94,6 +96,16 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setFeedGrouping(grouping: FeedGrouping) {
         context.dataStore.edit { it[Keys.FEED_GROUPING] = grouping.name }
+    }
+
+    // The DefaultData.VERSION whose built-in feeds the user has been offered. Unset for users who
+    // installed the app before it was stored
+    val defaultFeedsSeenFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[Keys.DEFAULT_FEEDS_SEEN] ?: DefaultData.BASELINE_VERSION
+    }.distinctUntilChanged()
+
+    suspend fun markDefaultFeedsSeen() {
+        context.dataStore.edit { it[Keys.DEFAULT_FEEDS_SEEN] = DefaultData.VERSION }
     }
 
     suspend fun setTheme(theme: String) {
