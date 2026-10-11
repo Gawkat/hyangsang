@@ -50,8 +50,8 @@ class RssFeedRepository(
     private val rssFeedDao: RssFeedDao,
     private val articleDao: ArticleDao,
     private val rssService: RssFeedService,
-    // Resolved on each call, so restored feeds get names in the current app language
-    private val defaultFeeds: () -> List<RssFeed>,
+    // Resolved on each call, so added built-in feeds get names in the current app language
+    private val resolveDefaultFeeds: (List<DefaultFeed>) -> List<RssFeed>,
     // Returns the given feeds whose built-in names need translating into the app language
     private val localizeFeeds: (List<RssFeed>) -> List<RssFeed> = { emptyList() }
 ) {
@@ -131,24 +131,13 @@ class RssFeedRepository(
 
     suspend fun countSavedArticles(feed: RssFeed): Int = articleDao.countSavedInFeed(feed.id)
 
-    // Re-adds built-in feeds the user removed and moves the rest back to their built-in
-    // categories. Names and on/off states are left as they are. Returns how many feeds changed
-    suspend fun restoreDefaultFeeds(): Int {
-        val existingByUrl = rssFeedDao.getAllFeeds().first().associateBy { it.url }
-        val (present, missing) = defaultFeeds().partition { it.url in existingByUrl }
-
-        val moved = present.mapNotNull { feed ->
-            val existing = existingByUrl.getValue(feed.url)
-            existing.takeIf { it.category != feed.category }?.also {
-                rssFeedDao.updateFeedDetails(it.id, it.title, feed.category)
-            }
-        }
-        val restored = missing.mapNotNull { feed ->
+    // Adds the built-in feeds the user picked and fetches them. Feeds already added are skipped
+    suspend fun addDefaultFeeds(feeds: List<DefaultFeed>) {
+        val added = resolveDefaultFeeds(feeds).mapNotNull { feed ->
             val id = rssFeedDao.insertFeed(feed)
             if (id != -1L) feed.copy(id = id) else null
         }
-        fetchConcurrently(restored)
-        return moved.size + restored.size
+        fetchConcurrently(added)
     }
 
     // Toggle feed status

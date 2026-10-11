@@ -2,6 +2,7 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
@@ -12,7 +13,8 @@ class AppViewModelFactory(
     private val articleRepository: ArticleRepository,
     private val dictionaryRepository: DictionaryRepository,
     private val vocabularyRepository: VocabularyRepository,
-    private val rssFeedRepository: RssFeedRepository
+    private val rssFeedRepository: RssFeedRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
@@ -29,7 +31,7 @@ class AppViewModelFactory(
             }
 
             modelClass.isAssignableFrom(RssFeedViewModel::class.java) -> {
-                RssFeedViewModel(rssFeedRepository) as T
+                RssFeedViewModel(rssFeedRepository, userPreferencesRepository) as T
             }
 
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

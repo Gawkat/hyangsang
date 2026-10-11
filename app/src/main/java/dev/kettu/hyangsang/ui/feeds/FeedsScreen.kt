@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,7 +32,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -49,6 +50,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -86,6 +88,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.defaults.DefaultData
+import dev.kettu.hyangsang.data.defaults.DefaultFeed
 import dev.kettu.hyangsang.data.defaults.DefaultSource
 import dev.kettu.hyangsang.data.defaults.FeedSources
 import dev.kettu.hyangsang.data.local.entity.RssFeed
@@ -109,6 +113,7 @@ fun FeedsScreen(
     modifier: Modifier = Modifier
 ) {
     val feeds by viewModel.feeds.collectAsState()
+    val newDefaultFeeds by viewModel.newDefaultFeeds.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val refreshingFeedIds by viewModel.refreshingFeedIds.collectAsState()
     val context = LocalContext.current
@@ -123,6 +128,17 @@ fun FeedsScreen(
     var removingFeedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var renamingCategory by rememberSaveable { mutableStateOf<String?>(null) }
     var aboutSource by rememberSaveable { mutableStateOf<DefaultSource?>(null) }
+    var builtInFeedsList by rememberSaveable { mutableStateOf<BuiltInFeedsList?>(null) }
+    val listState = rememberLazyListState()
+
+    // The card loads after the list, and the list keeps the row that was at the top in place, so
+    // the card would appear above the screen. Show it when the user is still at the top
+    val hasNewDefaultFeeds = newDefaultFeeds.isNotEmpty()
+    LaunchedEffect(hasNewDefaultFeeds) {
+        if (hasNewDefaultFeeds && listState.firstVisibleItemIndex == 1 && listState.firstVisibleItemScrollOffset == 0) {
+            listState.scrollToItem(0)
+        }
+    }
 
     val categories = remember(feeds) { feeds.map { it.category }.distinct().sorted() }
     val groups = remember(feeds, grouping, sources) { groupFeeds(feeds, grouping, sources) }
@@ -213,24 +229,11 @@ fun FeedsScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.restore_default_feeds)) },
-                                leadingIcon = { Icon(Icons.Outlined.Restore, contentDescription = null) },
+                                text = { Text(stringResource(R.string.add_built_in_feeds)) },
+                                leadingIcon = { Icon(Icons.Outlined.LibraryAdd, contentDescription = null) },
                                 onClick = {
                                     showMenu = false
-                                    scope.launch {
-                                        val restored = viewModel.restoreDefaultFeeds()
-                                        snackbarHostState.showSnackbar(
-                                            if (restored == 0) {
-                                                context.getString(R.string.restore_nothing)
-                                            } else {
-                                                context.resources.getQuantityString(
-                                                    R.plurals.restored_feeds,
-                                                    restored,
-                                                    restored
-                                                )
-                                            }
-                                        )
-                                    }
+                                    builtInFeedsList = BuiltInFeedsList.ALL
                                 }
                             )
                         }
@@ -257,10 +260,21 @@ fun FeedsScreen(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             LazyColumn(
+                state = listState,
                 // Keep the last row clear of the floating button
                 contentPadding = PaddingValues(bottom = 88.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                if (hasNewDefaultFeeds) {
+                    item(key = "new_feeds") {
+                        NewFeedsCard(
+                            feeds = newDefaultFeeds,
+                            onReview = { builtInFeedsList = BuiltInFeedsList.NEW },
+                            onDismiss = viewModel::dismissNewDefaultFeeds,
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+                }
                 item(key = "helper") {
                     Text(
                         text = stringResource(R.string.feeds_helper),
@@ -409,6 +423,45 @@ fun FeedsScreen(
         )
     }
 
+    builtInFeedsList?.let { list ->
+        BuiltInFeedsSheet(
+            title = stringResource(
+                when (list) {
+                    BuiltInFeedsList.NEW -> R.string.new_built_in_feeds_title
+                    BuiltInFeedsList.ALL -> R.string.built_in_feeds_title
+                }
+            ),
+            description = stringResource(
+                when (list) {
+                    BuiltInFeedsList.NEW -> R.string.new_built_in_feeds_description
+                    BuiltInFeedsList.ALL -> R.string.built_in_feeds_description
+                }
+            ),
+            feeds = when (list) {
+                BuiltInFeedsList.NEW -> newDefaultFeeds
+                BuiltInFeedsList.ALL -> DefaultData.defaultFeeds
+            },
+            addedUrls = remember(feeds) { feeds.mapTo(HashSet()) { it.url } },
+            // Every feed in the list of new ones is new, so they're only marked in the full list
+            newUrls = when (list) {
+                BuiltInFeedsList.NEW -> emptySet()
+                BuiltInFeedsList.ALL -> newDefaultFeeds.mapTo(HashSet()) { it.url }
+            },
+            onAdd = { picked ->
+                viewModel.addDefaultFeeds(picked)
+                builtInFeedsList = null
+                picked.forEach { expandGroupsOf(it.url, context.getString(it.category.label)) }
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        context.resources.getQuantityString(R.plurals.added_feeds, picked.size, picked.size)
+                    )
+                }
+            },
+            onDismiss = { builtInFeedsList = null }
+        )
+    }
+
     aboutSource?.let { source ->
         SourceInfoSheet(source = source, onDismiss = { aboutSource = null })
     }
@@ -426,6 +479,49 @@ fun FeedsScreen(
             },
             onDismiss = { renamingCategory = null }
         )
+    }
+}
+
+private enum class BuiltInFeedsList { NEW, ALL }
+
+// Offers the built-in feeds added in app updates, until the user adds some or dismisses it
+@Composable
+private fun NewFeedsCard(
+    feeds: List<DefaultFeed>,
+    onReview: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sourceNames = feeds.map { it.source }.distinct().map { stringResource(it.label) }
+
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp)
+        ) {
+            Text(
+                text = pluralStringResource(R.plurals.new_built_in_feeds, feeds.size, feeds.size),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.new_built_in_feeds_sources, sourceNames.joinToString(", ")),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.dismiss))
+                }
+                TextButton(onClick = onReview) {
+                    Text(stringResource(R.string.review))
+                }
+            }
+        }
     }
 }
 

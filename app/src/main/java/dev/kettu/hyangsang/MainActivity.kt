@@ -118,7 +118,8 @@ class MainActivity : AppCompatActivity() {
                     app.articleRepository,
                     app.dictionaryRepository,
                     app.vocabularyRepository,
-                    app.rssFeedRepository
+                    app.rssFeedRepository,
+                    prefsRepository
                 )
             )
 
@@ -127,7 +128,8 @@ class MainActivity : AppCompatActivity() {
                     app.articleRepository,
                     app.dictionaryRepository,
                     app.vocabularyRepository,
-                    app.rssFeedRepository
+                    app.rssFeedRepository,
+                    prefsRepository
                 )
             )
 
@@ -136,7 +138,8 @@ class MainActivity : AppCompatActivity() {
                     app.articleRepository,
                     app.dictionaryRepository,
                     app.vocabularyRepository,
-                    app.rssFeedRepository
+                    app.rssFeedRepository,
+                    prefsRepository
                 )
             )
 
@@ -145,7 +148,8 @@ class MainActivity : AppCompatActivity() {
                     app.articleRepository,
                     app.dictionaryRepository,
                     app.vocabularyRepository,
-                    app.rssFeedRepository
+                    app.rssFeedRepository,
+                    prefsRepository
                 )
             )
 
