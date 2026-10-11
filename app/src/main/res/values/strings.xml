@@ -250,4 +250,20 @@
     <string name="source_slownews">Slow News</string>
     <string name="source_donga">Dong-A Ilbo</string>
     <string name="section_travel">Travel</string>
+    <string name="about_source">About this source</string>
+    <string name="source_sections">Sections: %1$s</string>
+    <string name="visit_website">Visit website</string>
+    <!-- Source descriptions follow the same pattern for every source: what it is and when it was
+         founded, who owns or funds it, and what its feeds contain. No judgements of the source,
+         and no claim that isn't cited in docs/feed-sources.md -->
+    <string name="about_yonhap_news">A news agency founded in 1980, designated as Korea\'s national news agency by a 2003 law. Its largest shareholder is a body set up under that law, and the government pays it for its news service. Mostly short news reports, published throughout the day.</string>
+    <string name="about_bbc_korean">The Korean service of the BBC World Service, the international news service of the UK\'s public broadcaster, launched in 2017. The World Service is funded mainly by the UK TV licence fee and the UK government. One feed with news and explainers on Korea and the world.</string>
+    <string name="about_sbs_news">A commercial TV and radio broadcaster founded in 1990. Its largest shareholder is TY Holdings. Section feeds with news reports.</string>
+    <string name="about_hankyoreh">A national daily newspaper founded in 1988 with money raised by selling shares to the public. It\'s owned by tens of thousands of shareholders, including its employees. Section feeds with news reports, features and columns.</string>
+    <string name="about_donga">A national daily newspaper founded in 1920. Its largest shareholder is a foundation named after one of its founders, Kim Seong-su. Section feeds with news reports, features and columns. Some sports articles come from Sports Dong-A, in the same media group.</string>
+    <string name="about_kids_donga">A daily newspaper for kindergarten and primary school children, published by the Dong-A Ilbo since 1964. One feed with short articles in plain language.</string>
+    <string name="about_kids_hankook">A daily newspaper for children, founded in 1960 by the Hankook Ilbo and now published by a separate company. One feed with news for children, plus children\'s poems and stories.</string>
+    <string name="about_econoi">A weekly newspaper that explains economics to children. It began in 1998 as a children\'s edition of the Seoul Economic Daily, and is now published by a separate company. One feed with articles on the economics of everyday life.</string>
+    <string name="about_easylaw">A government website that explains the laws of everyday life in plain language, run by the Ministry of Government Legislation since 2008. Not news: its feed lists guide pages that were added or updated.</string>
+    <string name="about_slownews">An online media outlet founded in 2012 that covers the context behind the news rather than breaking news. Run by a company, Slow News, that offers paid supporter memberships. One feed with explainers, essays and the daily 슬로우레터 digest.</string>
 </resources>

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.ViewAgenda
@@ -85,12 +86,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.defaults.DefaultSource
 import dev.kettu.hyangsang.data.defaults.FeedSources
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.repository.FeedCheckError
 import dev.kettu.hyangsang.data.repository.FeedCheckResult
 import dev.kettu.hyangsang.ui.components.FeedAvatar
+import dev.kettu.hyangsang.ui.components.SourceInfoSheet
 import dev.kettu.hyangsang.ui.components.rememberCategoryIcons
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
@@ -119,6 +122,7 @@ fun FeedsScreen(
     var editingFeedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var removingFeedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var renamingCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    var aboutSource by rememberSaveable { mutableStateOf<DefaultSource?>(null) }
 
     val categories = remember(feeds) { feeds.map { it.category }.distinct().sorted() }
     val groups = remember(feeds, grouping, sources) { groupFeeds(feeds, grouping, sources) }
@@ -267,6 +271,12 @@ fun FeedsScreen(
                 }
                 groups.forEach { group ->
                     val isExpanded = group.key !in collapsedGroups
+                    // Built-in sources are described, feeds the user added from other sites aren't
+                    val source = if (grouping == FeedGrouping.SOURCE) {
+                        DefaultSource.forUrl(group.feeds.first().url)
+                    } else {
+                        null
+                    }
                     item(key = group.key) {
                         GroupHeader(
                             name = group.name,
@@ -314,8 +324,22 @@ fun FeedsScreen(
                             } else {
                                 null
                             },
+                            onAbout = source?.let { { aboutSource = it } },
                             modifier = Modifier.animateItem()
                         )
+                    }
+                    if (isExpanded && source != null) {
+                        item(key = "${group.key}:about") {
+                            Text(
+                                text = stringResource(source.about),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                // Lined up with the group and feed names
+                                modifier = Modifier
+                                    .animateItem()
+                                    .padding(start = 72.dp, end = 24.dp, bottom = 8.dp)
+                            )
+                        }
                     }
                     if (isExpanded) {
                         items(group.feeds, key = { it.id }) { feed ->
@@ -385,6 +409,10 @@ fun FeedsScreen(
         )
     }
 
+    aboutSource?.let { source ->
+        SourceInfoSheet(source = source, onDismiss = { aboutSource = null })
+    }
+
     renamingCategory?.takeIf { it in categories }?.let { category ->
         RenameCategoryDialog(
             category = category,
@@ -440,6 +468,7 @@ private fun GroupHeader(
     onSetEnabled: (Boolean) -> Unit,
     onRefresh: () -> Unit,
     onRename: (() -> Unit)?,
+    onAbout: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val enabledCount = feeds.count { it.isEnabled }
@@ -524,6 +553,16 @@ private fun GroupHeader(
                                     onClick = {
                                         showMenu = false
                                         onRename()
+                                    }
+                                )
+                            }
+                            if (onAbout != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.about_source)) },
+                                    leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        onAbout()
                                     }
                                 )
                             }

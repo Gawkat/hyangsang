@@ -18,7 +18,7 @@ class FeedSources(private val sourcesByHost: Map<String, String>) {
     companion object {
         fun from(context: Context) = FeedSources(
             DefaultData.defaultFeeds
-                .mapNotNull { feed -> hostOf(feed.url)?.let { it to context.getString(feed.source) } }
+                .mapNotNull { feed -> hostOf(feed.url)?.let { it to context.getString(feed.source.label) } }
                 .toMap()
         )
 
