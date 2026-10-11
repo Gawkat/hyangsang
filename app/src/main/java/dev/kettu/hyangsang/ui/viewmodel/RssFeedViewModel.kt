@@ -2,7 +2,9 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.kettu.hyangsang.data.defaults.DefaultFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.FeedCheckResult
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import kotlinx.coroutines.async
@@ -14,7 +16,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RssFeedViewModel(private val rssFeedRepository: RssFeedRepository) : ViewModel() {
+class RssFeedViewModel(
+    private val rssFeedRepository: RssFeedRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
+) : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
@@ -27,6 +32,28 @@ class RssFeedViewModel(private val rssFeedRepository: RssFeedRepository) : ViewM
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    // Built-in feeds added in app updates since the user last looked, that they don't have
+    val newDefaultFeeds: StateFlow<List<DefaultFeed>> = rssFeedRepository
+        .newDefaultFeeds(userPreferencesRepository.defaultFeedsSeenFlow)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Stops offering the current new built-in feeds. They can still be added from the full list
+    fun dismissNewDefaultFeeds() {
+        viewModelScope.launch { userPreferencesRepository.markDefaultFeedsSeen() }
+    }
+
+    // The new built-in feeds were in the list the user picked from, so they count as seen
+    fun addDefaultFeeds(feeds: List<DefaultFeed>) {
+        viewModelScope.launch {
+            userPreferencesRepository.markDefaultFeedsSeen()
+            rssFeedRepository.addDefaultFeeds(feeds)
+        }
+    }
 
     suspend fun checkFeed(url: String): FeedCheckResult = rssFeedRepository.checkFeed(url)
 
@@ -87,9 +114,6 @@ class RssFeedViewModel(private val rssFeedRepository: RssFeedRepository) : ViewM
     }
 
     suspend fun countSavedArticles(feed: RssFeed): Int = rssFeedRepository.countSavedArticles(feed)
-
-    // Returns how many feeds were re-added
-    suspend fun restoreDefaultFeeds(): Int = rssFeedRepository.restoreDefaultFeeds()
 
     fun deleteFeed(feed: RssFeed) {
         viewModelScope.launch {

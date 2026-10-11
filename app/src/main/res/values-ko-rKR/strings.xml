@@ -97,11 +97,25 @@
     <string name="more_options">더보기</string>
     <string name="feeds_helper">피드를 누르면 이름이나 카테고리를 바꾸거나 삭제할 수 있습니다.</string>
     <string name="refresh_all_feeds">모든 피드 새로고침</string>
-    <string name="restore_default_feeds">기본 피드 복원</string>
-    <plurals name="restored_feeds">
-        <item quantity="other">피드 %1$d개 복원됨</item>
+    <string name="add_built_in_feeds">기본 피드 추가</string>
+    <plurals name="new_built_in_feeds">
+        <item quantity="other">새 기본 피드 %1$d개</item>
     </plurals>
-    <string name="restore_nothing">기본 피드가 모두 원래 카테고리에 추가되어 있습니다</string>
+    <string name="new_built_in_feeds_sources">%1$s</string>
+    <string name="review">살펴보기</string>
+    <string name="dismiss">닫기</string>
+    <string name="new_built_in_feeds_title">새 기본 피드</string>
+    <string name="new_built_in_feeds_description">앱 업데이트로 추가된 피드입니다. 선택한 피드만 추가됩니다.</string>
+    <string name="built_in_feeds_title">기본 피드</string>
+    <string name="built_in_feeds_description">추가할 피드를 선택하세요. 이미 있는 피드는 체크되어 있습니다.</string>
+    <string name="built_in_feed_new">새 피드</string>
+    <string name="add_feeds">추가</string>
+    <plurals name="add_feeds_count">
+        <item quantity="other">피드 %1$d개 추가</item>
+    </plurals>
+    <plurals name="added_feeds">
+        <item quantity="other">피드 %1$d개를 추가했습니다</item>
+    </plurals>
     <string name="feed_status_off">꺼짐</string>
     <string name="feed_status_never">아직 업데이트되지 않음</string>
     <string name="feed_status_updated">%1$s 업데이트됨</string>

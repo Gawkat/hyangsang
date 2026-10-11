@@ -147,7 +147,7 @@ class HyangsangApplication : Application() {
             database.rssFeedDao(),
             database.articleDao(),
             rssFeedService,
-            defaultFeeds = { DefaultData.resolveFeeds(this) },
+            resolveDefaultFeeds = { DefaultData.resolveFeeds(this, it) },
             localizeFeeds = { DefaultData.localizeFeeds(this, it) }
         )
     }

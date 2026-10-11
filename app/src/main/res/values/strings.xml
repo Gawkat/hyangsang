@@ -100,12 +100,28 @@
     <string name="more_options">More options</string>
     <string name="feeds_helper">Tap a feed to rename it, change its category, or remove it.</string>
     <string name="refresh_all_feeds">Refresh all feeds</string>
-    <string name="restore_default_feeds">Restore built-in feeds</string>
-    <plurals name="restored_feeds">
-        <item quantity="one">Restored %1$d feed</item>
-        <item quantity="other">Restored %1$d feeds</item>
+    <string name="add_built_in_feeds">Add built-in feeds</string>
+    <plurals name="new_built_in_feeds">
+        <item quantity="one">%1$d new built-in feed</item>
+        <item quantity="other">%1$d new built-in feeds</item>
     </plurals>
-    <string name="restore_nothing">All built-in feeds are already added and in their categories</string>
+    <string name="new_built_in_feeds_sources">From %1$s</string>
+    <string name="review">Review</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="new_built_in_feeds_title">New built-in feeds</string>
+    <string name="new_built_in_feeds_description">Feeds added in app updates. Only the ones you pick are added.</string>
+    <string name="built_in_feeds_title">Built-in feeds</string>
+    <string name="built_in_feeds_description">Pick feeds to add. Feeds you already have are checked.</string>
+    <string name="built_in_feed_new">New</string>
+    <string name="add_feeds">Add</string>
+    <plurals name="add_feeds_count">
+        <item quantity="one">Add %1$d feed</item>
+        <item quantity="other">Add %1$d feeds</item>
+    </plurals>
+    <plurals name="added_feeds">
+        <item quantity="one">Added %1$d feed</item>
+        <item quantity="other">Added %1$d feeds</item>
+    </plurals>
     <string name="feed_status_off">Off</string>
     <string name="feed_status_never">Not updated yet</string>
     <string name="feed_status_updated">Updated %1$s</string>

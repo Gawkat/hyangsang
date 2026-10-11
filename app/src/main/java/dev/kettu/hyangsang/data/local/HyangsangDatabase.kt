@@ -76,10 +76,11 @@ abstract class HyangsangDatabase : RoomDatabase() {
             return free * 2 > total
         }
 
-        // A new install gets every built-in feed, so none of them are new to the user
+        // A new install gets every built-in feed, so none of them are new to the user. Marked
+        // first, so the feeds inserted one by one don't show as new in the meantime
         private suspend fun seedDefaultFeeds(context: Context, dao: RssFeedDao) {
-            DefaultData.resolveFeeds(context).forEach { dao.insertFeed(it) }
             UserPreferencesRepository(context.applicationContext).markDefaultFeedsSeen()
+            DefaultData.resolveFeeds(context).forEach { dao.insertFeed(it) }
         }
     }
 }
