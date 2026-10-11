@@ -104,8 +104,13 @@ class UserPreferencesRepository(private val context: Context) {
         preferences[Keys.DEFAULT_FEEDS_SEEN] ?: DefaultData.BASELINE_VERSION
     }.distinctUntilChanged()
 
-    suspend fun markDefaultFeedsSeen() {
-        context.dataStore.edit { it[Keys.DEFAULT_FEEDS_SEEN] = DefaultData.VERSION }
+    suspend fun markDefaultFeedsSeen() = setDefaultFeedsSeen(DefaultData.VERSION)
+
+    // Null clears it, as for users from before it was stored. Only set directly for testing
+    suspend fun setDefaultFeedsSeen(version: Int?) {
+        context.dataStore.edit {
+            if (version == null) it.remove(Keys.DEFAULT_FEEDS_SEEN) else it[Keys.DEFAULT_FEEDS_SEEN] = version
+        }
     }
 
     suspend fun setTheme(theme: String) {
