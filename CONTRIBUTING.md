@@ -11,8 +11,8 @@ Thank you for considering contributing to Hyangsang!
 
 Missing something that should be there?
 
-* Check the [discussions](https://github.com/Gawkat/hyangsang/discussions) to see if someone
-  has already suggested it.
+* Check the [discussions](https://github.com/Gawkat/hyangsang/discussions) to see if someone has
+  already suggested it.
 * Describe the feature in as much detail as possible.
 * Explain why it's useful and how it fits in with the rest of the app.
 
@@ -20,8 +20,8 @@ Missing something that should be there?
 
 Found a bug?
 
-* Check the [open issues](https://github.com/Gawkat/hyangsang/issues) to make sure it
-  hasn't been reported already.
+* Check the [open issues](https://github.com/Gawkat/hyangsang/issues) to make sure it hasn't been
+  reported already.
 * Make sure the bug hasn't been fixed already. Use the latest version of the app to reproduce it.
 * Open a new issue and describe the bug in as much detail as possible. Also include steps to
   reproduce it and details about your environment (e.g. app version, Android version, screen size).
@@ -39,11 +39,13 @@ Want to contribute with a patch?
    # or
    git checkout -b fix/short-bug-description
    ```
+   Other prefixes, such as `chore/`, `docs/`, `refactor/`, are fine if they fit the change better.
 4. Implement your changes. Make sure the project still builds/runs and that you haven't broken
    existing functionality. Run the tests (see [Tests](#tests)) and check
    [When you change...](#when-you-change) for anything else your change needs. CI runs the tests on
    every pull request too.
-5. Write clean, concise commit messages.
+5. Write clean, concise commit messages. Pull requests are rebase merged, so each commit lands on
+   `main` as it is: squash fixups before submitting.
 6. Submit your PR against our `main` branch. Provide a brief description of what you changed and
    link it to the relevant issue (e.g., `Closes #12`).
 
@@ -57,8 +59,8 @@ articles copied from news sites.
 ## Project layout
 
 * `app` - the Android app
-* `parser` - a plain Kotlin library that turns article pages into content blocks, with a
-  parser per news site and a generic fallback
+* `parser` - a plain Kotlin library that turns article pages into content blocks, with a parser per
+  news site and a generic fallback
 * `tools/dictionary-generator` - builds the bundled dictionary from the NIKL dictionary data
 
 ## Tests
@@ -75,11 +77,11 @@ The instrumented tests, such as the Room migration tests, need a running emulato
 
 Running them uninstalls the app from the device, along with its data.
 
-Some parser tests run against saved copies of real articles in `parser/src/test/resources`, which
-is ignored by git since the articles belong to the news sites. Without them those tests are
-skipped, and Gradle reports them as skipped. To run them, save an article page from the site
-under the name the test reads, such as `bbc_sample.html`. They check details of specific
-articles, so expect to adjust the assertions for a different article.
+Some parser tests run against saved copies of real articles in `parser/src/test/resources`, which is
+ignored by git since the articles belong to the news sites. Without them those tests are skipped,
+and Gradle reports them as skipped. To run them, save an article page from the site under the name
+the test reads, such as `bbc_sample.html`. They check details of specific articles, so expect to
+adjust the assertions for a different article.
 
 `LookupEvaluationTest` measures how often word lookups show the right dictionary entry, and is
 skipped without the bundled dictionary. It runs three sets of cases in `app/src/test/resources`:
@@ -89,13 +91,13 @@ skipped without the bundled dictionary. It runs three sets of cases in `app/src/
 * `lookup-eval.tsv` - sentences from real articles, with the category of their feed. The file is
   ignored by git like the saved articles, and its test is skipped without it.
 
-The format of the sets is described in the test. See [Dictionary lookup
-ranking](#dictionary-lookup-ranking) for how to use them.
+The format of the sets is described in the test.
+See [Dictionary lookup ranking](#dictionary-lookup-ranking) for how to use them.
 
 ## Release builds
 
-Release builds are signed with the key configured in `keystore.properties` at the repository
-root, which is ignored by git:
+Release builds are signed with the key configured in `keystore.properties` at the repository root,
+which is ignored by git:
 
 ```properties
 storeFile=C:/path/outside/the/repository/hyangsang-release.jks
@@ -112,25 +114,24 @@ Without it, `./gradlew :app:assembleRelease` builds an unsigned APK.
 
 Raise `ArticleParser.VERSION` in
 `parser/src/main/kotlin/dev/kettu/hyangsang/parser/ArticleParser.kt` when the change should reach
-articles already stored, such as a fix for missing or broken content. Articles parsed with an
-older version are parsed again in the background the next time they're opened.
+articles already stored, such as a fix for missing or broken content. Articles parsed with an older
+version are parsed again in the background the next time they're opened.
 
-A parser change that only matters for new articles doesn't need a bump. Each bump re-fetches
-every article once, as it's opened.
+A parser change that only matters for new articles doesn't need a bump. Each bump re-fetches every
+article once, as it's opened.
 
 ### The built-in feeds
 
-A feed from a new site needs a `DefaultSource`, with a description in both string files. Follow
-the rules in [docs/feed-sources.md](docs/feed-sources.md), and add a citation for each claim
-there.
+A feed from a new site needs a `DefaultSource`, with a description in both string files. Follow the
+rules in [docs/feed-sources.md](docs/feed-sources.md), and add a citation for each claim there.
 
 When adding feeds, raise `DefaultData.VERSION` and give the new feeds the new version as their
-`addedIn`, so existing users are offered them. If it was already raised since the last release,
-use that version instead: a version that has shipped must not get more feeds, since users who saw
-it wouldn't be offered them. Never lower or reuse it, even when removing feeds.
+`addedIn`, so existing users are offered them. If it was already raised since the last release, use
+that version instead: a version that has shipped must not get more feeds, since users who saw it
+wouldn't be offered them. Never lower or reuse it, even when removing feeds.
 
-A feed in a new `DefaultCategory` also needs a place in `FeedTopic`, so the first-run setup can
-pick it. `FeedTopicTest` fails until it has one.
+A feed in a new `DefaultCategory` also needs a place in `FeedTopic`, so the first-run setup can pick
+it. `FeedTopicTest` fails until it has one.
 
 ### The user database schema
 
@@ -151,9 +152,9 @@ replaced from the `dictionary.db` asset. Neither the asset nor its source data i
 
 To regenerate it:
 
-1. Download the dictionary's JSON files from the [Korean-English Learners' Dictionary
-   site](https://krdict.korean.go.kr/kor/mainAction), from 사전 전체 내려받기 at the bottom of the
-   page. The files total about 1 GB.
+1. Download the dictionary's JSON files from
+   the [Korean-English Learners' Dictionary site](https://krdict.korean.go.kr/kor/mainAction), from
+   사전 전체 내려받기 at the bottom of the page. The files total about 1 GB.
 2. Put them in `tools/dictionary-generator/data`, which is ignored by git. Keep them out of
    `app/src/main/assets`, which would package them into the app.
 3. Run the generator with the new version. It writes `app/src/main/assets/dictionary.db`:
@@ -164,18 +165,18 @@ To regenerate it:
 
    A different input folder can be given as a second argument, relative to the repository root.
 
-Installed copies are only replaced when `DICTIONARY_VERSION` changes, so raise it whenever the
-asset is regenerated. The version is the NIKL release date followed by a two-digit revision, such
-as `2026091901`, and must match the version given to the generator. `DictionaryAssetTest` checks
-that they match.
+Installed copies are only replaced when `DICTIONARY_VERSION` changes, so raise it whenever the asset
+is regenerated. The version is the NIKL release date followed by a two-digit revision, such as
+`2026091901`, and must match the version given to the generator. `DictionaryAssetTest` checks that
+they match.
 
 Then run `LookupEvaluationTest`, since a new release can break the lookup evaluation sets (see
 [Dictionary lookup ranking](#dictionary-lookup-ranking)).
 
 ### Dictionary lookup ranking
 
-When a word has several dictionary entries, `HomonymRanking` decides which one a lookup shows
-first. Measure ranking changes with `LookupEvaluationTest` (see [Tests](#tests)):
+When a word has several dictionary entries, `HomonymRanking` decides which one a lookup shows first.
+Measure ranking changes with `LookupEvaluationTest` (see [Tests](#tests)):
 
 1. Work against the dev set, `lookup-eval-krdict-dev.tsv`, using its per-case report in
    `app/build/reports`.
@@ -184,10 +185,9 @@ first. Measure ranking changes with `LookupEvaluationTest` (see [Tests](#tests))
 3. Raise the baselines in `LookupEvaluationTest` for the sets the change improves. Each set fails
    below its baseline.
 
-The dictionary sets are generated from the dictionary's example sentences and refer to entries
-by homonym number, which can change between dictionary releases. If the test reports entries
-missing from the dictionary after it's regenerated, generate the sets again and measure the
-baselines again:
+The dictionary sets are generated from the dictionary's example sentences and refer to entries by
+homonym number, which can change between dictionary releases. If the test reports entries missing
+from the dictionary after it's regenerated, generate the sets again and measure the baselines again:
 
 ```bash
 ./gradlew :tools:dictionary-generator:generateEvalSet
