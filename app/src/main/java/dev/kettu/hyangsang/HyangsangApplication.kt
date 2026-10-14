@@ -4,15 +4,6 @@ import android.app.Application
 import android.app.UiModeManager
 import android.content.res.Configuration
 import android.os.Build
-import dev.kettu.hyangsang.data.defaults.DefaultData
-import dev.kettu.hyangsang.data.local.DictionaryDatabase
-import dev.kettu.hyangsang.data.local.HyangsangDatabase
-import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
-import dev.kettu.hyangsang.data.repository.ArticleRepository
-import dev.kettu.hyangsang.data.repository.DictionaryRepository
-import dev.kettu.hyangsang.data.repository.RssFeedRepository
-import dev.kettu.hyangsang.data.repository.VocabularyRepository
-import dev.kettu.hyangsang.network.RssFeedService
 import dev.kettu.hyangsang.sync.FeedSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,49 +15,27 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava
-import retrofit2.Retrofit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class HyangsangApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val database: HyangsangDatabase by lazy { HyangsangDatabase.getDatabase(this) }
-    val dictionaryDatabase: DictionaryDatabase by lazy { DictionaryDatabase.getDatabase(this) }
-
-    private val retrofit by lazy {
-        val logging = okhttp3.logging.HttpLoggingInterceptor().apply {
-            level = okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
-        }
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .build()
-
-        Retrofit.Builder()
-            // Placeholder URL
-            .baseUrl("https://www.kettu.dev/")
-            .client(client)
-            .build()
-    }
-
-    val rssFeedService: RssFeedService by lazy {
-        retrofit.create(RssFeedService::class.java)
-    }
+    val container = AppContainer(this)
 
     override fun onCreate() {
         super.onCreate()
 
         applicationScope.launch {
             // The language may have changed while the app wasn't running
-            rssFeedRepository.localizeDefaultNames()
+            container.rssFeedRepository.localizeDefaultNames()
 
             // Fetch latest articles from feeds
-            rssFeedRepository.refreshEnabledFeeds()
+            container.rssFeedRepository.refreshEnabledFeeds()
         }
 
         applicationScope.launch {
-            userPreferencesRepository.feedSyncIntervalFlow.collect { interval ->
+            container.userPreferencesRepository.feedSyncIntervalFlow.collect { interval ->
                 FeedSyncWorker.schedule(this@HyangsangApplication, interval)
             }
         }
@@ -74,17 +43,19 @@ class HyangsangApplication : Application() {
         // Runs at startup and again when either setting changes
         applicationScope.launch {
             combine(
-                userPreferencesRepository.articleRetentionFlow,
-                userPreferencesRepository.contentRetentionFlow,
+                container.userPreferencesRepository.articleRetentionFlow,
+                container.userPreferencesRepository.contentRetentionFlow,
                 ::Pair
             ).collect { (articleRetention, contentRetention) ->
-                articleRepository.pruneStorage(articleRetention, contentRetention)
+                container.articleRepository.pruneStorage(articleRetention, contentRetention)
             }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             applicationScope.launch {
-                userPreferencesRepository.themeFlow.distinctUntilChanged().collect { theme ->
+                container.userPreferencesRepository.themeFlow
+                    .distinctUntilChanged()
+                    .collect { theme ->
                     applyApplicationNightMode(theme)
                 }
             }
@@ -96,8 +67,8 @@ class HyangsangApplication : Application() {
      * a new install as pending, so the answer isn't known before then.
      */
     val firstRunSetupPending: Flow<Boolean> = flow {
-        withContext(Dispatchers.IO) { database.openHelper.writableDatabase }
-        emitAll(userPreferencesRepository.firstRunSetupPendingFlow)
+        withContext(Dispatchers.IO) { container.database.openHelper.writableDatabase }
+        emitAll(container.userPreferencesRepository.firstRunSetupPendingFlow)
     }
 
     private val readerResourcesLoaded = AtomicBoolean(false)
@@ -116,14 +87,14 @@ class HyangsangApplication : Application() {
         // Opening copies the bundled dictionary on first launch or after an update, which would
         // otherwise delay the first lookup
         applicationScope.launch {
-            dictionaryDatabase.openHelper.writableDatabase
+            container.dictionaryDatabase.openHelper.writableDatabase
         }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         // Also runs for other changes, such as rotation, when there's nothing to rename
-        applicationScope.launch { rssFeedRepository.localizeDefaultNames() }
+        applicationScope.launch { container.rssFeedRepository.localizeDefaultNames() }
     }
 
     /**
@@ -139,33 +110,5 @@ class HyangsangApplication : Application() {
             else -> UiModeManager.MODE_NIGHT_AUTO
         }
         getSystemService(UiModeManager::class.java).setApplicationNightMode(mode)
-    }
-
-    val articleRepository: ArticleRepository by lazy {
-        ArticleRepository(database.articleDao())
-    }
-
-    val dictionaryRepository: DictionaryRepository by lazy {
-        DictionaryRepository(
-            dictionaryDatabase.dictionaryDao()
-        )
-    }
-
-    val vocabularyRepository: VocabularyRepository by lazy {
-        VocabularyRepository(database.vocabularyDao())
-    }
-
-    val rssFeedRepository: RssFeedRepository by lazy {
-        RssFeedRepository(
-            database.rssFeedDao(),
-            database.articleDao(),
-            rssFeedService,
-            resolveDefaultFeeds = { DefaultData.resolveFeeds(this, it) },
-            localizeFeeds = { DefaultData.localizeFeeds(this, it) }
-        )
-    }
-
-    val userPreferencesRepository: UserPreferencesRepository by lazy {
-        UserPreferencesRepository(applicationContext)
     }
 }

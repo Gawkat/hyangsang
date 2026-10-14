@@ -2,6 +2,9 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.kettu.hyangsang.appContainer
 import dev.kettu.hyangsang.data.local.entity.VocabularyWord
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,6 +55,14 @@ class VocabularyViewModel(private val vocabularyRepository: VocabularyRepository
                 vocabularyRepository.upsertWord(
                     VocabularyWord(word = word, status = 0, timesEncountered = 1)
                 )
+            }
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                VocabularyViewModel(appContainer.vocabularyRepository)
             }
         }
     }

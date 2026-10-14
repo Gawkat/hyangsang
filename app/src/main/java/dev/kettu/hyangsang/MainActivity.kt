@@ -71,7 +71,6 @@ import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
 import dev.kettu.hyangsang.ui.setup.SetupScreen
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
-import dev.kettu.hyangsang.ui.viewmodel.AppViewModelFactory
 import dev.kettu.hyangsang.ui.viewmodel.ArticleUiState
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
@@ -85,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         val app = application as HyangsangApplication
         app.loadReaderResources()
-        val prefsRepository = app.userPreferencesRepository
+        val prefsRepository = app.container.userPreferencesRepository
 
         setContent {
             val theme by prefsRepository.themeFlow.collectAsState(initial = "System default")
@@ -119,45 +118,17 @@ class MainActivity : AppCompatActivity() {
                 onDispose {}
             }
 
-            val articleViewModel: ArticleViewModel = viewModel(
-                factory = AppViewModelFactory(
-                    app.articleRepository,
-                    app.dictionaryRepository,
-                    app.vocabularyRepository,
-                    app.rssFeedRepository,
-                    prefsRepository
-                )
-            )
+            val articleViewModel: ArticleViewModel = viewModel(factory = ArticleViewModel.Factory)
 
             val dictionaryViewModel: DictionaryViewModel = viewModel(
-                factory = AppViewModelFactory(
-                    app.articleRepository,
-                    app.dictionaryRepository,
-                    app.vocabularyRepository,
-                    app.rssFeedRepository,
-                    prefsRepository
-                )
+                factory = DictionaryViewModel.Factory
             )
 
             val vocabularyViewModel: VocabularyViewModel = viewModel(
-                factory = AppViewModelFactory(
-                    app.articleRepository,
-                    app.dictionaryRepository,
-                    app.vocabularyRepository,
-                    app.rssFeedRepository,
-                    prefsRepository
-                )
+                factory = VocabularyViewModel.Factory
             )
 
-            val feedViewModel: RssFeedViewModel = viewModel(
-                factory = AppViewModelFactory(
-                    app.articleRepository,
-                    app.dictionaryRepository,
-                    app.vocabularyRepository,
-                    app.rssFeedRepository,
-                    prefsRepository
-                )
-            )
+            val feedViewModel: RssFeedViewModel = viewModel(factory = RssFeedViewModel.Factory)
 
             // Null until the database is open. Once shown, the setup stays until the user leaves
             // it, although it stops being pending as soon as the feeds are added

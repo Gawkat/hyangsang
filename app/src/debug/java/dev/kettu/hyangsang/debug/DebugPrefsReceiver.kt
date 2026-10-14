@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
 class DebugPrefsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val version = if (intent.hasExtra(DEFAULT_FEEDS_SEEN)) intent.getIntExtra(DEFAULT_FEEDS_SEEN, 0) else null
-        val prefs = (context.applicationContext as HyangsangApplication).userPreferencesRepository
+        val app = context.applicationContext as HyangsangApplication
+        val prefs = app.container.userPreferencesRepository
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {

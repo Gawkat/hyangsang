@@ -2,6 +2,9 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.kettu.hyangsang.appContainer
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
@@ -233,6 +236,14 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 transform(it)
             } else {
                 it
+            }
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                ArticleViewModel(appContainer.articleRepository)
             }
         }
     }
