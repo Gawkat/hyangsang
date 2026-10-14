@@ -2,6 +2,9 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.kettu.hyangsang.appContainer
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
 import dev.kettu.hyangsang.data.repository.LookupContext
@@ -46,5 +49,13 @@ class DictionaryViewModel(
         lookupJob = null
         _lookupResult.value = emptyMap()
         _isLookingUp.value = false
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                DictionaryViewModel(appContainer.dictionaryRepository)
+            }
+        }
     }
 }

@@ -21,11 +21,11 @@ class FeedSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val app = applicationContext as HyangsangApplication
+        val container = (applicationContext as HyangsangApplication).container
         // Each feed records its own failure, and the next run tries again
-        app.rssFeedRepository.refreshEnabledFeeds()
-        val prefs = app.userPreferencesRepository
-        app.articleRepository.pruneStorage(
+        container.rssFeedRepository.refreshEnabledFeeds()
+        val prefs = container.userPreferencesRepository
+        container.articleRepository.pruneStorage(
             prefs.articleRetentionFlow.first(),
             prefs.contentRetentionFlow.first()
         )

@@ -2,6 +2,9 @@ package dev.kettu.hyangsang.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.kettu.hyangsang.appContainer
 import dev.kettu.hyangsang.data.defaults.DefaultFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
@@ -148,6 +151,17 @@ class RssFeedViewModel(
                 // TODO: log error?
             } finally {
                 _isRefreshing.value = false
+            }
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                RssFeedViewModel(
+                    appContainer.rssFeedRepository,
+                    appContainer.userPreferencesRepository
+                )
             }
         }
     }
