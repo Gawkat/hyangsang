@@ -92,6 +92,13 @@ skipped without the bundled dictionary. It runs three sets of cases in `app/src/
   ignored by git like the saved articles, and its test is skipped without it.
 
 The format of the sets is described in the test.
+
+To collect cases for `lookup-eval.tsv` while reading, turn on Report wrong lookups in the app's
+settings. The lookup sheet then gets a button for saving a lookup that shows the wrong entry. Switch
+to the right entry first, if the sheet has it, and it's saved as the expected one. Saved lookups are
+shared from the settings as tab-separated rows. Their first five columns are the evaluation set's,
+so a row with an expected entry can be added to the set as it is. The rest, such as how Open Korean
+Text split the word, help find the cause.
 See [Dictionary lookup ranking](#dictionary-lookup-ranking) for how to use them.
 
 ## Release builds

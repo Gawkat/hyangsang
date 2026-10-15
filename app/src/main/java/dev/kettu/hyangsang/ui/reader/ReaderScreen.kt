@@ -1,6 +1,7 @@
 package dev.kettu.hyangsang.ui.reader
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -115,7 +116,8 @@ fun ReaderScreen(
     onRefreshResultShown: () -> Unit,
     downloadFailed: Boolean,
     onRetryDownloadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    collectLookupReports: Boolean = false
 ) {
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
     val isLookingUp by dictionaryViewModel.isLookingUp.collectAsState()
@@ -133,6 +135,14 @@ fun ReaderScreen(
             dictionaryViewModel.lookupWord(word, LookupContext(sentence, feedCategory))
         },
         onClearLookup = { dictionaryViewModel.clearLookup() },
+        onReportLookup = if (collectLookupReports) {
+            { shown, picked, note ->
+                dictionaryViewModel.reportLookup(shown, picked, note, articleWithFeed.article.sourceUrl)
+                Toast.makeText(context, R.string.lookup_report_saved, Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            null
+        },
         readerSettings = readerSettings,
         onReaderSettingsChange = onReaderSettingsChange,
         currentTheme = currentTheme,
@@ -170,7 +180,8 @@ fun ReaderContent(
     onRefreshResultShown: () -> Unit,
     downloadFailed: Boolean,
     onRetryDownloadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReportLookup: ((shown: DictionaryWithSenses?, picked: DictionaryWithSenses?, note: String) -> Unit)? = null
 ) {
     val article = articleWithFeed.article
     val contentBlocks = article.content.orEmpty()
@@ -485,7 +496,8 @@ fun ReaderContent(
                             Constants.WEB_DICTIONARY_SEARCH_URL + Uri.encode(term)
                         )
                     },
-                    modifier = Modifier.heightIn(max = lookupContentMaxHeight)
+                    modifier = Modifier.heightIn(max = lookupContentMaxHeight),
+                    onReport = onReportLookup
                 )
             }
         }

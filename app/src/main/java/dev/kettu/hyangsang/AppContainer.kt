@@ -9,11 +9,13 @@ import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
+import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
 import dev.kettu.hyangsang.network.RssFeedService
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import java.io.File
 
 /**
  * Creates the app's shared dependencies, each on first use. The application holds the one
@@ -52,7 +54,11 @@ class AppContainer(private val context: Context) {
         )
     }
 
-    val vocabularyRepository: VocabularyRepository by lazy {
+    val lookupReportRepository: LookupReportRepository by lazy {
+        LookupReportRepository(File(context.filesDir, "lookup-reports.tsv"))
+    }
+
+    val vocabularyRepository:VocabularyRepository by lazy {
         VocabularyRepository(database.vocabularyDao())
     }
 

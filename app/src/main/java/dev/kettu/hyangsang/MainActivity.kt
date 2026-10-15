@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
@@ -60,6 +61,7 @@ import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
+import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
@@ -150,6 +152,7 @@ class MainActivity : AppCompatActivity() {
 
                     else -> MainApp(
                         prefsRepository = prefsRepository,
+                        lookupReportRepository = app.container.lookupReportRepository,
                         articleViewModel = articleViewModel,
                         dictionaryViewModel = dictionaryViewModel,
                         vocabularyViewModel = vocabularyViewModel,
@@ -197,6 +200,7 @@ private data class NavItem(
 @Composable
 fun MainApp(
     prefsRepository: UserPreferencesRepository,
+    lookupReportRepository: LookupReportRepository,
     articleViewModel: ArticleViewModel,
     dictionaryViewModel: DictionaryViewModel,
     vocabularyViewModel: VocabularyViewModel,
@@ -212,6 +216,7 @@ fun MainApp(
 ) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    val collectLookupReports by prefsRepository.collectLookupReportsFlow.collectAsState(initial = false)
     val discoverListState = rememberLazyListState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
@@ -401,7 +406,8 @@ fun MainApp(
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
                         onMoreTextSettingsClick = {
                             entry.ifResumed { navController.navigate(Routes.TEXT_LAYOUT) }
-                        }
+                        },
+                        collectLookupReports = collectLookupReports
                     )
                 }
                 composable(Routes.TEXT_LAYOUT) { entry ->
@@ -417,6 +423,8 @@ fun MainApp(
                     )
                 }
                 composable(Routes.SETTINGS) { entry ->
+                    val context = LocalContext.current
+                    val lookupReportCount by lookupReportRepository.reportCount.collectAsState(initial = 0)
                     SettingsScreen(
                         currentTheme = currentTheme,
                         onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
@@ -442,6 +450,23 @@ fun MainApp(
                         onContentRetentionChange = {
                             scope.launch { prefsRepository.setContentRetention(it) }
                         },
+                        collectLookupReports = collectLookupReports,
+                        onCollectLookupReportsChange = {
+                            scope.launch { prefsRepository.setCollectLookupReports(it) }
+                        },
+                        lookupReportCount = lookupReportCount,
+                        onShareLookupReports = {
+                            scope.launch {
+                                val reports = lookupReportRepository.export() ?: return@launch
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.lookup_reports_share_subject))
+                                    putExtra(Intent.EXTRA_TEXT, reports)
+                                }
+                                context.startActivity(Intent.createChooser(send, null))
+                            }
+                        },
+                        onDeleteLookupReports = { scope.launch { lookupReportRepository.clear() } },
                         feeds = feeds,
                         hasNewDefaultFeeds = newDefaultFeeds.isNotEmpty(),
                         onManageFeedsClick = {
@@ -474,7 +499,8 @@ fun ReaderRoute(
     onReaderSettingsChange: (ReaderSettings) -> Unit,
     currentTheme: String,
     onThemeChange: (String) -> Unit,
-    onMoreTextSettingsClick: () -> Unit
+    onMoreTextSettingsClick: () -> Unit,
+    collectLookupReports: Boolean
 ) {
     val uiState by articleViewModel.currentArticleState.collectAsState()
 
@@ -512,7 +538,8 @@ fun ReaderRoute(
                 onRefreshClick = articleViewModel::refreshArticle,
                 onRefreshResultShown = articleViewModel::onRefreshResultShown,
                 downloadFailed = state.downloadFailed,
-                onRetryDownloadClick = articleViewModel::retryDownload
+                onRetryDownloadClick = articleViewModel::retryDownload,
+                collectLookupReports = collectLookupReports
             )
         }
     }

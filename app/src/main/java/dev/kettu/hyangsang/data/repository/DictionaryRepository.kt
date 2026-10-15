@@ -330,7 +330,13 @@ class DictionaryRepository(
         return splits[0]
     }
 
-    private fun tokenize(text: String) = OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
+    /** How Open Korean Text splits [word], as `text/Pos`, with the stem where it differs. */
+    fun describeTokens(word: String): String = tokenize(word).joinToString(" ") { token ->
+        val stem = token.stem?.takeIf { it.isNotEmpty() && it != token.text }?.let { "($it)" }.orEmpty()
+        "${token.text}/${token.pos}$stem"
+    }
+
+    private fun tokenize(text: String) =OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
         OpenKoreanTextProcessorJava.tokenize(OpenKoreanTextProcessorJava.normalize(text))
     ).filter { it.pos.toString() !in listOf("Space", "Punctuation") }
 
