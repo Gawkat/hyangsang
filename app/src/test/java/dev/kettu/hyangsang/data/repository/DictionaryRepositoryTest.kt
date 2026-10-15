@@ -174,6 +174,121 @@ class DictionaryRepositoryTest {
     }
 
     @Test
+    fun `되어 and 되었다 are looked up as 되다`() = runBlocking {
+        // Open Korean Text stems them as 되어다
+        assertEquals(setOf("되다"), lookUp("되어", listOf("되다", "되어다")))
+        assertEquals(setOf("되다"), lookUp("되었다", listOf("되다", "되어다")))
+    }
+
+    @Test
+    fun `는 after a quote or a Latin letter is the particle`() = runBlocking {
+        // Open Korean Text reads it as a form of 늘다
+        val dictionary = listOf(
+            createEntry("없다", "Adjective"),
+            createEntry("보이다", "Verb"),
+            createEntry("늘다", "Verb"),
+            createEntry("는", "Particle")
+        )
+        assertEquals(listOf("없다", "는"), lookUpIn("없다”는", dictionary))
+        assertEquals(listOf("보이다", "는"), lookUpIn("보인다’는", dictionary))
+        assertEquals(listOf("는"), lookUpIn("LG는", dictionary))
+    }
+
+    private suspend fun lookUpIn(
+        word: String,
+        dictionary: List<DictionaryWithSenses>,
+        sentence: String = ""
+    ): List<String> =
+        DictionaryRepository(FakeDictionaryDao(dictionary))
+            .getDefinitionsForWord(word, LookupContext(sentence)).first().keys.toList()
+
+    // Single syllables are nouns too, which a misread noun's split would show
+    private val predicateDictionary = listOf(
+        createEntry("통하다", "Verb"),
+        createEntry("지나다", "Verb"),
+        createEntry("크다", "Verb"),
+        createEntry("크다", "Adjective", homonymNumber = 2),
+        createEntry("구하다", "Verb"),
+        createEntry("알리다", "Verb"),
+        createEntry("대하다", "Verb"),
+        createEntry("내다", "Verb"),
+        createEntry("사다", "Verb"),
+        createEntry("때다", "Verb"),
+        createEntry("대한", "Noun", origin = "大韓"),
+        createEntry("대해", "Noun", origin = "大海", level = "Advanced"),
+        createEntry("낼", "Noun", level = "Beginner"),
+        createEntry("산", "Noun", level = "Beginner"),
+        createEntry("때", "Noun", level = "Beginner"),
+        createEntry("마이크", "Noun", level = "Beginner")
+    ) + listOf("통", "해", "지", "난", "크", "게", "구", "알", "리", "고", "서").map { createEntry(it, "Noun") }
+
+    @Test
+    fun `predicates misread as nouns are looked up as predicates`() = runBlocking {
+        assertEquals(listOf("통하다"), lookUpIn("통해", predicateDictionary))
+        assertEquals("통하다", lookUpIn("통해서", predicateDictionary).first())
+        assertEquals(listOf("지나다"), lookUpIn("지난", predicateDictionary))
+        assertEquals(listOf("구하다"), lookUpIn("구해", predicateDictionary))
+        assertEquals("알리다", lookUpIn("알리고", predicateDictionary).first())
+        // -게 makes adverbs of adjectives
+        val big = DictionaryRepository(FakeDictionaryDao(predicateDictionary))
+            .getDefinitionsForWord("크게").first()
+        assertEquals(listOf("크다"), big.keys.toList())
+        assertEquals("Adjective", big.getValue("크다").first().entry.partOfSpeech)
+    }
+
+    @Test
+    fun `nouns in the dictionary are not read as predicates`() = runBlocking {
+        assertEquals(listOf("산"), lookUpIn("산", predicateDictionary))
+        assertEquals(listOf("낼"), lookUpIn("낼", predicateDictionary))
+        assertEquals(listOf("대해"), lookUpIn("대해", predicateDictionary))
+    }
+
+    @Test
+    fun `rare nouns give way to the predicate`() = runBlocking {
+        // 대한 is in the dictionary as 大韓, without a vocabulary level
+        assertEquals(listOf("대하다", "대한"), lookUpIn("대한", predicateDictionary))
+    }
+
+    @Test
+    fun `the sentence can show a noun is a predicate`() = runBlocking {
+        // Only predicates can come before a bound noun
+        assertEquals("내다", lookUpIn("낼", predicateDictionary, "목소리를 낼 수 있다").first())
+        assertEquals("사다", lookUpIn("산", predicateDictionary, "어제 산 것이다").first())
+        // Particles like 에 and 을 need a predicate after them
+        assertEquals("대하다", lookUpIn("대해", predicateDictionary, "문제에 대해 말했다").first())
+        assertEquals("대해", lookUpIn("대해", predicateDictionary, "넓은 대해 위로").first())
+    }
+
+    @Test
+    fun `nouns with a contracted particle are not read as predicates`() = runBlocking {
+        // 땐 is 때는, not 때다
+        assertEquals(emptyList<String>(), lookUpIn("땐", predicateDictionary))
+        // Names can end the same way, so the contracted noun isn't shown
+        assertEquals(emptyList<String>(), lookUpIn("마이클", predicateDictionary))
+    }
+
+    @Test
+    fun `verbs made of a noun and 하다 are looked up joined`() = runBlocking {
+        val dictionary = listOf(
+            createEntry("공부", "Noun"),
+            createEntry("공부하다", "Verb"),
+            createEntry("하다", "Verb"),
+            createEntry("연계", "Noun"),
+            createEntry("연계하다", "Verb"),
+            createEntry("퇴출", "Noun"),
+            createEntry("시키다", "Verb"),
+            createEntry("지난해", "Noun", level = "Beginner"),
+            createEntry("지난하다", "Adjective")
+        )
+        assertEquals(listOf("공부", "공부하다", "하다"), lookUpIn("공부하러", dictionary))
+        // Open Korean Text misreads these altogether
+        assertEquals(listOf("연계", "연계하다"), lookUpIn("연계한", dictionary))
+        assertEquals("퇴출", lookUpIn("퇴출시키고", dictionary).first())
+        // Nouns can contain the endings too
+        assertEquals(listOf("지난해"), lookUpIn("지난해", dictionary))
+    }
+
+    @Test
     fun `words are ranked by the POS of their first homonym`() = runBlocking {
         // A noun homonym of 시키다 shouldn't put it level with 결정, where it would win on length
         val entries = listOf(
@@ -263,7 +378,8 @@ class DictionaryRepositoryTest {
         pos: String,
         origin: String? = null,
         homonymNumber: Int = 0,
-        semanticCategory: String? = null
+        semanticCategory: String? = null,
+        level: String? = null
     ): DictionaryWithSenses {
         return DictionaryWithSenses(
             entry = DictionaryEntry(
@@ -272,7 +388,7 @@ class DictionaryRepositoryTest {
                 origin = origin,
                 homonymNumber = homonymNumber,
                 partOfSpeech = pos,
-                vocabularyLevel = null,
+                vocabularyLevel = level,
                 semanticCategory = semanticCategory,
                 lexicalUnit = null,
                 pronunciation = null,
