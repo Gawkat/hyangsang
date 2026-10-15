@@ -27,10 +27,14 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +77,8 @@ fun DefinitionOverlay(
     lookupResults: Map<String, List<DictionaryWithSenses>>,
     isLoading: Boolean,
     onSearchWeb: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReport: ((shown: DictionaryWithSenses?, picked: DictionaryWithSenses?, note: String) -> Unit)? = null
 ) {
     var selectedStem by remember(selectedWord) { mutableStateOf(selectedWord) }
     var userPickedStem by remember(selectedWord) { mutableStateOf(false) }
@@ -88,6 +94,7 @@ fun DefinitionOverlay(
     var selectedEntryIndex by remember(selectedStem, entries.size) { mutableIntStateOf(0) }
     // The whole word is selectable even without an entry, so the web search always covers it
     val stems = lookupResults.keys.filter { it != selectedWord }
+    var showReportDialog by remember(selectedWord) { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Column(
@@ -168,8 +175,69 @@ fun DefinitionOverlay(
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
+            if (onReport != null) {
+                IconButton(onClick = { showReportDialog = true }) {
+                    Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.report_lookup))
+                }
+            }
         }
     }
+
+    if (showReportDialog && onReport != null) {
+        // The entry the sheet opened on, before the user switched stem or entry
+        val shown = (lookupResults[selectedWord]?.takeIf { it.isNotEmpty() }
+            ?: lookupResults.values.firstOrNull { it.isNotEmpty() })?.firstOrNull()
+        val picked = entries.getOrNull(selectedEntryIndex.coerceAtMost(entries.lastIndex))
+        ReportLookupDialog(
+            expected = picked?.takeIf { it.entry.id != shown?.entry?.id },
+            onDismiss = { showReportDialog = false },
+            onSave = { note ->
+                onReport(shown, picked, note)
+                showReportDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun ReportLookupDialog(
+    expected: DictionaryWithSenses?,
+    onDismiss: () -> Unit,
+    onSave: (note: String) -> Unit
+) {
+    var note by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.report_lookup)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.report_lookup_body))
+                Text(
+                    if (expected != null) {
+                        val gloss = expected.senses.firstOrNull()?.sense?.translationEn
+                        stringResource(
+                            R.string.report_lookup_expected,
+                            listOfNotNull(expected.entry.word, gloss?.let { "($it)" }).joinToString(" ")
+                        )
+                    } else {
+                        stringResource(R.string.report_lookup_switch_hint)
+                    }
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text(stringResource(R.string.report_lookup_note)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(note) }) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+        }
+    )
 }
 
 @Composable

@@ -60,6 +60,21 @@
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
+    <string name="dictionary_section">Dictionary</string>
+    <string name="collect_lookup_reports_setting">Report wrong lookups</string>
+    <string name="collect_lookup_reports_summary">Adds a button to the dictionary sheet for saving lookups that show the wrong entry</string>
+    <string name="share_lookup_reports">Share reported lookups</string>
+    <plurals name="lookup_reports_saved">
+        <item quantity="one">%1$d lookup saved</item>
+        <item quantity="other">%1$d lookups saved</item>
+    </plurals>
+    <string name="delete_lookup_reports">Delete reported lookups</string>
+    <plurals name="delete_lookup_reports_title">
+        <item quantity="one">Delete %1$d reported lookup?</item>
+        <item quantity="other">Delete %1$d reported lookups?</item>
+    </plurals>
+    <string name="delete">Delete</string>
+    <string name="lookup_reports_share_subject">Hyangsang lookup reports</string>
     <string name="background_refresh_setting">Background refresh</string>
     <string name="background_refresh_off">Off</string>
     <string name="background_refresh_6_hours">Every 6 hours</string>
@@ -254,6 +269,12 @@
     <string name="not_right_meaning">Not the right meaning?</string>
     <string name="lookup_online_hint">Try looking it up online.</string>
     <string name="search_web_dictionary">Search “%1$s” online</string>
+    <string name="report_lookup">Report wrong lookup</string>
+    <string name="report_lookup_body">Saves the word, its sentence and what the dictionary showed. You can share saved lookups from Settings.</string>
+    <string name="report_lookup_expected">%1$s is saved as the right entry.</string>
+    <string name="report_lookup_switch_hint">If another entry is right, switch to it before reporting.</string>
+    <string name="report_lookup_note">What\'s wrong? (optional)</string>
+    <string name="lookup_report_saved">Lookup saved</string>
     <!-- Built-in feeds -->
     <string name="default_feed_title">%1$s - %2$s</string>
     <string name="source_yonhap_news">Yonhap News</string>

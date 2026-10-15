@@ -24,11 +24,14 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
@@ -81,7 +84,7 @@ import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
 private enum class SettingsDialog {
-    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION
+    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION, DELETE_LOOKUP_REPORTS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,6 +104,11 @@ fun SettingsScreen(
     onArticleRetentionChange: (ArticleRetention) -> Unit,
     contentRetention: ContentRetention,
     onContentRetentionChange: (ContentRetention) -> Unit,
+    collectLookupReports: Boolean,
+    onCollectLookupReportsChange: (Boolean) -> Unit,
+    lookupReportCount: Int,
+    onShareLookupReports: () -> Unit,
+    onDeleteLookupReports: () -> Unit,
     feeds: List<RssFeed>,
     hasNewDefaultFeeds: Boolean,
     onManageFeedsClick: () -> Unit,
@@ -227,6 +235,33 @@ fun SettingsScreen(
                 )
             )
 
+            SectionHeader(stringResource(R.string.dictionary_section))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.collect_lookup_reports_setting)) },
+                supportingContent = { Text(stringResource(R.string.collect_lookup_reports_summary)) },
+                leadingContent = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                trailingContent = { Switch(checked = collectLookupReports, onCheckedChange = null) },
+                modifier = Modifier.toggleable(
+                    value = collectLookupReports,
+                    onValueChange = onCollectLookupReportsChange,
+                    role = Role.Switch
+                )
+            )
+            // Reports saved before turning the setting off can still be shared
+            if (lookupReportCount > 0) {
+                SettingsItem(
+                    icon = Icons.Outlined.Share,
+                    title = stringResource(R.string.share_lookup_reports),
+                    summary = pluralStringResource(R.plurals.lookup_reports_saved, lookupReportCount, lookupReportCount),
+                    onClick = onShareLookupReports
+                )
+                SettingsItem(
+                    icon = Icons.Outlined.Delete,
+                    title = stringResource(R.string.delete_lookup_reports),
+                    onClick = { openDialog = SettingsDialog.DELETE_LOOKUP_REPORTS }
+                )
+            }
+
             SectionHeader(stringResource(R.string.storage_section))
             SettingsItem(
                 icon = Icons.Outlined.History,
@@ -339,6 +374,21 @@ fun SettingsScreen(
             selected = contentRetention,
             onSelect = { onContentRetentionChange(it); dismiss() },
             onDismiss = dismiss
+        )
+
+        SettingsDialog.DELETE_LOOKUP_REPORTS -> AlertDialog(
+            onDismissRequest = dismiss,
+            title = {
+                Text(pluralStringResource(R.plurals.delete_lookup_reports_title, lookupReportCount, lookupReportCount))
+            },
+            confirmButton = {
+                TextButton(onClick = { onDeleteLookupReports(); dismiss() }) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = dismiss) { Text(stringResource(android.R.string.cancel)) }
+            }
         )
 
         SettingsDialog.DICTIONARY_ATTRIBUTION -> AlertDialog(
@@ -500,6 +550,11 @@ fun SettingsScreenPreview() {
             onArticleRetentionChange = {},
             contentRetention = ContentRetention.DEFAULT,
             onContentRetentionChange = {},
+            collectLookupReports = true,
+            onCollectLookupReportsChange = {},
+            lookupReportCount = 3,
+            onShareLookupReports = {},
+            onDeleteLookupReports = {},
             feeds = emptyList(),
             hasNewDefaultFeeds = false,
             onManageFeedsClick = {},

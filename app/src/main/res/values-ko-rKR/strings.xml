@@ -59,6 +59,19 @@
     <string name="saved_empty_body">기사의 북마크를 누르면 나중에 읽을 수 있도록 여기에 저장됩니다.</string>
     <string name="unread_counts_setting">읽지 않은 기사 수</string>
     <string name="unread_counts_summary">피드 목록에 개수 표시</string>
+    <string name="dictionary_section">사전</string>
+    <string name="collect_lookup_reports_setting">잘못된 사전 결과 신고</string>
+    <string name="collect_lookup_reports_summary">사전 창에 잘못된 결과를 저장하는 버튼 추가</string>
+    <string name="share_lookup_reports">신고한 결과 공유</string>
+    <plurals name="lookup_reports_saved">
+        <item quantity="other">%1$d개 저장됨</item>
+    </plurals>
+    <string name="delete_lookup_reports">신고한 결과 삭제</string>
+    <plurals name="delete_lookup_reports_title">
+        <item quantity="other">신고한 결과 %1$d개를 삭제할까요?</item>
+    </plurals>
+    <string name="delete">삭제</string>
+    <string name="lookup_reports_share_subject">향상 사전 결과 신고</string>
     <string name="background_refresh_setting">백그라운드 새로고침</string>
     <string name="background_refresh_off">사용 안 함</string>
     <string name="background_refresh_6_hours">6시간마다</string>
@@ -241,6 +254,12 @@
     <string name="not_right_meaning">찾는 뜻이 아닌가요?</string>
     <string name="lookup_online_hint">온라인 사전에서 찾아보세요.</string>
     <string name="search_web_dictionary">“%1$s” 웹 사전 검색</string>
+    <string name="report_lookup">잘못된 결과 신고</string>
+    <string name="report_lookup_body">단어와 문장, 사전에 표시된 결과를 저장합니다. 저장한 결과는 설정에서 공유할 수 있습니다.</string>
+    <string name="report_lookup_expected">%1$s 항목이 올바른 결과로 저장됩니다.</string>
+    <string name="report_lookup_switch_hint">다른 항목이 맞다면 신고하기 전에 그 항목으로 바꿔 주세요.</string>
+    <string name="report_lookup_note">무엇이 잘못되었나요? (선택)</string>
+    <string name="lookup_report_saved">신고를 저장했습니다</string>
     <!-- Built-in feeds -->
     <string name="source_yonhap_news">연합뉴스</string>
     <string name="category_news">뉴스</string>

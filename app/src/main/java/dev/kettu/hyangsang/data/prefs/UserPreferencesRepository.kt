@@ -36,6 +36,7 @@ class UserPreferencesRepository(private val context: Context) {
         val FEED_GROUPING = stringPreferencesKey("feed_grouping")
         val DEFAULT_FEEDS_SEEN = intPreferencesKey("default_feeds_seen")
         val FIRST_RUN_SETUP_PENDING = booleanPreferencesKey("first_run_setup_pending")
+        val COLLECT_LOOKUP_REPORTS = booleanPreferencesKey("collect_lookup_reports")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -65,6 +66,15 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setShowUnreadCounts(show: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_UNREAD_COUNTS] = show }
+    }
+
+    // Adds a button to the lookup sheet for saving wrong lookups, to improve the dictionary ranking
+    val collectLookupReportsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[Keys.COLLECT_LOOKUP_REPORTS] ?: false
+    }.distinctUntilChanged()
+
+    suspend fun setCollectLookupReports(collect: Boolean) {
+        context.dataStore.edit { it[Keys.COLLECT_LOOKUP_REPORTS] = collect }
     }
 
     val feedSyncIntervalFlow: Flow<FeedSyncInterval> = context.dataStore.data.map { preferences ->
