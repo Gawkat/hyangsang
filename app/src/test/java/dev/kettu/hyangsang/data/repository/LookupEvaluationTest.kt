@@ -111,8 +111,8 @@ class LookupEvaluationTest {
                 .getDefinitionsForWord(case.word, LookupContext(case.sentence, category))
                 .first()
 
-            // What the overlay opens on: the tapped word if it has entries, otherwise the first stem
-            val shownStem = case.word.takeIf { !results[it].isNullOrEmpty() } ?: results.keys.firstOrNull()
+            // What the overlay opens on: the first term with entries, usually the tapped word
+            val shownStem = results.keys.firstOrNull { !results[it].isNullOrEmpty() }
             val shown = shownStem?.let { results[it]?.firstOrNull()?.id() }
             // Whether the expected entry comes first once its stem is picked
             val bestForExpectedStem = case.expectedWords.firstNotNullOfOrNull { results[it]?.firstOrNull()?.id() }

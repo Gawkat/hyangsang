@@ -83,8 +83,10 @@ fun DefinitionOverlay(
     var selectedStem by remember(selectedWord) { mutableStateOf(selectedWord) }
     var userPickedStem by remember(selectedWord) { mutableStateOf(false) }
 
+    // Opens on the first term with entries, which is the word itself unless it's a predicate
+    // Open Korean Text misread as a noun (대한, read as 대하다)
     LaunchedEffect(lookupResults) {
-        if (!userPickedStem && lookupResults[selectedStem].isNullOrEmpty()) {
+        if (!userPickedStem) {
             lookupResults.keys.firstOrNull { !lookupResults[it].isNullOrEmpty() }
                 ?.let { selectedStem = it }
         }
@@ -185,8 +187,7 @@ fun DefinitionOverlay(
 
     if (showReportDialog && onReport != null) {
         // The entry the sheet opened on, before the user switched stem or entry
-        val shown = (lookupResults[selectedWord]?.takeIf { it.isNotEmpty() }
-            ?: lookupResults.values.firstOrNull { it.isNotEmpty() })?.firstOrNull()
+        val shown = lookupResults.values.firstOrNull { it.isNotEmpty() }?.firstOrNull()
         val picked = entries.getOrNull(selectedEntryIndex.coerceAtMost(entries.lastIndex))
         ReportLookupDialog(
             expected = picked?.takeIf { it.entry.id != shown?.entry?.id },
