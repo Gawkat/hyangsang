@@ -25,5 +25,6 @@ dependencyResolutionManagement {
 rootProject.name = "Hyangsang"
 include(":app")
 include(":tools:dictionary-generator")
+include(":tools:analyzer-counts")
 include(":parser")
 include(":analyzer")
