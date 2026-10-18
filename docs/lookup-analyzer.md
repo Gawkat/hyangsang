@@ -10,8 +10,8 @@ module, and word lookups use it.
 accurate than OKT, close to Kiwi on most measures, uses about 14 MB of memory instead of OKT's
 ~50 MB, loads in about a second instead of ten, and recovers endings such as -면서. Its main weak
 spot is proper names. With the lookup's ranking re-tuned for it, lookups show the expected entry
-in 340 instead of 268 dictionary dev cases (see [In the app](#in-the-app)). There is no fallback to
-OKT and no choice between analyzers in the app.
+in 340 instead of 268 dictionary dev cases (see [In the app](#in-the-app)). OKT has since been
+removed from the app; there is no fallback to it.
 
 ## How it works
 
@@ -190,7 +190,9 @@ OKT is replaced in stages, each its own pull request:
    [In the app](#in-the-app)). OKT stays in the build, unused, until step 4.
 4. **Coverage, then remove OKT:** a list of names, or a rule for surname + given name; the missing
    irregulars; numbers and units. Then remove OKT and the Scala library it depends on, its 1.7 MB
-   jar and 5.2 MB of Scala before shrinking.
+   jar and 5.2 MB of Scala before shrinking (done). Without a second analyzer, `KoreanAnalyzer` is
+   the adapter for this one rather than an interface. The release APK went from 47.5 MB to
+   43.9 MB, and the lookup evaluation is unchanged.
 
 Showing endings such as -면서 in the lookup sheet comes after the switch. Tuning the analyzer
 belongs in the `analyzer` module, not in the app's lookup code.

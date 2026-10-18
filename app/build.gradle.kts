@@ -82,9 +82,7 @@ android {
 
     testOptions {
         unitTests.all { test ->
-            // -PlookupAnalyzer=okt runs LookupEvaluationTest with Open Korean Text instead of the
-            // app's analyzer, and -PlexContext=<counts file> gives the analyzer other counts
-            providers.gradleProperty("lookupAnalyzer").orNull?.let { test.systemProperty("lookup.analyzer", it) }
+            // -PlexContext=<counts file> runs LookupEvaluationTest with other counts for the analyzer
             providers.gradleProperty("lexContext").orNull?.let { test.systemProperty("lex.context", it) }
         }
     }
@@ -132,9 +130,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // Open Korean Text, which lookups no longer use, until it's removed
-    implementation(libs.open.korean.text)
 
     // Retrofit
     implementation(libs.retrofit)

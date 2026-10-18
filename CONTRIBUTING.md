@@ -104,9 +104,6 @@ The analyzer uses its bundled context counts. To evaluate it with other counts, 
 ./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlexContext=<counts file>
 ```
 
-Until Open Korean Text is removed from the build, `-PlookupAnalyzer=okt` evaluates it instead, for
-comparison. Lookups no longer have its patches, so it scores below its old baselines.
-
 To collect cases for `lookup-eval.tsv` while reading, turn on Report wrong lookups in the app's
 settings. The lookup sheet then gets a button for saving a lookup that shows the wrong entry. Switch
 to the right entry first, if the sheet has it, and it's saved as the expected one. Saved lookups are

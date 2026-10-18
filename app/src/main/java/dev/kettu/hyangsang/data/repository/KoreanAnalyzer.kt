@@ -1,7 +1,7 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.analyzer.LookupAnalyzer
 import dev.kettu.hyangsang.analyzer.Tag
-import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 
 /**
  * A token as the lookup uses it, with the analyzer's [tag] and, for verbs, adjectives and
@@ -9,50 +9,79 @@ import org.openkoreantext.processor.OpenKoreanTextProcessorJava
  */
 data class KoreanToken(val text: String, val tag: Tag, val stem: String? = null)
 
-/** Splits text into tokens for dictionary lookups, leaving out spaces and punctuation. */
-interface KoreanAnalyzer {
+/**
+ * Splits text into tokens for dictionary lookups, leaving out spaces and punctuation, using the
+ * dictionary-driven [LookupAnalyzer]. Its best analysis of each word is turned into tokens: a
+ * predicate with its endings is one token with the dictionary form as stem, and the endings
+ * follow it as tokens of their own with the dictionary's form (-면서) as stem. Other morphemes
+ * are a token each.
+ *
+ * With a sentence, the words around each word are taken from it, for the analyzer's context.
+ */
+class KoreanAnalyzer(private val analyzer: LookupAnalyzer) {
     /**
-     * @param sentence the sentence [text] is part of, if known, for analyzers that use the
-     *   context
+     * @param sentence the sentence [text] is part of, if known, for the analyzer's context
      */
-    fun tokenize(text: String, sentence: String? = null): List<KoreanToken>
+    fun tokenize(text: String, sentence: String? = null): List<KoreanToken> {
+        val words = text.split(WHITESPACE).filter { it.isNotEmpty() }
+        val sentenceWords = sentence?.split(WHITESPACE)?.filter { it.isNotEmpty() }
+        return words.flatMapIndexed { index, word ->
+            val (previous, next) = if (words.size == 1 && sentenceWords != null) {
+                val i = sentenceWords.indexOfFirst { core(it) == core(word) }
+                (if (i > 0) sentenceWords[i - 1] else null) to sentenceWords.getOrNull(i + 1)?.takeIf { i >= 0 }
+            } else {
+                words.getOrNull(index - 1) to words.getOrNull(index + 1)
+            }
+            tokens(word, previous, next)
+        }
+    }
 
     /**
      * The words in [sentence] that tell what it's about, for matching against dictionary entries:
      * its nouns, and the stems of its verbs and adjectives (만들 for 만들었다, 도착 for 도착했다).
+     * Each word is analyzed on its own, which is enough for these, and much less work than with
+     * the context.
      */
-    fun contextWords(sentence: String): List<String>
-}
+    fun contextWords(sentence: String): List<String> =
+        sentence.split(WHITESPACE).filter { it.isNotEmpty() }.flatMap { word ->
+            analyzer.analyze(word, limit = 1).firstOrNull()?.morphemes.orEmpty().mapNotNull { m ->
+                when {
+                    m.tag == Tag.NOUN || m.tag == Tag.UNKNOWN -> m.form
+                    // The noun of 하다 and 되다 verbs, as their stems contract (도착했다)
+                    m.tag.isPredicate && m.tag.isContent && m.form.length > 2 && m.form.last() in "하되" ->
+                        m.form.dropLast(1)
+                    // One-syllable stems are part of too many other words
+                    m.tag.isPredicate && m.tag.isContent && m.form.length > 1 -> m.form
+                    else -> null
+                }
+            }
+        }
 
-/**
- * Open Korean Text, which lookups used before [LexiconKoreanAnalyzer]. Only kept for comparing
- * the two in LookupEvaluationTest, until it's removed from the build.
- */
-object OktAnalyzer : KoreanAnalyzer {
-    override fun tokenize(text: String, sentence: String?): List<KoreanToken> =
-        OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
-            OpenKoreanTextProcessorJava.tokenize(OpenKoreanTextProcessorJava.normalize(text))
-        )
-            .filter { it.pos.toString() !in listOf("Space", "Punctuation") }
-            .map { KoreanToken(it.text, TAGS[it.pos.toString()] ?: Tag.FOREIGN, it.stem) }
+    private fun core(word: String) = word.trim { !it.isLetterOrDigit() }
 
-    override fun contextWords(sentence: String): List<String> =
-        tokenize(sentence).filter { it.tag == Tag.NOUN }.map { it.text }
+    private fun tokens(word: String, previous: String?, next: String?): List<KoreanToken> {
+        val morphemes = analyzer.analyze(word, previous, next).firstOrNull()?.morphemes ?: return emptyList()
+        val tokens = mutableListOf<KoreanToken>()
+        var i = 0
+        while (i < morphemes.size) {
+            val m = morphemes[i]
+            when {
+                m.tag == Tag.COPULA -> Unit
+                m.tag.isPredicate -> {
+                    var last = i
+                    while (morphemes.getOrNull(last + 1)?.tag == Tag.ENDING) last++
+                    val surface = word.substring(m.start.coerceAtMost(word.length), morphemes[last].end.coerceAtMost(word.length))
+                    tokens += KoreanToken(surface, m.tag, m.headword.removePrefix("-"))
+                }
+                m.tag == Tag.ENDING -> tokens += KoreanToken(m.form, m.tag, m.headword)
+                else -> tokens += KoreanToken(m.form, m.tag)
+            }
+            i++
+        }
+        return tokens
+    }
 
-    private val TAGS = mapOf(
-        "Noun" to Tag.NOUN,
-        "ProperNoun" to Tag.NOUN,
-        "Verb" to Tag.VERB,
-        "Adjective" to Tag.ADJECTIVE,
-        "Adverb" to Tag.ADVERB,
-        "Determiner" to Tag.DETERMINER,
-        "Modifier" to Tag.DETERMINER,
-        "Exclamation" to Tag.INTERJECTION,
-        "Josa" to Tag.PARTICLE,
-        "Eomi" to Tag.ENDING,
-        "PreEomi" to Tag.ENDING,
-        "Suffix" to Tag.SUFFIX,
-        "VerbPrefix" to Tag.PREFIX,
-        "Number" to Tag.NUMBER
-    )
+    private companion object {
+        val WHITESPACE = Regex("\\s+")
+    }
 }

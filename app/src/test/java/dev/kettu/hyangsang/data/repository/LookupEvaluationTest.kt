@@ -244,19 +244,15 @@ class LookupEvaluationTest {
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
 
-        // -PlookupAnalyzer=okt (see app/build.gradle.kts) evaluates Open Korean Text instead of
-        // the app's analyzer, and -PlexContext=<counts file> gives the analyzer other counts
+        // -PlexContext=<counts file> (see app/build.gradle.kts) gives the analyzer other counts
         private val analyzer: KoreanAnalyzer by lazy {
-            when (System.getProperty("lookup.analyzer")) {
-                "okt" -> OktAnalyzer
-                else -> LexiconKoreanAnalyzer(
-                    LookupAnalyzer(
-                        Lexicon(dictionaryRows()),
-                        System.getProperty("lex.context")?.let { ContextModel(File(it).readLines().asSequence()) }
-                            ?: ContextModel.bundled()
-                    )
+            KoreanAnalyzer(
+                LookupAnalyzer(
+                    Lexicon(dictionaryRows()),
+                    System.getProperty("lex.context")?.let { ContextModel(File(it).readLines().asSequence()) }
+                        ?: ContextModel.bundled()
                 )
-            }
+            )
         }
 
         private fun dictionaryRows(): List<DictionaryRow> =

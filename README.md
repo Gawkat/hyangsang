@@ -54,7 +54,9 @@ features. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 * [National Institute of Korean Language's Korean-English Learners' Dictionary](https://krdict.korean.go.kr/eng/mainAction)
   for offline dictionary lookups
-* [open-korean-text](https://github.com/open-korean-text/open-korean-text) for lemmatization
+* [UD Korean GSD](https://github.com/UniversalDependencies/UD_Korean-GSD) and
+  [UD Korean Kaist](https://github.com/UniversalDependencies/UD_Korean-Kaist) treebanks, whose
+  word counts help the analyzer choose between readings of a word
 
 ## License
 
