@@ -83,8 +83,8 @@ fun DefinitionOverlay(
     var selectedStem by remember(selectedWord) { mutableStateOf(selectedWord) }
     var userPickedStem by remember(selectedWord) { mutableStateOf(false) }
 
-    // Opens on the first term with entries, which is the word itself unless it's a predicate
-    // Open Korean Text misread as a noun (대한, read as 대하다)
+    // Opens on the first term with entries, which is the word itself unless the analyzer reads it
+    // as a form of another word (통해, read as 통하다)
     LaunchedEffect(lookupResults) {
         if (!userPickedStem) {
             lookupResults.keys.firstOrNull { !lookupResults[it].isNullOrEmpty() }

@@ -82,8 +82,8 @@ android {
 
     testOptions {
         unitTests.all { test ->
-            // -PlookupAnalyzer=lexicon runs LookupEvaluationTest with the dictionary-driven
-            // analyzer, and -PlexContext=<counts file> gives it context counts
+            // -PlookupAnalyzer=okt runs LookupEvaluationTest with Open Korean Text instead of the
+            // app's analyzer, and -PlexContext=<counts file> gives the analyzer other counts
             providers.gradleProperty("lookupAnalyzer").orNull?.let { test.systemProperty("lookup.analyzer", it) }
             providers.gradleProperty("lexContext").orNull?.let { test.systemProperty("lex.context", it) }
         }
@@ -133,7 +133,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // OKT
+    // Open Korean Text, which lookups no longer use, until it's removed
     implementation(libs.open.korean.text)
 
     // Retrofit
@@ -146,7 +146,7 @@ dependencies {
     // Parser
     implementation(project(":parser"))
 
-    // Dictionary-driven analyzer, not used by lookups yet
+    // Dictionary-driven analyzer for word lookups
     implementation(project(":analyzer"))
 
     // For OSS licensing

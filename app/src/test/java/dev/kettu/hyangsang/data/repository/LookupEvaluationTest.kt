@@ -7,6 +7,7 @@ import dev.kettu.hyangsang.analyzer.LookupAnalyzer
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
+import dev.kettu.hyangsang.data.local.dao.LexiconRow
 import dev.kettu.hyangsang.data.local.dao.SenseWithExamples
 import dev.kettu.hyangsang.data.local.entity.DictionaryEntry
 import dev.kettu.hyangsang.data.local.entity.DictionaryExample
@@ -87,7 +88,7 @@ class LookupEvaluationTest {
 
     private fun evaluate(name: String, baseline: Int) = runBlocking {
         val dao = JdbcDictionaryDao(connection)
-        val repository = DictionaryRepository(dao, analyzer)
+        val repository = DictionaryRepository(dao, lazyOf(analyzer))
         val cases = loadCases(name)
 
         // Catch typos in the expected entries, which would otherwise just look like misses
@@ -232,27 +233,29 @@ class LookupEvaluationTest {
         override fun getEntriesByWord(word: String): Flow<List<DictionaryEntry>> = flowOf(emptyList())
         override fun getSensesForEntry(entryId: Long): Flow<List<DictionarySense>> = flowOf(emptyList())
         override fun getFullEntriesByWord(word: String): Flow<List<DictionaryWithSenses>> = flowOf(emptyList())
+        override fun getLexiconRows(): List<LexiconRow> = emptyList()
     }
 
     companion object {
         // Correct cases in each set as of the last ranking change
         private const val BASELINE_NEWS = 64
-        private const val BASELINE_KRDICT_DEV = 268
-        private const val BASELINE_KRDICT_TEST = 274
+        private const val BASELINE_KRDICT_DEV = 340
+        private const val BASELINE_KRDICT_TEST = 315
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
 
-        // -PlookupAnalyzer=lexicon (see app/build.gradle.kts) evaluates the dictionary-driven
-        // LookupAnalyzer instead of Open Korean Text
+        // -PlookupAnalyzer=okt (see app/build.gradle.kts) evaluates Open Korean Text instead of
+        // the app's analyzer, and -PlexContext=<counts file> gives the analyzer other counts
         private val analyzer: KoreanAnalyzer by lazy {
             when (System.getProperty("lookup.analyzer")) {
-                "lexicon" -> LexiconKoreanAnalyzer(
+                "okt" -> OktAnalyzer
+                else -> LexiconKoreanAnalyzer(
                     LookupAnalyzer(
                         Lexicon(dictionaryRows()),
                         System.getProperty("lex.context")?.let { ContextModel(File(it).readLines().asSequence()) }
+                            ?: ContextModel.bundled()
                     )
                 )
-                else -> OktAnalyzer
             }
         }
 

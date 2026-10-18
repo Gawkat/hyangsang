@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.analyzer.Tag
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 import kotlinx.coroutines.Dispatchers
@@ -12,19 +13,26 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
+/**
+ * @param analyzer built on first use, which takes a while, so it's only used off the main thread
+ */
 class DictionaryRepository(
     private val dictionaryDao: DictionaryDao,
-    private val analyzer: KoreanAnalyzer = OktAnalyzer
+    private val analyzer: Lazy<KoreanAnalyzer>
 ) {
     /**
-     * @param terms search terms, each with the Open Korean Text POS of the token it came from, or
-     *   null when unknown (such as the whole word when it spans several tokens)
+     * @param terms search terms, each with the tag of the token it came from, or null when
+     *   unknown (such as the whole word when it spans several tokens)
+     * @param mainTerm the term the word is read as, shown first: the word itself, unless the
+     *   analyzer reads it as a form of another word (통해 as 통하다) or splits it (배가 as 배 +
+     *   가)
      * @param compounds noun stems whose parts were added as terms
      * @param splitParts terms only worth showing when they're part of a compound's split into
      *   words: single syllables, and affixes as the dictionary writes them (-부, 외-)
      * @param affixFallbacks tokens that look like affixes, mapped to their affix form; the token
      *   itself is only shown if the dictionary doesn't have the affix
      * @param counters terms right after a number, like 명 in 3명 or 일 in 26일
+     * @param numberWordCounters the counters after a number word, like 바퀴 in 두 바퀴
      * @param leadingNoun the noun the word starts with, like 중 in 중에서, if any
      * @param hanjaTerms the hanja runs and their parts, looked up by the entries' origin
      * @param titledHanja single hanja followed by a title, like 李 in 李대통령, which makes them
@@ -33,55 +41,28 @@ class DictionaryRepository(
      *   not affixes
      * @param weekdayHanja standalone hanja in parentheses, as weekdays are written in dates
      *   (3일(金))
-     * @param predicateReadings nouns that may be a conjugated verb or adjective Open Korean Text
-     *   misread as a noun (통해, 지난)
      */
     private class SearchTerms(
-        val terms: Map<String, String?>,
+        val terms: Map<String, Tag?>,
+        val mainTerm: String,
         val compounds: List<String>,
         val splitParts: Set<String>,
         val affixFallbacks: Map<String, String>,
         val counters: Set<String>,
+        val numberWordCounters: Set<String> = emptySet(),
         val leadingNoun: String?,
         val hanjaTerms: List<String> = emptyList(),
         val titledHanja: Set<String> = emptySet(),
         val standaloneHanja: Set<String> = emptySet(),
-        val weekdayHanja: Set<String> = emptySet(),
-        val predicateReadings: List<PredicateReading> = emptyList()
-    )
-
-    /**
-     * A noun token that may be a misread conjugated predicate, like 통해 (통하다), 지난 (지나다)
-     * or 크게 (크다). Open Korean Text has many such forms in its noun list. Which reading wins
-     * is decided once the dictionary has been searched, by [resolvePredicateReadings].
-     *
-     * @param noun the token as Open Korean Text read it
-     * @param stems the predicates it could be a form of, added as search terms for it
-     * @param contractedNoun for forms ending in ㄴ or ㄹ, the noun they'd be with a contracted
-     *   particle (땐 for 때는, 걸 for 거를), searched for to rule out the predicate
-     * @param hidesContractedNoun whether [contractedNoun] was only added to be searched for, so
-     *   it isn't shown. Names often end like a contraction (마이클, 서산).
-     * @param beforeBoundNoun whether a bound noun follows (낼 수), which only a predicate can
-     *   modify
-     * @param afterCaseParticle whether the token is a 해 form and the whole word, and follows an
-     *   object or adverbial particle (을 위해, 에 대해), which needs a predicate
-     */
-    private class PredicateReading(
-        val noun: String,
-        val stems: List<String>,
-        val contractedNoun: String?,
-        val hidesContractedNoun: Boolean,
-        val beforeBoundNoun: Boolean,
-        val afterCaseParticle: Boolean
+        val weekdayHanja: Set<String> = emptySet()
     )
 
     /** The words around a tapped word in its sentence, when known. */
     private class Neighbors(val previous: String? = null, val next: String? = null)
 
     /**
-     * News writes some words in hanja (北, 韓美), which Open Korean Text reads as foreign and
-     * misreads the particles after (北이 -> 이/Noun). So hanja are looked up by the entries'
-     * origin, and the Hangul between them as words of their own.
+     * News writes some words in hanja (北, 韓美), which are looked up by the entries' origin, and
+     * the Hangul between them as words of their own.
      *
      * @param neighbors the words around [word] in its sentence. The next word tells whether hanja
      *   at the end of [word] are a family name before a title (韓 총리).
@@ -97,7 +78,7 @@ class DictionaryRepository(
             for (length in run.length downTo 1) hanjaTerms += run.windowed(length)
         }
 
-        val terms = LinkedHashMap<String, String?>()
+        val terms = LinkedHashMap<String, Tag?>()
         terms[word] = null
         val parts = mutableListOf<SearchTerms>()
         var leadingNoun: String? = null
@@ -123,7 +104,7 @@ class DictionaryRepository(
             }
             when {
                 text.isEmpty() -> Unit
-                index > 0 && text in PARTICLES -> terms.putIfAbsent(text, "Josa")
+                index > 0 && text in PARTICLES -> terms.putIfAbsent(text, Tag.PARTICLE)
                 else -> {
                     val part = getHangulSearchTerms(text)
                     if (index == 0) leadingNoun = part.leadingNoun
@@ -135,6 +116,7 @@ class DictionaryRepository(
 
         return SearchTerms(
             terms = terms,
+            mainTerm = word,
             compounds = parts.flatMap { it.compounds },
             splitParts = parts.flatMap { it.splitParts }.toSet(),
             affixFallbacks = parts.fold(emptyMap()) { fallbacks, part -> fallbacks + part.affixFallbacks },
@@ -143,8 +125,7 @@ class DictionaryRepository(
             hanjaTerms = hanjaTerms.toList(),
             titledHanja = titledHanja,
             standaloneHanja = standaloneHanja,
-            weekdayHanja = weekdayHanja,
-            predicateReadings = parts.flatMap { it.predicateReadings }
+            weekdayHanja = weekdayHanja
         )
     }
 
@@ -194,240 +175,116 @@ class DictionaryRepository(
             .filter { (_, entries) -> entries.isNotEmpty() }
     }
 
-    // Open Korean Text stems 됐다 and 돼 as 돼다, and 되어 and 되었다 as 되어다, instead of 되다
-    private fun stemOf(token: KoreanToken): String =
-        (if (!token.stem.isNullOrEmpty()) token.stem else token.text).let {
-            when {
-                it.endsWith("돼다") -> it.dropLast(2) + "되다"
-                it.endsWith("되어다") -> it.dropLast(3) + "되다"
-                else -> it
-            }
-        }
-
     private fun getHangulSearchTerms(word: String, neighbors: Neighbors = Neighbors()): SearchTerms {
-        // The words around it, for analyzers that use the context
+        // The words around it, for the analyzer's context
         val context = listOfNotNull(neighbors.previous, word, neighbors.next).takeIf { it.size > 1 }?.joinToString(" ")
-        val javaTokens = analyzer.tokenize(word, context)
-        val terms = LinkedHashMap<String, String?>()
+        // Endings aren't shown yet
+        val tokens = analyzer.value.tokenize(word, context).filter { it.tag != Tag.ENDING }
+        val terms = LinkedHashMap<String, Tag?>()
         val compounds = mutableListOf<String>()
         val splitParts = mutableSetOf<String>()
         val affixFallbacks = mutableMapOf<String, String>()
         val counters = mutableSetOf<String>()
-        terms[word] = javaTokens.singleOrNull()?.pos?.toString()
+        val numberWordCounters = mutableSetOf<String>()
+        val single = tokens.singleOrNull()
+        terms[word] = single?.tag
 
-        // A word can't start with a particle, so a leading particle token is Open Korean Text
-        // misreading a noun and its particle (나흘 만에 -> 만에/Josa, meaning 만 + 에)
-        val misreadNoun = javaTokens.firstOrNull()
-            ?.takeIf { it.pos.toString() == "Josa" && it.text.length > 1 && it.text.drop(1) in PARTICLES }
-            ?.text?.take(1)
-        misreadNoun?.let { terms.putIfAbsent(it, null) }
+        tokens.forEachIndexed { index, token ->
+            val stem = token.stem ?: token.text
+            terms.putIfAbsent(stem, token.tag)
 
-        javaTokens.forEachIndexed { index, token ->
-            val pos = token.pos.toString()
-            // Open Korean Text reads 는 after a quote or a Latin letter as a form of 늘다
-            // (없다”는, LG는), where it's always the particle
-            if (index > 0 && token.text == "는" && pos == "Verb") {
-                terms.putIfAbsent(token.text, "Josa")
-                return@forEachIndexed
-            }
-            val stem = stemOf(token)
-            terms.putIfAbsent(stem, pos)
-
-            // Open Korean Text splits verbs made of a noun and 하다, 되다 or 시키다
-            // (공부하러 -> 공부 + 하러/Verb), so the dictionary's joined verb is looked up too
-            val next = javaTokens.getOrNull(index + 1)
-            if (pos == "Noun" && next?.pos?.toString() == "Verb" && stemOf(next) in LIGHT_VERBS) {
-                terms.putIfAbsent(token.text + stemOf(next), "Verb")
+            // The noun a predicate is made from (공부 in 공부하다), as a word of its own
+            if (token.tag.isPredicate) {
+                LIGHT_VERBS.firstOrNull { stem.length > it.length + 1 && stem.endsWith(it) }
+                    ?.let { terms.putIfAbsent(stem.dropLast(it.length), Tag.NOUN) }
             }
 
             // A word after a number is almost always a counter (3명, 134개), possibly after a unit
-            // (16t급). Its own text is used since Open Korean Text can misread it (60대 -> 대다).
-            val previous = javaTokens.subList(0, index).lastOrNull { it.pos.toString() != "Alpha" }
-            val isCounter = previous?.pos?.toString() == "Number" && pos in listOf("Noun", "Verb", "Adjective")
+            // (16t급)
+            val previous = tokens.subList(0, index).lastOrNull { it.tag != Tag.FOREIGN }
+            val isCounter = previous?.tag == Tag.NUMBER && token.tag.isContent
             if (isCounter) {
-                terms.putIfAbsent(token.text, "Noun")
+                terms.putIfAbsent(token.text, Tag.NOUN)
                 counters += token.text
             }
 
-            // Open Korean Text splits off common suffixes (후보군 -> 후보 + 군/Suffix) and some
-            // prefixes, as one-syllable nouns (초고속 -> 초 + 고속). The dictionary writes these
-            // as -군 and 초-.
-            val nextPos = javaTokens.getOrNull(index + 1)?.pos?.toString()
-            val affix = when (pos) {
-                "Suffix" -> "-$stem"
-                "Noun" if stem.length == 1 && nextPos == "Noun" && !isCounter -> "$stem-"
+            // The dictionary writes affixes as -군 and 초-
+            val affix = when (token.tag) {
+                Tag.SUFFIX, Tag.PREDICATE_SUFFIX -> "-$stem"
+                Tag.PREFIX -> "$stem-"
                 else -> null
             }
             if (affix != null && affix !in terms) {
-                terms[affix] = pos
+                terms[affix] = token.tag
                 if (stem != word) affixFallbacks[stem] = affix
             }
+        }
 
-            // Regex to catch numbers followed by Hangul (e.g., "2009년", "12일")
-            // This ensures "년" or "일" are added as separate search terms
-            val numericSuffixMatch = Regex("^\\d+([ㄱ-ㅎㅏ-ㅣ가-힣]+)$").find(token.text)
-            numericSuffixMatch?.let {
-                terms.putIfAbsent(it.groupValues[1], null)
-                counters += it.groupValues[1]
+        // A noun after a number written as a word (두 바퀴, 몇 명) is a counter too
+        if (neighbors.previous in NUMBER_DETERMINERS) {
+            tokens.firstOrNull()?.takeIf { it.tag.isNominal }?.let {
+                counters += it.text
+                numberWordCounters += it.text
             }
+        }
 
-            // Handle compound nouns by generating all sub-strings. This lets the dictionary
-            // decide which parts are "real" words.
-            if (pos == "Noun" && stem.length >= 2) {
-                compounds += stem
-                for (i in stem.indices) {
-                    for (j in i + 1..stem.length) {
-                        val sub = stem.substring(i, j)
-                        if (sub.length < stem.length && sub !in terms) {
-                            terms[sub] = "Noun"
-                            if (sub.length == 1) splitParts += sub
-                        }
+        // Handle compound nouns by generating all sub-strings. This lets the dictionary decide
+        // which parts are "real" words. Nouns next to each other are one compound, as the
+        // analyzer splits compounds the dictionary doesn't have (대표팀 -> 대표 + 팀), but not
+        // counters or nouns apart in the text (88세)씨).
+        val nounRuns = mutableListOf<String>()
+        var run = ""
+        for (token in tokens) {
+            val joins = token.tag in COMPOUND_TAGS && token.text !in counters
+            if (joins && (run + token.text) in word) {
+                run += token.text
+            } else {
+                if (run.isNotEmpty()) nounRuns += run
+                run = if (joins) token.text else ""
+            }
+        }
+        if (run.isNotEmpty()) nounRuns += run
+        for (compound in nounRuns.filter { it.length >= 2 }) {
+            compounds += compound
+            for (i in compound.indices) {
+                for (j in i + 1..compound.length) {
+                    val sub = compound.substring(i, j)
+                    if (sub.length < compound.length && sub !in terms) {
+                        terms[sub] = Tag.NOUN
+                        if (sub.length == 1) splitParts += sub
                     }
                 }
-                // The start and end of a compound can also be affixes (외교부 -> 외-, -부)
-                for (i in 1 until stem.length) {
-                    for (affix in listOf(stem.substring(0, i) + "-", "-" + stem.substring(i))) {
-                        if (affix !in terms) {
-                            terms[affix] = null
-                            splitParts += affix
-                        }
+            }
+            // The start and end of a compound can also be affixes (외교부 -> 외-, -부)
+            for (i in 1 until compound.length) {
+                for (affix in listOf(compound.substring(0, i) + "-", "-" + compound.substring(i))) {
+                    if (affix !in terms) {
+                        terms[affix] = null
+                        splitParts += affix
                     }
                 }
             }
         }
 
-        // Open Korean Text misreads some noun + 하다 verbs altogether (연계한 -> 연/Modifier +
-        // 계/Noun + 한/Josa), so the noun is also split off at the verb's ending. Not from what
-        // it reads as one noun, which can contain the ending (지난해), or when it read the verb
-        // right (중요한 -> 중요하다).
-        val isOneNoun = javaTokens.singleOrNull()?.pos?.toString() == "Noun"
-        LIGHT_VERB_FORM.find(word)?.takeIf { !isOneNoun }?.let { match ->
-            val (noun, ending) = match.destructured
-            val verb = noun + when (ending.first()) {
-                '시' -> "시키다"
-                '되', '된', '될', '됨', '됩', '돼', '됐' -> "되다"
-                else -> "하다"
-            }
-            if (verb !in terms) {
-                terms[verb] = "Verb"
-                terms.putIfAbsent(noun, "Noun")
-            }
+        // The word is read as the content word it starts with, unless it's that word. Without
+        // one, as after a number or a prefix, the terms are ranked by the rest of the order.
+        val content = tokens.firstOrNull()?.takeIf { it.tag.isContent }
+        val mainTerm = when {
+            content == null || single?.text == word && single.stem == null -> word
+            else -> content.stem ?: content.text
         }
-
-        // A noun followed only by particles and endings may be a misread predicate
-        val predicateReading = javaTokens.firstOrNull()
-            ?.takeIf { first ->
-                first.pos.toString() == "Noun" && first.text.all { it in '가'..'힣' } &&
-                    javaTokens.drop(1).all { it.pos.toString() in GRAMMATICAL_POS }
-            }
-            ?.let { predicateReading(it.text, isWholeWord = it.text == word, neighbors, terms.keys) }
-            ?.also { reading ->
-                for (stem in reading.stems) terms[stem] = if (reading.noun.last() == '게') "Adjective" else null
-                reading.contractedNoun?.let { terms.putIfAbsent(it, "Noun") }
-            }
 
         // Filter out pure numbers (e.g. "2009") to keep the UI chips clean
         return SearchTerms(
             terms = terms.filterKeys { term -> term.any { !it.isDigit() } || term == word },
+            mainTerm = mainTerm,
             compounds = compounds,
             splitParts = splitParts,
             affixFallbacks = affixFallbacks,
             counters = counters,
-            leadingNoun = misreadNoun ?: javaTokens.firstOrNull()?.takeIf { it.pos.toString() == "Noun" }?.text,
-            predicateReadings = listOfNotNull(predicateReading)
+            numberWordCounters = numberWordCounters,
+            leadingNoun = tokens.firstOrNull()?.takeIf { it.tag.isNominal }?.text
         )
-    }
-
-    /**
-     * How [noun] would read as a conjugated predicate, or null if it can't be one. Covers the
-     * endings Open Korean Text most often misses: modifier ㄴ and ㄹ (지난, 낼), 해 (통해), 게
-     * (크게), and the bare stem before a particle-like ending (앞서, 알리고).
-     */
-    private fun predicateReading(
-        noun: String,
-        isWholeWord: Boolean,
-        neighbors: Neighbors,
-        otherTerms: Set<String>
-    ): PredicateReading? {
-        val last = noun.last()
-        val head = noun.dropLast(1)
-        val final = last.finalConsonant()
-        val isModifier = final == FINAL_N || final == FINAL_L
-        val withoutFinal = head + (last - final)
-        val stems = buildList {
-            if (isModifier) add(withoutFinal + "다")
-            if (last == '해') add(head + "하다")
-            if (last == '게' && head.isNotEmpty()) add(head + "다")
-            // Not after a particle's syllable, as Open Korean Text also reads some nouns and
-            // their particle as one noun (달이)
-            if (last.toString() !in PARTICLES) add(noun + "다")
-        }.distinct().filter { it !in otherTerms }
-        if (stems.isEmpty()) return null
-
-        val nextToken = neighbors.next?.let { tokenize(it).firstOrNull() }
-        val previousToken = neighbors.previous?.let { tokenize(it).lastOrNull() }
-        val contractedNoun = withoutFinal.takeIf { isModifier && it.isNotEmpty() }
-        return PredicateReading(
-            noun = noun,
-            stems = stems,
-            contractedNoun = contractedNoun,
-            hidesContractedNoun = contractedNoun != null && contractedNoun !in otherTerms,
-            beforeBoundNoun = isModifier && isWholeWord && nextToken?.text in BOUND_NOUNS,
-            afterCaseParticle = last == '해' && isWholeWord && previousToken?.pos?.toString() == "Josa" &&
-                previousToken.text in CASE_PARTICLES
-        )
-    }
-
-    private class ResolvedReadings(
-        val promoted: Set<String> = emptySet(),
-        val demoted: Set<String> = emptySet(),
-        val hidden: Set<String> = emptySet()
-    )
-
-    /**
-     * Decides how each of [searchTerms]'s nouns that may be a misread predicate reads, given the
-     * dictionary [entries] found for the terms. The predicate wins, and is shown first, when:
-     * - A bound noun follows the form ending in ㄴ or ㄹ (낼 수)
-     * - The noun isn't in the dictionary (통해, 지난), unless it can be a noun with a contracted
-     *   particle (땐 for 때는)
-     * - The dictionary only has it as rare nouns, without a vocabulary level (대한, 大韓), with
-     *   the same exception
-     * - It's a 해 form of a noun and follows an object or adverbial particle (에 대해, 을 위해),
-     *   which needs a predicate
-     * Otherwise the noun was read right (산, 피해), and the predicates aren't shown.
-     */
-    private fun resolvePredicateReadings(
-        searchTerms: SearchTerms,
-        entries: Map<String, List<DictionaryWithSenses>>
-    ): ResolvedReadings {
-        val promoted = mutableSetOf<String>()
-        val demoted = mutableSetOf<String>()
-        val hidden = mutableSetOf<String>()
-        for (reading in searchTerms.predicateReadings) {
-            val stems = reading.stems.filter { stem ->
-                entries[stem].orEmpty().any { it.entry.partOfSpeech in PREDICATE_POS }
-            }
-            val own = entries[reading.noun].orEmpty()
-            val isContraction = reading.contractedNoun
-                ?.let { noun -> entries[noun].orEmpty().any { it.entry.partOfSpeech in NOMINAL_POS } } == true
-            val isPredicate = stems.isNotEmpty() && (
-                reading.beforeBoundNoun ||
-                    !isContraction && (
-                        own.isEmpty() ||
-                            own.all { it.entry.partOfSpeech == "Noun" && it.entry.vocabularyLevel in UNLEVELED }
-                        ) ||
-                    reading.afterCaseParticle && own.all { it.entry.partOfSpeech == "Noun" }
-                )
-            if (isPredicate) {
-                promoted += stems
-                demoted += reading.noun
-                hidden += reading.stems - stems.toSet()
-            } else {
-                hidden += reading.stems
-            }
-            if (reading.hidesContractedNoun) hidden += listOfNotNull(reading.contractedNoun)
-        }
-        return ResolvedReadings(promoted, demoted, hidden)
     }
 
     /** The word after [word] in [sentence], or null if [word] ends in punctuation or isn't found. */
@@ -462,15 +319,14 @@ class DictionaryRepository(
         val previous = words[index - 1]
         if (!previous.last().isLetterOrDigit()) return PrecedingWord.BREAK
         val last = tokenize(previous).lastOrNull() ?: return PrecedingWord.UNKNOWN
-        return when (last.pos.toString()) {
+        return when {
             // Suffixes end nouns too (1960년대 -> 대/Suffix)
-            "Noun", "ProperNoun", "Number", "Determiner", "Modifier", "Suffix" -> PrecedingWord.MODIFIER
-            "Josa" -> PrecedingWord.BREAK
-            // What follows a number, like 대 in 1960년대 or 에 in 5조원에
-            "Foreign" -> if (last.text in PARTICLES) PrecedingWord.BREAK else PrecedingWord.MODIFIER
+            last.tag.isNominal || last.tag in setOf(Tag.NUMBER, Tag.DETERMINER, Tag.SUFFIX, Tag.HANJA) ->
+                PrecedingWord.MODIFIER
+            last.tag == Tag.PARTICLE -> PrecedingWord.BREAK
             // Verbs modify nouns in forms ending in ㄴ or ㄹ (맛볼, 위치한, 하는)
-            "Verb", "Adjective", "Eomi" ->
-                if (last.text.last().finalConsonant() in listOf(FINAL_N, FINAL_L)) PrecedingWord.MODIFIER
+            last.tag.isPredicate || last.tag == Tag.ENDING ->
+                if (previous.last().finalConsonant() in listOf(FINAL_N, FINAL_L)) PrecedingWord.MODIFIER
                 else PrecedingWord.BREAK
             else -> PrecedingWord.UNKNOWN
         }
@@ -518,26 +374,25 @@ class DictionaryRepository(
         return splits[0]
     }
 
-    /** How Open Korean Text splits [word], as `text/Pos`, with the stem where it differs. */
+    /**
+     * How the analyzer splits [word], as `text/TAG`, with the stem where it differs. Call off the
+     * main thread.
+     */
     fun describeTokens(word: String): String = tokenize(word).joinToString(" ") { token ->
         val stem = token.stem?.takeIf { it.isNotEmpty() && it != token.text }?.let { "($it)" }.orEmpty()
-        "${token.text}/${token.pos}$stem"
+        "${token.text}/${token.tag}$stem"
     }
 
-    private fun tokenize(text: String) = analyzer.tokenize(text)
+    private fun tokenize(text: String) = analyzer.value.tokenize(text)
 
-    // Nouns in the sentence other than the looked up word itself, for matching against entries
-    private fun contextNouns(sentence: String, searchTerms: Set<String>): Set<String> =
+    // Words in the sentence other than the looked up word itself, for matching against entries
+    private fun contextWords(sentence: String, searchTerms: Set<String>): Set<String> =
         if (sentence.isBlank()) emptySet()
-        else tokenize(sentence)
-            .filter { it.pos.toString() in listOf("Noun", "ProperNoun") && it.text.length >= 2 }
-            .map { it.text }
-            .filter { it !in searchTerms }
-            .toSet()
+        else analyzer.value.contextWords(sentence).filter { it !in searchTerms }.toSet()
 
     private class Lookup(
         val searchTerms: SearchTerms,
-        val contextNouns: Set<String>,
+        val contextWords: Set<String>,
         val precedingWord: PrecedingWord
     )
 
@@ -547,8 +402,8 @@ class DictionaryRepository(
         context: LookupContext = LookupContext()
     ): Flow<Map<String, List<DictionaryWithSenses>>> {
         val categoryPrefixes = HomonymRanking.categoryPrefixesFor(context.feedCategory)
-        // Tokenizing with Open Korean Text is CPU-heavy (and the first call loads its
-        // dictionaries), so it must not run on the main thread.
+        // Analyzing takes a while, and the first call builds the analyzer, so it must not run on
+        // the main thread.
         return flow {
             val searchTerms = getSearchTerms(
                 word,
@@ -557,7 +412,7 @@ class DictionaryRepository(
             emit(
                 Lookup(
                     searchTerms = searchTerms,
-                    contextNouns = contextNouns(context.sentence, searchTerms.terms.keys),
+                    contextWords = contextWords(context.sentence, searchTerms.terms.keys - searchTerms.splitParts),
                     precedingWord = precedingWord(context.sentence, word)
                 )
             )
@@ -584,15 +439,13 @@ class DictionaryRepository(
                         hanjaEntries.groupBy { it.entry.origin },
                         HomonymRanking(
                             tokenPos = null,
-                            contextNouns = lookup.contextNouns,
+                            contextWords = lookup.contextWords,
                             categoryPrefixes = categoryPrefixes
                         )
                     )
-                    val readings = resolvePredicateReadings(lookup.searchTerms, byWord)
-                    // A misread predicate isn't a compound, so its syllables aren't words
-                    val keptParts = usefulSplitParts(lookup.searchTerms.compounds - readings.demoted, byWord.keys)
+                    val keptParts = usefulSplitParts(lookup.searchTerms.compounds, byWord.keys)
+                    val mainTerm = lookup.searchTerms.mainTerm
                     byWord
-                        .filterKeys { it !in readings.hidden }
                         .filterKeys { it !in lookup.searchTerms.splitParts || it in keptParts }
                         .filterKeys { term ->
                             val affix = lookup.searchTerms.affixFallbacks[term]
@@ -601,9 +454,10 @@ class DictionaryRepository(
                         .mapValues { (term, homonyms) ->
                             val ranking = HomonymRanking(
                                 tokenPos = terms[term],
-                                contextNouns = lookup.contextNouns,
+                                contextWords = lookup.contextWords,
                                 categoryPrefixes = categoryPrefixes,
                                 isCounter = term in lookup.searchTerms.counters,
+                                afterNumberWord = term in lookup.searchTerms.numberWordCounters,
                                 preceding = if (term == lookup.searchTerms.leadingNoun) {
                                     lookup.precedingWord
                                 } else {
@@ -615,9 +469,8 @@ class DictionaryRepository(
                         .toList()
                         .plus(hanja)
                         // Sort:
-                        // 1. Exact match first, then hanja, which are likely why the word was
-                        //    tapped. A predicate Open Korean Text misread as a noun takes the
-                        //    noun's place.
+                        // 1. What the word is read as first (the word itself, or its stem),
+                        //    then hanja, which are likely why the word was tapped
                         // 2. Particles and endings last. Many have noun homonyms (과, 이), so
                         //    the entries' POS alone would put them first.
                         // 3. Counters first, as the word after a number is what's being counted
@@ -626,12 +479,11 @@ class DictionaryRepository(
                         // 5. Longest sub-strings next
                         .sortedWith(
                             compareByDescending<Pair<String, List<DictionaryWithSenses>>> {
-                                it.first in readings.promoted ||
-                                    it.first == word && it.first !in readings.demoted
+                                it.first == mainTerm
                             }.thenByDescending {
                                 it.first in hanjaTerms
                             }.thenBy {
-                                terms[it.first] in GRAMMATICAL_POS
+                                terms[it.first] == Tag.PARTICLE
                             }.thenByDescending {
                                 it.first in lookup.searchTerms.counters
                             }.thenBy {
@@ -663,32 +515,22 @@ class DictionaryRepository(
     }
 
     private companion object {
-        // Open Korean Text POS of particles and endings. It also tags particles after numbers as
-        // Foreign (5조원에 -> 에/Foreign).
-        val GRAMMATICAL_POS = setOf("Josa", "Eomi", "PreEomi", "Foreign")
+        // What predicates are made from nouns with (공부하다, 발표되다, 퇴출시키다)
+        val LIGHT_VERBS = listOf("하다", "되다", "시키다")
+
+        // Determiners that count, before a counter (두 바퀴, 몇 명)
+        val NUMBER_DETERMINERS = setOf(
+            "한", "두", "세", "네", "서", "석", "너", "넉", "다섯", "여섯", "일곱", "여덟", "아홉", "열",
+            "스무", "몇", "여러", "몇몇", "수십", "수백", "수천", "수만", "십여"
+        )
+
+        // Tags of the parts of a compound noun
+        val COMPOUND_TAGS = setOf(Tag.NOUN, Tag.UNKNOWN, Tag.SUFFIX)
 
         val PARTICLES = setOf(
             "이", "가", "을", "를", "은", "는", "의", "에", "에서", "에게", "로", "으로", "와", "과",
             "도", "만", "까지", "부터"
         )
-
-        // Particles that need a predicate after them, rather than a noun (을 위해, 에 대해)
-        val CASE_PARTICLES = setOf("을", "를", "에", "에게")
-
-        // Bound nouns that follow a predicate's ㄴ or ㄹ form (낼 수, 온 지)
-        val BOUND_NOUNS = setOf("수", "것", "거", "줄", "데", "뿐", "듯", "바", "리", "적", "채", "터", "때", "지", "만큼")
-
-        // What 하다 verbs and the like are made from nouns with
-        val LIGHT_VERBS = setOf("하다", "되다", "시키다")
-
-        // A noun of two or more syllables followed by a form of 하다, 되다 or 시키다
-        val LIGHT_VERB_FORM = Regex("^([가-힣]{2,}?)(하|한|할|함|합|해|했|시키|시킨|시킬|시켜|시켰|되|된|될|됨|됩|돼|됐)")
-
-        val PREDICATE_POS = setOf("Verb", "Adjective", "Auxiliary Verb", "Auxiliary Adjective")
-        val NOMINAL_POS = setOf("Noun", "Bound Noun", "Pronoun")
-
-        // Entries without a vocabulary level, which are rarer words
-        val UNLEVELED = setOf(null, "None")
 
         // The semantic category of weekdays (금, Friday), among other time words
         const val TIME_CATEGORY = "개념 > 시간"

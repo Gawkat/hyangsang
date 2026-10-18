@@ -3,12 +3,18 @@ package dev.kettu.hyangsang
 import android.content.Context
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.CreationExtras
+import dev.kettu.hyangsang.analyzer.ContextModel
+import dev.kettu.hyangsang.analyzer.DictionaryRow
+import dev.kettu.hyangsang.analyzer.Lexicon
+import dev.kettu.hyangsang.analyzer.LookupAnalyzer
 import dev.kettu.hyangsang.data.defaults.DefaultData
 import dev.kettu.hyangsang.data.local.DictionaryDatabase
 import dev.kettu.hyangsang.data.local.HyangsangDatabase
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
+import dev.kettu.hyangsang.data.repository.KoreanAnalyzer
+import dev.kettu.hyangsang.data.repository.LexiconKoreanAnalyzer
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
@@ -48,10 +54,19 @@ class AppContainer(private val context: Context) {
         ArticleRepository(database.articleDao())
     }
 
+    /**
+     * The analyzer word lookups use, built from the installed dictionary on first use. That takes
+     * about a second, and reads the dictionary, which Room doesn't allow on the main thread.
+     */
+    val koreanAnalyzer: Lazy<KoreanAnalyzer> = lazy {
+        val rows = dictionaryDatabase.dictionaryDao().getLexiconRows().map {
+            DictionaryRow(it.word, it.partOfSpeech, it.vocabularyLevel, it.lexicalUnit)
+        }
+        LexiconKoreanAnalyzer(LookupAnalyzer(Lexicon(rows), ContextModel.bundled()))
+    }
+
     val dictionaryRepository: DictionaryRepository by lazy {
-        DictionaryRepository(
-            dictionaryDatabase.dictionaryDao()
-        )
+        DictionaryRepository(dictionaryDatabase.dictionaryDao(), koreanAnalyzer)
     }
 
     val lookupReportRepository: LookupReportRepository by lazy {

@@ -19,7 +19,7 @@ import java.io.File
  * @param gloss the first translation of [expected]
  * @param shown the entry the lookup showed first, as `word#homonymNumber`
  * @param stems the terms the lookup searched for, as shown in the sheet's chips
- * @param tokens how Open Korean Text split the tapped word
+ * @param tokens how the analyzer split the tapped word
  */
 data class LookupReport(
     val category: DefaultCategory?,

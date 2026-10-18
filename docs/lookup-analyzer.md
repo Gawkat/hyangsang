@@ -4,14 +4,14 @@ Kiwi analyzes Korean far better than Open Korean Text (OKT) but needs about 490 
 device (see [korean-analyzer.md](korean-analyzer.md)). In October 2026 a time-boxed prototype
 tested whether a narrow analyzer, built for what a lookup needs and driven by the bundled
 dictionary, could get close to Kiwi's accuracy at a small cost. Its code is now the `analyzer`
-module. The app's lookups still use OKT.
+module, and word lookups use it.
 
 **Decision: replace OKT with this analyzer, in stages (see [Plan](#plan)).** It's much more
 accurate than OKT, close to Kiwi on most measures, uses about 14 MB of memory instead of OKT's
 ~50 MB, loads in about a second instead of ten, and recovers endings such as -면서. Its main weak
-spot is proper names. End-to-end, lookups only get slightly better so far, because the lookup code
-around the analyzer is tuned to OKT. There will be no fallback to OKT and no choice between
-analyzers in the app.
+spot is proper names. With the lookup's ranking re-tuned for it, lookups show the expected entry
+in 340 instead of 268 dictionary dev cases (see [In the app](#in-the-app)). There is no fallback to
+OKT and no choice between analyzers in the app.
 
 ## How it works
 
@@ -102,6 +102,51 @@ What a lookup analyzes includes the whole sentence, for the nouns used in rankin
 sentences are long lists of agency names (한국해외인프라도시개발지원공사, ...), slow for both.
 On a desktop JVM, Lex analyzes a sentence in 0.20 ms (median), Kiwi in 0.47 ms and OKT in 1.33 ms.
 
+### In the app
+
+Lookups switched to the analyzer in step 3 of the [Plan](#plan). `LookupEvaluationTest`, expected
+entry shown first (in parentheses, the right headword shown):
+
+| Set | OKT, patched | Lex, OKT patches still in | Lex, patches removed | Lex, ranking re-tuned |
+|---|---|---|---|---|
+| Dictionary, dev | 268 (433) | 274 (451) | 281 (458) | 340 (458) |
+| Dictionary, test | 274 (412) | 273 (433) | 277 (446) | 315 (444) |
+| Real articles | 64 (88) | 63 (88) | 64 (87) | 64 (87) |
+
+Almost all of the remaining dev misses are the right headword with the wrong homonym first.
+`HomonymRanking` was re-tuned on the dev set:
+
+* **Context words:** the sentence's nouns of any length and the stems of its verbs and adjectives
+  of two or more syllables (the noun for 하다 and 되다 verbs, whose stems contract: 도착했다),
+  instead of nouns of two or more syllables. Words found in an entry's examples count twice as
+  much as words found in its definitions. Together about +50 on dev.
+* **Number words:** a noun after 한, 두, 몇, 여러 and the like is a counter, as after digits, with
+  counting units of any part of speech first (두 통, two buckets). About +12.
+* **Parts of speech:** the analyzer's verb, adjective, auxiliary, determiner and adverb tags have
+  to match the entry's exactly. Its nominal tags (bound noun, pronoun, numeral) are the class of
+  the word's most basic entry, not of the one the sentence uses, so they only tell nominals from
+  the rest: matching them exactly got 334 instead of 341 on dev. Whether a bound noun fits comes
+  from the word before it, as before.
+
+Two more changes measured on dev were dropped or narrowed after the one confirming run, because
+they cost the article set five cases: the counter order for number words was also used after
+digits (where bound-noun units come first again), and bound nouns after a plain noun (3년 만에)
+were ranked after the context words. So the article set informed these two choices and is no
+longer a clean held-out check of them. The test set was also run at checkpoints before the
+ranking was re-tuned, without deciding anything on it.
+
+Analyzer changes made for the switch, with their effect on the treebanks (lemma accuracy
+unchanged, part of speech −0.6 points on GSD, +0.5 on Kaist):
+
+* A stem that's both a verb and an adjective (크다) is read as both, for the counts to choose
+  from, so 크게 is the adjective.
+* A bound noun after a word (산 것) outweighs the counts: its bonus went from 0.8 to 2.5.
+* A number word between digits (5조5천) isn't read as a prefix.
+
+On the x86_64 emulator, building the analyzer from the installed dictionary took 1.3 s (reading the
+entries 0.54 s, lexicon 0.46 s, counts 0.34 s), in the background as the app starts. The first
+lookup in an article then took 35 ms.
+
 ## Where it goes wrong
 
 On 268 saved articles, Lex's main headword isn't among Kiwi's for 9% of words. In a sample of 60 of
@@ -137,12 +182,12 @@ OKT is replaced in stages, each its own pull request:
    twice, are kept. That leaves out 28% of the counts and changes none of the evaluation results.
    The UD Korean treebanks are licensed CC BY-SA 4.0, which Creative Commons lists as compatible
    with GPLv3 (one-way), so the derived counts ship under CC BY-SA 4.0 with attribution.
-3. **Switch lookups to it:** use it through `KoreanAnalyzer` in `DictionaryRepository`, and remove
-   the OKT patches it makes unnecessary (misread predicates, 돼다 and 되어다, 늘다 after quotes,
-   noun + 하다 splits). Give `HomonymRanking` its finer parts of speech (bound noun, determiner) and
-   re-tune it, then raise the lookup baselines. Load the lexicon once, from the dictionary database
-   (~0.3 s) or a compact asset, and share it with the lookup. Context nouns only need the
-   sentence's nouns, which would also cap the slow sentences.
+3. **Switch lookups to it (done):** lookups use it through `KoreanAnalyzer`, built once per process
+   from the installed dictionary, off the main thread. The OKT patches are removed (misread
+   predicates, 돼다 and 되어다, 늘다 after quotes, noun + 하다 joins, misread leading particles).
+   `HomonymRanking` gets its finer parts of speech and context words, analyzed word by word
+   without the sentence context, and was re-tuned, and the baselines raised (see
+   [In the app](#in-the-app)). OKT stays in the build, unused, until step 4.
 4. **Coverage, then remove OKT:** a list of names, or a rule for surname + given name; the missing
    irregulars; numbers and units. Then remove OKT and the Scala library it depends on, its 1.7 MB
    jar and 5.2 MB of Scala before shrinking.
@@ -154,14 +199,15 @@ belongs in the `analyzer` module, not in the app's lookup code.
 
 The comparison harness, which runs OKT, Kiwi and the analyzer on the treebanks, the dictionary
 examples and saved articles, and measures them on a device, is kept unpublished, like the Kiwi
-comparison's. `LookupEvaluationTest` evaluates the analyzer instead of OKT with:
+comparison's. `LookupEvaluationTest` evaluates the analyzer with other counts than the bundled
+ones with:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlookupAnalyzer=lexicon -PlexContext=<counts file>
+./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlexContext=<counts file>
 ```
 
-`-PlexContext` is optional. Without counts, the analyzer gets 275 (449), 275 (433) and 62 (88) on
-the three sets. The committed counts are
+Before the switch, without counts, the analyzer got 275 (449), 275 (433) and 62 (88) on the three
+sets. The committed counts are
 `analyzer/src/main/resources/dev/kettu/hyangsang/analyzer/context-counts.tsv`; CONTRIBUTING.md
 describes how to regenerate them.
 

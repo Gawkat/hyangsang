@@ -1,8 +1,10 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.analyzer.Tag
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
+import dev.kettu.hyangsang.data.local.dao.LexiconRow
 import dev.kettu.hyangsang.data.local.dao.SenseWithExamples
 import dev.kettu.hyangsang.data.local.entity.DictionaryEntry
 import dev.kettu.hyangsang.data.local.entity.DictionaryExample
@@ -33,12 +35,12 @@ class HomonymRankingTest {
 
     private fun rank(
         entries: List<DictionaryWithSenses> = all,
-        tokenPos: String? = "Noun",
-        contextNouns: Set<String> = emptySet(),
+        tokenPos: Tag? = Tag.NOUN,
+        contextWords: Set<String> = emptySet(),
         category: DefaultCategory? = null
     ): List<Int> = entries
         .sortedWith(
-            HomonymRanking(tokenPos, contextNouns, HomonymRanking.categoryPrefixesFor(category)).comparator
+            HomonymRanking(tokenPos, contextWords, HomonymRanking.categoryPrefixesFor(category)).comparator
         )
         .map { it.entry.homonymNumber }
 
@@ -58,7 +60,7 @@ class HomonymRankingTest {
     fun `nouns shared with the sentence outweigh the feed category`() {
         assertEquals(
             listOf(1, 2, 3),
-            rank(contextNouns = setOf("침체", "수출"), category = DefaultCategory.SPORTS)
+            rank(contextWords = setOf("침체", "수출"), category = DefaultCategory.SPORTS)
         )
     }
 
@@ -66,8 +68,8 @@ class HomonymRankingTest {
     fun `entries matching the token's POS come first`() {
         val determiner = homonym("전", 6, "Determiner", "Beginner", "개념 > 순서")
         val noun = homonym("전", 2, "Noun", "Beginner", "개념 > 순서")
-        assertEquals(listOf(6, 2), rank(listOf(noun, determiner), tokenPos = "Determiner"))
-        assertEquals(listOf(2, 6), rank(listOf(noun, determiner), tokenPos = "Noun"))
+        assertEquals(listOf(6, 2), rank(listOf(noun, determiner), tokenPos = Tag.DETERMINER))
+        assertEquals(listOf(2, 6), rank(listOf(noun, determiner), tokenPos = Tag.NOUN))
     }
 
     @Test
@@ -75,7 +77,7 @@ class HomonymRankingTest {
         val work = homonym("일", 1, "Noun", "Beginner", "삶 > 일상 행위", "무엇을 이루려고 하는 활동.")
         val sunday = homonym("일", 2, "Noun", "Beginner", "개념 > 시간", "일주일의 마지막 날.")
         val date = homonym("일", 4, "Bound Noun", "Beginner", "개념 > 세는 말", "날이나 날짜를 세는 단위.")
-        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), isCounter = true)
+        val ranking = HomonymRanking(Tag.NOUN, emptySet(), emptyList(), isCounter = true)
         assertEquals(4, listOf(work, sunday, date).sortedWith(ranking.comparator).first().entry.homonymNumber)
     }
 
@@ -93,7 +95,7 @@ class HomonymRankingTest {
 
     @Test
     fun `after a modifier bound nouns come first, except counting units`() {
-        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), preceding = PrecedingWord.MODIFIER)
+        val ranking = HomonymRanking(Tag.NOUN, emptySet(), emptyList(), preceding = PrecedingWord.MODIFIER)
         assertEquals(
             listOf(3, 5, 11),
             listOf(sackMeasure, wednesday, means).sortedWith(ranking.comparator).map { it.entry.homonymNumber }
@@ -102,18 +104,53 @@ class HomonymRankingTest {
 
     @Test
     fun `after a break bound nouns come last`() {
-        val ranking = HomonymRanking("Noun", emptySet(), emptyList(), preceding = PrecedingWord.BREAK)
+        val ranking = HomonymRanking(Tag.NOUN, emptySet(), emptyList(), preceding = PrecedingWord.BREAK)
         assertEquals(5, listOf(means, sackMeasure, wednesday).sortedWith(ranking.comparator).first().entry.homonymNumber)
     }
 
     @Test
     fun `lookup reads the preceding word from the sentence`() = runBlocking {
-        val repository = DictionaryRepository(FakeDao(listOf(wednesday, means)))
+        val entries = listOf(wednesday, means)
+        val repository = DictionaryRepository(FakeDao(entries), testAnalyzer(entries))
         fun firstFor(sentence: String) = runBlocking {
             repository.getDefinitionsForWord("수", LookupContext(sentence)).first().getValue("수").first().entry.homonymNumber
         }
         assertEquals(3, firstFor("다양한 국수를 맛볼 수 있는 축제가 열린다."))
         assertEquals(5, firstFor("수 요일에 만나자."))
+    }
+
+    @Test
+    fun `after a number word counting units come first, then bound nouns`() {
+        // 통 as in 두 통: a bucket counts what's in it, 통 the bound noun is a situation (통에)
+        val body = homonym("통", 1, "Noun", "Beginner", "인간 > 신체 부위", "몸의 둘레.")
+        val situation = homonym("통", 3, "Bound Noun", "Intermediate", "개념 > 상황", "어떤 일이 벌어진 상황.")
+        val bucket = homonym("통", 5, "Noun", "Intermediate", "주생활 > 주거 도구", "물건을 담는 그릇. 또는 그것을 세는 단위.")
+        val ranking = HomonymRanking(Tag.NOUN, emptySet(), emptyList(), isCounter = true, afterNumberWord = true)
+        assertEquals(listOf(5, 3, 1), listOf(body, situation, bucket).sortedWith(ranking.comparator).map { it.entry.homonymNumber })
+    }
+
+    @Test
+    fun `words in examples count more than words in definitions`() {
+        val inDefinition = homonym("배", 1, "Noun", "Beginner", "인간 > 신체 부위", "음식을 소화하는 곳.")
+        val inExample = homonym("배", 2, "Noun", "Beginner", "사회 생활 > 교통 수단", "", "배가 항구에 도착했다.")
+        assertEquals(listOf(2, 1), rank(listOf(inDefinition, inExample), contextWords = setOf("음식", "항구")))
+    }
+
+    @Test
+    fun `lookup counts after number words and matches predicate stems`() = runBlocking {
+        val wheel = homonym("바퀴", 1, "Noun", "Intermediate", "교통 > 부품", "차 밑에 달린 둥근 물건.", "자전거 바퀴가 빠졌다.")
+        val round = homonym("바퀴", 3, "Bound Noun", "Intermediate", "개념 > 세는 말", "둘레를 도는 횟수를 세는 단위.")
+        val belly = homonym("배", 1, "Noun", "Beginner", "인간 > 신체 부위", "음식을 소화하는 곳.", "배가 아프다.")
+        val boat = homonym("배", 2, "Noun", "Beginner", "사회 생활 > 교통 수단", "물 위를 다니는 탈것.", "배가 항구에 도착했다.")
+        val entries = listOf(wheel, round, belly, boat, homonym("도착하다", 0, "Verb", "Beginner", "", ""))
+        val repository = DictionaryRepository(FakeDao(entries), testAnalyzer(entries))
+        fun first(word: String, sentence: String) = runBlocking {
+            repository.getDefinitionsForWord(word, LookupContext(sentence)).first().getValue(word).first().entry.homonymNumber
+        }
+        assertEquals(3, first("바퀴", "운동장을 두 바퀴 돌았다."))
+        assertEquals(1, first("바퀴", "자전거 바퀴 하나"))
+        // 도착했다 as 도착
+        assertEquals(2, first("배", "배가 늦게 도착했다."))
     }
 
     @Test
@@ -125,7 +162,7 @@ class HomonymRankingTest {
 
     @Test
     fun `lookup ranks homonyms using the sentence and feed`() = runBlocking {
-        val repository = DictionaryRepository(FakeDao(all))
+        val repository = DictionaryRepository(FakeDao(all), testAnalyzer(all))
 
         val bySentence = repository.getDefinitionsForWord(
             "경기",
@@ -151,6 +188,7 @@ class HomonymRankingTest {
             flowOf(entries.filter { it.entry.word in words })
         override fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>> =
             flowOf(entries.filter { it.entry.origin in origins })
+        override fun getLexiconRows(): List<LexiconRow> = emptyList()
     }
 
     private fun homonym(
