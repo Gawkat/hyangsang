@@ -17,6 +17,8 @@
 /tools/dictionary-generator/build/
 /app/src/main/assets/dictionary.db
 /tools/dictionary-generator/data/
+/tools/analyzer-counts/build/
+/tools/analyzer-counts/data/
 .kotlin
 *.jks
 *.keystore
