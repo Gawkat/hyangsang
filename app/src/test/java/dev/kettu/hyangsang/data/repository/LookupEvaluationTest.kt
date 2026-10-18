@@ -1,5 +1,9 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.analyzer.ContextModel
+import dev.kettu.hyangsang.analyzer.DictionaryRow
+import dev.kettu.hyangsang.analyzer.Lexicon
+import dev.kettu.hyangsang.analyzer.LookupAnalyzer
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.dao.DictionaryDao
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
@@ -83,7 +87,7 @@ class LookupEvaluationTest {
 
     private fun evaluate(name: String, baseline: Int) = runBlocking {
         val dao = JdbcDictionaryDao(connection)
-        val repository = DictionaryRepository(dao)
+        val repository = DictionaryRepository(dao, analyzer)
         val cases = loadCases(name)
 
         // Catch typos in the expected entries, which would otherwise just look like misses
@@ -237,6 +241,31 @@ class LookupEvaluationTest {
         private const val BASELINE_KRDICT_TEST = 274
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
+
+        // -PlookupAnalyzer=lexicon (see app/build.gradle.kts) evaluates the dictionary-driven
+        // LookupAnalyzer instead of Open Korean Text
+        private val analyzer: KoreanAnalyzer by lazy {
+            when (System.getProperty("lookup.analyzer")) {
+                "lexicon" -> LexiconKoreanAnalyzer(
+                    LookupAnalyzer(
+                        Lexicon(dictionaryRows()),
+                        System.getProperty("lex.context")?.let { ContextModel(File(it).readLines().asSequence()) }
+                    )
+                )
+                else -> OktAnalyzer
+            }
+        }
+
+        private fun dictionaryRows(): List<DictionaryRow> =
+            DriverManager.getConnection("jdbc:sqlite:${DICTIONARY.absolutePath}").use { conn ->
+                conn.createStatement().executeQuery(
+                    "SELECT word, partOfSpeech, vocabularyLevel, lexicalUnit FROM dictionary_entries"
+                ).use { rows ->
+                    generateSequence {
+                        if (rows.next()) DictionaryRow(rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4)) else null
+                    }.toList()
+                }
+            }
         private lateinit var copy: File
         private lateinit var connection: Connection
 

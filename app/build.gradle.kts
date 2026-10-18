@@ -79,6 +79,15 @@ android {
         // Exported Room schemas are needed by MigrationTestHelper
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
+
+    testOptions {
+        unitTests.all { test ->
+            // -PlookupAnalyzer=lexicon runs LookupEvaluationTest with the dictionary-driven
+            // analyzer, and -PlexContext=<counts file> gives it context counts
+            providers.gradleProperty("lookupAnalyzer").orNull?.let { test.systemProperty("lookup.analyzer", it) }
+            providers.gradleProperty("lexContext").orNull?.let { test.systemProperty("lex.context", it) }
+        }
+    }
 }
 
 kotlin {
@@ -136,6 +145,9 @@ dependencies {
 
     // Parser
     implementation(project(":parser"))
+
+    // Dictionary-driven analyzer, not used by lookups yet
+    implementation(project(":analyzer"))
 
     // For OSS licensing
     implementation(libs.aboutlibraries.compose.m3)

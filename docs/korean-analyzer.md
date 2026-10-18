@@ -1,13 +1,18 @@
-# Korean analyzer: Open Korean Text vs Kiwi
+# Korean analyzer: Open Korean Text, Kiwi and our own
 
 Word lookups use [Open Korean Text](https://github.com/open-korean-text/open-korean-text) (OKT) to
 find the dictionary forms of a tapped word. OKT is no longer developed and often misses
 conjugations, so in October 2026 it was compared with [Kiwi](https://github.com/bab2min/Kiwi)
 0.24.0, an actively developed analyzer with an Android library.
 
-**Decision: keep OKT and patch its errors as they're found.** Kiwi is clearly more accurate and
-much faster, but its model needs about 490 MB of memory on a device, plus a ~97 MB model on
-storage. That's too much for a reading app. Look again if Kiwi gets a much smaller model.
+Kiwi is clearly more accurate and much faster, but its model needs about 490 MB of memory on a
+device, plus a ~97 MB model on storage. That's too much for a reading app, so OKT was kept at first
+and patched as errors were found.
+
+**Decision: replace OKT with our own dictionary-driven analyzer, in stages.** A prototype built
+afterwards for what a lookup needs came close to Kiwi's accuracy at about 14 MB of memory. See
+[lookup-analyzer.md](lookup-analyzer.md) for its results and the stages. Until lookups switch to
+it, they use OKT, and OKT's errors are still patched in `DictionaryRepository`.
 
 ## How it was measured
 
@@ -60,7 +65,7 @@ Kiwi models are about half the size but don't load in current versions.
 ## OKT errors to patch
 
 Reading words in the articles where the two analyzers disagreed, Kiwi was right in 48 of 60 and
-OKT in 3. OKT's common errors, worth fixing in `DictionaryRepository`:
+OKT in 3. OKT's common errors, patched in `DictionaryRepository` until OKT is replaced:
 
 * Very common conjugated words read as nouns: 통해, 지난, 크게, 다른, 대한, 앞서
 * 는 after a closing quote mark (없다”는) read as a form of 늘다

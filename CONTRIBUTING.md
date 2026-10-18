@@ -61,12 +61,15 @@ articles copied from news sites.
 * `app` - the Android app
 * `parser` - a plain Kotlin library that turns article pages into content blocks, with a parser per
   news site and a generic fallback
+* `analyzer` - a plain Kotlin library that splits Korean words into dictionary headwords, particles
+  and endings, built on the bundled dictionary. It's to replace Open Korean Text in word lookups
+  (see [docs/lookup-analyzer.md](docs/lookup-analyzer.md)), which don't use it yet.
 * `tools/dictionary-generator` - builds the bundled dictionary from the NIKL dictionary data
 
 ## Tests
 
 ```bash
-./gradlew :app:testDebugUnitTest :parser:test
+./gradlew :app:testDebugUnitTest :parser:test :analyzer:test
 ```
 
 The instrumented tests, such as the Room migration tests, need a running emulator or device:
@@ -92,6 +95,13 @@ skipped without the bundled dictionary. It runs three sets of cases in `app/src/
   ignored by git like the saved articles, and its test is skipped without it.
 
 The format of the sets is described in the test.
+
+Lookups still use Open Korean Text. To evaluate them with the `analyzer` module instead, add
+`-PlookupAnalyzer=lexicon`, and optionally `-PlexContext=<counts file>` for its context counts:
+
+```bash
+./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlookupAnalyzer=lexicon
+```
 
 To collect cases for `lookup-eval.tsv` while reading, turn on Report wrong lookups in the app's
 settings. The lookup sheet then gets a button for saving a lookup that shows the wrong entry. Switch
