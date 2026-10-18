@@ -21,7 +21,7 @@ jobs:
       # The tests that need the bundled dictionary or the saved article samples are skipped,
       # since neither is committed
       - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest :parser:test
+        run: ./gradlew :app:testDebugUnitTest :parser:test :analyzer:test
 
       - name: Upload test reports
         if: failure()
