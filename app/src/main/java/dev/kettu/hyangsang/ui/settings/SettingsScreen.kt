@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.Dataset
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.FormatSize
@@ -84,7 +85,7 @@ import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
 private enum class SettingsDialog {
-    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, PALETTE_ATTRIBUTION, DELETE_LOOKUP_REPORTS
+    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, LANGUAGE_DATA_ATTRIBUTION, PALETTE_ATTRIBUTION, DELETE_LOOKUP_REPORTS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,6 +303,11 @@ fun SettingsScreen(
                 onClick = { openDialog = SettingsDialog.DICTIONARY_ATTRIBUTION }
             )
             SettingsItem(
+                icon = Icons.Outlined.Dataset,
+                title = stringResource(R.string.language_data_attribution_label),
+                onClick = { openDialog = SettingsDialog.LANGUAGE_DATA_ATTRIBUTION }
+            )
+            SettingsItem(
                 icon = Icons.Outlined.Palette,
                 title = stringResource(R.string.palette_attribution_label),
                 onClick = { openDialog = SettingsDialog.PALETTE_ATTRIBUTION }
@@ -409,29 +415,16 @@ fun SettingsScreen(
             }
         )
 
-        SettingsDialog.PALETTE_ATTRIBUTION -> AlertDialog(
-            onDismissRequest = dismiss,
-            title = { Text(stringResource(R.string.palette_attribution_label)) },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        AnnotatedString.fromHtml(
-                            stringResource(R.string.palette_attribution_text),
-                            linkStyles = TextLinkStyles(
-                                style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    textDecoration = TextDecoration.Underline
-                                )
-                            )
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = dismiss) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            }
+        SettingsDialog.LANGUAGE_DATA_ATTRIBUTION -> HtmlAttributionDialog(
+            title = stringResource(R.string.language_data_attribution_label),
+            html = stringResource(R.string.language_data_attribution_text),
+            onDismiss = dismiss
+        )
+
+        SettingsDialog.PALETTE_ATTRIBUTION -> HtmlAttributionDialog(
+            title = stringResource(R.string.palette_attribution_label),
+            html = stringResource(R.string.palette_attribution_text),
+            onDismiss = dismiss
         )
 
         null -> Unit
@@ -444,6 +437,35 @@ fun openInBrowser(context: Context, url: String) {
 
 private fun <T> List<Pair<T, String>>.labelFor(value: T): String =
     firstOrNull { it.first == value }?.second ?: ""
+
+// An attribution with links, scrollable as it can be long
+@Composable
+private fun HtmlAttributionDialog(title: String, html: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    AnnotatedString.fromHtml(
+                        html,
+                        linkStyles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline
+                            )
+                        )
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.ok))
+            }
+        }
+    )
+}
 
 @Composable
 private fun SectionHeader(text: String) {

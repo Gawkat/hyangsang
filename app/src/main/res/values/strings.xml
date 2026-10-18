@@ -299,6 +299,19 @@
     <string name="category_kids">Kids</string>
     <string name="category_law">Law</string>
     <string name="category_life">Life</string>
+    <string name="language_data_attribution_label">Language analysis data</string>
+    <string name="language_data_attribution_text">
+        <![CDATA[This application includes counts derived from the training sets of two Universal Dependencies treebanks, release 2.18:
+        <br><br>
+        UD Korean GSD - Ryan McDonald, Joakim Nivre, Daniel Zeman, Jinho Choi, Jayeol Chun, Na-Rae Han, Jena Hwang<br><a href="https://github.com/UniversalDependencies/UD_Korean-GSD">github.com/UniversalDependencies/UD_Korean-GSD</a>
+        <br><br>
+        UD Korean Kaist - Jinho Choi, Jayeol Chun, Na-Rae Han, Jena Hwang, from the KAIST Tree-Tagging Corpus<br><a href="https://github.com/UniversalDependencies/UD_Korean-Kaist">github.com/UniversalDependencies/UD_Korean-Kaist</a>
+        <br><br>
+        Jayeol Chun, Na-Rae Han, Jena D. Hwang and Jinho D. Choi. Building Universal Dependency Treebanks in Korean. LREC 2018.<br>
+        Ryan McDonald et al. Universal Dependency Annotation for Multilingual Parsing. ACL 2013.
+        <br><br>
+        The treebanks are licensed under the Creative Commons Attribution-ShareAlike 4.0 license. The counts are derived from them and shared under the same license:<br><a href="https://creativecommons.org/licenses/by-sa/4.0/">creativecommons.org/licenses/by-sa/4.0</a>]]>
+    </string>
     <string name="palette_attribution_label">Colour palettes</string>
     <string name="palette_attribution_text">
         <![CDATA[Solarized - Copyright (c) 2011 Ethan Schoonover<br><a href="https://ethanschoonover.com/solarized/">ethanschoonover.com/solarized</a>
