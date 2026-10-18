@@ -11,8 +11,9 @@ and patched as errors were found.
 
 **Decision: replace OKT with our own dictionary-driven analyzer, in stages.** A prototype built
 afterwards for what a lookup needs came close to Kiwi's accuracy at about 14 MB of memory. See
-[lookup-analyzer.md](lookup-analyzer.md) for its results and the stages. Lookups use it now, and
-the OKT patches below were removed with the switch.
+[lookup-analyzer.md](lookup-analyzer.md) for its results and the stages. Lookups use it now, the
+OKT patches below were removed with the switch, and OKT itself was removed from the app afterwards,
+along with the Scala library it needs. That made the release APK 3.5 MB smaller.
 
 ## How it was measured
 

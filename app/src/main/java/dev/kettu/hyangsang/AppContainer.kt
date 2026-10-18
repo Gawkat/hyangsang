@@ -14,7 +14,6 @@ import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.ArticleRepository
 import dev.kettu.hyangsang.data.repository.DictionaryRepository
 import dev.kettu.hyangsang.data.repository.KoreanAnalyzer
-import dev.kettu.hyangsang.data.repository.LexiconKoreanAnalyzer
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
@@ -62,7 +61,7 @@ class AppContainer(private val context: Context) {
         val rows = dictionaryDatabase.dictionaryDao().getLexiconRows().map {
             DictionaryRow(it.word, it.partOfSpeech, it.vocabularyLevel, it.lexicalUnit)
         }
-        LexiconKoreanAnalyzer(LookupAnalyzer(Lexicon(rows), ContextModel.bundled()))
+        KoreanAnalyzer(LookupAnalyzer(Lexicon(rows), ContextModel.bundled()))
     }
 
     val dictionaryRepository: DictionaryRepository by lazy {

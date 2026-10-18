@@ -26,5 +26,5 @@ internal fun testAnalyzer(entries: List<DictionaryWithSenses>): Lazy<KoreanAnaly
     val rows = entries.map {
         DictionaryRow(it.entry.word, it.entry.partOfSpeech, it.entry.vocabularyLevel, it.entry.lexicalUnit ?: "Word")
     }
-    return lazyOf(LexiconKoreanAnalyzer(LookupAnalyzer(Lexicon(rows + grammar), counts)))
+    return lazyOf(KoreanAnalyzer(LookupAnalyzer(Lexicon(rows + grammar), counts)))
 }
