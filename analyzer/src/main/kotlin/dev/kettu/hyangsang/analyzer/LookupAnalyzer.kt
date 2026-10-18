@@ -195,7 +195,10 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                     if (beforeNumber && !afterNominal && index < runs.lastIndex && text in lexicon.prefixes) {
                         listOf(Analysis(listOf(Morpheme(text, Tag.PREFIX, run.range.first, run.range.last + 1)), 0f))
                     } else {
-                        Search(text, run.range.first, afterNominal, afterQuote = before in CLOSING).run()
+                        Search(
+                            text, run.range.first, afterNominal, afterQuote = before in CLOSING,
+                            afterNumber = before?.isDigit() == true, afterUnit = before in UNITS, beforeNumber = beforeNumber
+                        ).run()
                     }
                 }
                 text[0].isDigit() -> listOf(Analysis(listOf(Morpheme(text, Tag.NUMBER, run.range.first, run.range.last + 1)), 0f))
@@ -226,7 +229,10 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
         private val word: String,
         private val offset: Int,
         private val afterNominal: Boolean,
-        private val afterQuote: Boolean = false
+        private val afterQuote: Boolean = false,
+        private val afterNumber: Boolean = false,
+        private val afterUnit: Boolean = false,
+        private val beforeNumber: Boolean = false
     ) {
         private val results = ArrayList<Analysis>()
         private val stack = ArrayList<Morpheme>()
@@ -235,20 +241,19 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
 
         fun run(): List<Analysis> {
             val rest = Rest(word, offset)
-            // Particles after a quote are common in news (없다”는, 했다"고)
-            if (afterNominal) {
-                nominalTail(rest, null, if (afterQuote) 0f else AFTER_NOMINAL, allowCompound = false)
-                // Suffixes after a number (200여대 -> 여 + 대)
-                for (k in 1 until rest.text.length) {
-                    val w = rest.text.substring(0, k)
-                    lexicon.suffixes[w]?.let { c ->
-                        with(Morpheme(w, Tag.SUFFIX, rest.start, rest.start + k)) {
-                            nominalTail(rest.drop(k), null, AFTER_NOMINAL + GRAMMATICAL + SUFFIX + c, allowCompound = true)
-                        }
-                    }
-                }
+            if (afterNumber) {
+                number(rest, 0f)
+            } else {
+                // Particles after a quote are common in news (없다”는, 했다"고)
+                if (afterNominal) nominalStart(rest, if (afterQuote) 0f else AFTER_NOMINAL, AFTER_NOMINAL)
+                // After a unit (12.4%다), particles and the copula are far more likely than a word
+                content(rest, if (afterUnit) CONTENT_AFTER_UNIT else 0f)
+                if (!afterNominal) name(rest, 0f)
             }
-            content(rest, 0f)
+            return ranked()
+        }
+
+        private fun ranked(): List<Analysis> {
             return results.sortedBy { it.cost }
                 .distinctBy { a -> a.morphemes.joinToString { "${it.form}/${it.tag}" } }
                 .let { list -> list.filter { it.cost <= list.first().cost + MARGIN } }
@@ -292,6 +297,21 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                         }
                     }
                 }
+                // The copula contracted with a noun that ends in a vowel: 누군가 (누구 + 이 + ㄴ가),
+                // 어딘지, 친굽니다
+                if (!after.isEmpty) Hangul.JAMO_FINALS[final]?.let { jamo ->
+                    val noun = w.dropLast(1) + Hangul.withFinal(last, 0)
+                    lexicon.nominals[noun]?.let { (tag, c) ->
+                        with(Morpheme(noun, tag, rest.start, rest.start + j)) {
+                            with(Morpheme("이", Tag.COPULA, rest.start + j - 1, rest.start + j)) {
+                                // An ending of its own, not a modifier ending followed by particles
+                                // (아메리칸은 isn't 아메리카 + 이 + ㄴ + 은)
+                                val endingCost = cost + CONTENT + c + GRAMMATICAL + ELIDED_COPULA + CONTRACTED_COPULA
+                                endings(Rest(jamo + after.text, rest.start + j - 1), "이", endingCost, 0, minLength = 2)
+                            }
+                        }
+                    }
+                }
                 CONTRACTED_NOUNS[w]?.let { (noun, particle) ->
                     with(Morpheme(noun, lexicon.nominals[noun]?.first ?: Tag.NOUN, rest.start, rest.start + j)) {
                         with(Morpheme(particle, Tag.PARTICLE, rest.start + j - 1, rest.start + j)) {
@@ -316,15 +336,131 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
             unknown(rest, cost)
         }
 
-        /** A noun at the start of [rest], after a prefix. */
+        /**
+         * What follows a number: a counter (3명이), particles, the copula, or more of the number
+         * (2천만원, 200여대, with 여 for more than).
+         */
+        private fun number(rest: Rest, cost: Float) {
+            if (pruned(cost)) return
+            nominalStart(rest, cost + AFTER_NOMINAL, cost + AFTER_NOMINAL)
+            val first = rest.text.substring(0, 1)
+            // Not before 제 and the next number (제2조제1호)
+            val beforePrefix = beforeNumber && rest.text.substring(1) in lexicon.prefixes
+            // At the end, 여 is more than (200여), and a number word part of the number (300만),
+            // except 조 at the end of the word, which is also the counter for articles (제2조)
+            if (rest.text == "여" && first in lexicon.suffixes) {
+                with(Morpheme(first, Tag.SUFFIX, rest.start, rest.start + 1)) { emit(cost + GRAMMATICAL) }
+            }
+            if (rest.text in NUMBER_UNITS && (rest.text != "조" || beforeNumber)) {
+                with(Morpheme(first, Tag.NUMERAL, rest.start, rest.start + 1)) { emit(cost + GRAMMATICAL) }
+            }
+            if (rest.text.length > 1 && !beforePrefix && (first in NUMBER_UNITS || first == "여" && first in lexicon.suffixes)) {
+                val tag = if (first == "여") Tag.SUFFIX else Tag.NUMBER
+                with(Morpheme(first, tag, rest.start, rest.start + 1)) { number(rest.drop(1), cost + GRAMMATICAL) }
+            }
+            // Counters are bound nouns, and more likely than a longer noun (10대가 is 대 + 가, not
+            // 대가). They keep the tag of their most basic entry, as other nouns do.
+            for (j in 1..rest.text.length) {
+                val w = rest.text.substring(0, j)
+                // 3만 is a number, not the bound noun 만 (10년 만에)
+                if (w == "만") continue
+                lexicon.boundNouns[w]?.let { c ->
+                    val tag = lexicon.nominals[w]?.first ?: Tag.BOUND_NOUN
+                    with(Morpheme(w, tag, rest.start, rest.start + j)) { counterTail(rest.drop(j), w, cost + CONTENT + c - COUNTER) }
+                }
+            }
+            content(rest, cost)
+        }
+
+        /**
+         * What follows a number, letters or a quote in the same word, as after a noun: particles
+         * and the copula at [cost], or a suffix at [suffixCost] (3%대).
+         */
+        private fun nominalStart(rest: Rest, cost: Float, suffixCost: Float) {
+            nominalTail(rest, null, cost, allowCompound = false)
+            for (k in 1 until rest.text.length) {
+                val w = rest.text.substring(0, k)
+                lexicon.suffixes[w]?.let { c ->
+                    with(Morpheme(w, Tag.SUFFIX, rest.start, rest.start + k)) {
+                        nominalTail(rest.drop(k), null, suffixCost + GRAMMATICAL + SUFFIX + c, allowCompound = true)
+                    }
+                }
+            }
+        }
+
+        /** What can follow a counter after a number: particles, the copula and a few suffixes (1일부로, 10명가량). */
+        private fun counterTail(rest: Rest, counter: String, cost: Float) {
+            if (pruned(cost)) return
+            if (rest.isEmpty) {
+                emit(cost)
+                return
+            }
+            particles(rest, counter, cost, 0)
+            predicate(rest, cost, PredicateKind.COPULA)
+            if (!Hangul.endsInConsonant(counter)) {
+                with(Morpheme("이", Tag.COPULA, rest.start, rest.start)) {
+                    endings(rest, counter, cost + GRAMMATICAL + ELIDED_COPULA, 0)
+                }
+            }
+            for (suffix in COUNTER_SUFFIXES) {
+                if (rest.text.startsWith(suffix) && suffix in lexicon.suffixes) {
+                    with(Morpheme(suffix, Tag.SUFFIX, rest.start, rest.start + suffix.length)) {
+                        counterTail(rest.drop(suffix.length), suffix, cost + GRAMMATICAL)
+                    }
+                }
+            }
+            // 제 before the next number (제2조제1호)
+            if (beforeNumber && rest.text in lexicon.prefixes) {
+                with(Morpheme(rest.text, Tag.PREFIX, rest.start, rest.start + rest.text.length)) { emit(cost + GRAMMATICAL) }
+            }
+        }
+
+        /**
+         * A noun at the start of [rest], after a prefix. Prefixes rarely come before nouns of one
+         * syllable, and such splits are more often foreign names (고베 isn't 고- + 베).
+         */
         private fun nouns(rest: Rest, cost: Float) {
             for (j in rest.text.length downTo 1) {
                 val w = rest.text.substring(0, j)
                 lexicon.nominals[w]?.let { (tag, c) ->
-                    with(Morpheme(w, tag, rest.start, rest.start + j)) { nominalTail(rest.drop(j), w, cost + CONTENT + c) }
+                    val short = if (j == 1) SHORT_AFTER_PREFIX else 0f
+                    with(Morpheme(w, tag, rest.start, rest.start + j)) { nominalTail(rest.drop(j), w, cost + CONTENT + c + short) }
                 }
             }
         }
+
+        /**
+         * A Korean name: a common surname and a given name of two syllables common in names
+         * (한지민이 -> 한지민 + 이), which would otherwise be split into rare words (한지 + -민).
+         * Not when the dictionary has the name or the given name, when the name starts with a
+         * word that a particle, ending or suffix follows (이란과, 연구다, 고양시), when it ends in
+         * the start of a longer word (한국은행 is 한국 + 은행), or when the word is a predicate
+         * (모아준). Called after the other analyses are found.
+         */
+        private fun name(rest: Rest, cost: Float) {
+            val text = rest.text
+            for (surnameLength in 2 downTo 1) {
+                val end = surnameLength + 2
+                if (text.length < end || text.substring(0, surnameLength) !in SURNAMES) continue
+                val name = text.substring(0, end)
+                val given = name.substring(surnameLength)
+                // Given names rarely end in 가 and 도, which are often particles
+                if (given[0] !in GIVEN_NAME_SYLLABLES || given[1] !in GIVEN_NAME_SYLLABLES || given[1] in "가도") continue
+                if (isWord(name) || given in lexicon.nominals) continue
+                val afterWord = text.substring(surnameLength + 1)
+                if (isWord(text.substring(0, surnameLength + 1)) && (
+                        (1..afterWord.length).any { afterWord.substring(0, it).let { w -> w in lexicon.particles || w in lexicon.endings } } ||
+                            afterWord[0] == '이' || given[1] !in NAME_FINALS && given.substring(1) in lexicon.suffixes
+                        )
+                ) continue
+                if ((2..afterWord.length).any { afterWord.substring(0, it) in lexicon.nominals }) continue
+                val nameCost = cost + CONTENT + NAME
+                if (results.any { it.morphemes.first().tag.isPredicate && it.cost <= nameCost + PREDICATE_OVER_NAME }) continue
+                with(Morpheme(name, Tag.UNKNOWN, rest.start, rest.start + end)) { nominalTail(rest.drop(end), name, nameCost) }
+            }
+        }
+
+        private fun isWord(w: String) = w in lexicon.nominals || w in lexicon.adverbs || w in lexicon.determiners || w in lexicon.interjections
 
         /** A word the dictionary doesn't have, such as a name, followed by particles or the like. */
         private fun unknown(rest: Rest, cost: Float) {
@@ -347,7 +483,7 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
             }
             particles(rest, noun, cost, 0)
             // After a number, the copula is rarer than a counter (16일)
-            val copulaCost = if (noun == null) cost + COPULA_AFTER_NUMBER else cost
+            val copulaCost = if (noun == null && !afterUnit) cost + COPULA_AFTER_NUMBER else cost
             predicate(rest, copulaCost, PredicateKind.COPULA)
             // Copula dropped after a vowel (학교다, 학교라는)
             if (noun == null || !Hangul.endsInConsonant(noun)) {
@@ -397,7 +533,8 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
             for (i in 1..text.length) {
                 val left = text.substring(0, i)
                 val right = rest.drop(i)
-                for ((stem, endingRest, ruleCost, surface) in splits(left, right, rest.start + i - 1)) {
+                for (split in splits(left, right, rest.start + i - 1)) {
+                    val (stem, endingRest, ruleCost, surface) = split
                     if (endingRest.isEmpty) continue
                     val base = when (kind) {
                         PredicateKind.ANY -> CONTENT + PREDICATE_PRIOR
@@ -405,6 +542,7 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                         else -> GRAMMATICAL
                     }
                     for ((tag, entryCost) in stemTags(stem, kind)) {
+                        if (split.adjectiveOnly && tag != Tag.ADJECTIVE) continue
                         with(Morpheme(stem, tag, rest.start, rest.start + i)) {
                             endings(endingRest, surface, cost + base + entryCost + ruleCost, 0)
                         }
@@ -484,10 +622,28 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                 if (fin == 0 && nextIni == Hangul.I_NG && nextMed in setOf(Hangul.A, Hangul.EO, Hangul.EU) && S_IRREGULAR.any { sStem.endsWith(it) }) {
                     result += Split(sStem, right, IRREGULAR)
                 }
+                // 러 irregular: 이르러 (이르다), 푸르러
+                if (l == '르' && nextIni == Hangul.I_R && nextMed == Hangul.EO && R_IRREGULAR.any { left.endsWith(it) }) {
+                    result += Split(left, right.replaceFirst(Hangul.withInitial(next, Hangul.I_NG)), 0f)
+                }
+                // 하 dropped after a voiceless consonant: 깨끗지 (깨끗하지), 익숙지
+                if (fin in VOICELESS_FINALS && next in "지게고건") {
+                    result += Split(left + "하", right, CONTRACTION)
+                }
+                // 으 dropped before 아 or 어 after a vowel: 모아 (모으다)
+                if (fin == 0 && nextIni == Hangul.I_NG && nextMed in setOf(Hangul.A, Hangul.EO)) {
+                    result += Split(left + "으", right, 0f, left)
+                }
                 // 르 irregular: 불러 (부르다), 몰라 (모르다)
                 if (fin == Hangul.L && nextIni == Hangul.I_R && nextMed in setOf(Hangul.A, Hangul.EO)) {
                     result += Split(head + Hangul.withFinal(l, 0) + '르', right.replaceFirst(Hangul.withInitial(next, Hangul.I_NG)), 0.05f)
                 }
+            }
+
+            // 하 contracted with the ending, in adjectives: 순탄치 (순탄하지), 간편케 (간편하게).
+            // Nouns end in 치 more often than verbs contract (전망치, 예상치).
+            if (head.isNotEmpty()) HA_CONTRACTIONS[l]?.let { c ->
+                result += Split(head + "하", Rest(c + right.text, last), CONTRACTION, adjectiveOnly = true)
             }
 
             // A final consonant that starts the ending: 간다 (가 + ㄴ다), 합니다, 할
@@ -515,6 +671,8 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                     Hangul.EO -> {
                         add(Hangul.compose(ini, Hangul.EO), '어', 0.1f)
                         add(Hangul.compose(ini, Hangul.EU), '어')
+                        // 우 irregular: 퍼 (푸다), the only one
+                        if (ini == Hangul.I_P) add(Hangul.compose(ini, Hangul.U), '어', IRREGULAR)
                     }
                     Hangul.AE -> {
                         if (ini == Hangul.I_H) add('하', '여')
@@ -528,8 +686,13 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                         add(Hangul.compose(ini, Hangul.I), '어')
                         add(Hangul.compose(ini, Hangul.YEO), '어', 0.1f)
                     }
-                    // 예요 (이 + 에요)
-                    Hangul.YE -> if (ini == Hangul.I_NG) add('이', '에')
+                    // ㅎ irregular in ㅒ and ㅖ: 하얘 (하얗다), 부예 (부옇다)
+                    Hangul.YAE -> add(Hangul.compose(ini, Hangul.YA, Hangul.H), '아', IRREGULAR)
+                    Hangul.YE -> {
+                        // 예요 (이 + 에요)
+                        if (ini == Hangul.I_NG) add('이', '에')
+                        add(Hangul.compose(ini, Hangul.YEO, Hangul.H), '어', IRREGULAR)
+                    }
                     Hangul.WA -> {
                         add(Hangul.compose(ini, Hangul.O), '아')
                         // 놔 (놓다)
@@ -546,10 +709,10 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
          * Endings after [previous], the stem or ending before them. Pre-final endings (시, 었, 겠)
          * come in that order, as given by [stage], and need an ending after them.
          */
-        private fun endings(rest: Rest, previous: String, cost: Float, stage: Int) {
+        private fun endings(rest: Rest, previous: String, cost: Float, stage: Int, minLength: Int = 1) {
             if (pruned(cost) || rest.isEmpty) return
             val text = rest.text
-            for (k in 1..minOf(text.length, lexicon.maxEnding)) {
+            for (k in minLength..minOf(text.length, lexicon.maxEnding)) {
                 val f = text.substring(0, k)
                 val ending = lexicon.endings[f] ?: continue
                 val order = if (ending.prefinal) PREFINAL_ORDER[f] ?: 3 else null
@@ -605,6 +768,8 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
             val first = f[0]
             val endings = lexicon.endings
             return when {
+                // 이르러 is 이르다 + -어, rarely -러
+                first == '러' && previous in R_IRREGULAR -> SOFT
                 Hangul.isJamo(first) -> if (consonant) HARD else 0f
                 first == '으' -> if (consonant) 0f else HARD
                 first in "은을음읍" && (Hangul.JAMO_FINALS.values.any { j -> (j + f.drop(1)) in endings || first == '읍' }) ->
@@ -637,7 +802,7 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
 
     private enum class PredicateKind { ANY, COPULA, SUFFIX, AUX }
 
-    private data class Split(val stem: String, val rest: Rest, val cost: Float, val surface: String = stem)
+    private data class Split(val stem: String, val rest: Rest, val cost: Float, val surface: String = stem, val adjectiveOnly: Boolean = false)
 
     private companion object {
         const val CONTENT = 1f
@@ -649,18 +814,25 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
         const val AUXILIARY = 0.3f
         const val ADJECTIVE_TIE = 0.01f
         const val IRREGULAR = 0.25f
+        const val CONTRACTION = 0.25f
         const val CONTRACTED_PARTICLE = 0.4f
         const val ADVERB_PARTICLE = 0.3f
         const val INTERJECTION = 0.3f
         const val ELIDED_COPULA = 0.5f
+        const val CONTRACTED_COPULA = 0.2f
         const val COPULA_AFTER_NUMBER = 0.3f
         const val AFTER_NOMINAL = 0.5f
+        const val CONTENT_AFTER_UNIT = 1f
+        const val NAME = 1.1f
+        const val PREDICATE_OVER_NAME = 0.5f
+        const val COUNTER = 0.7f
         const val RARE_PARTICLE = 0.6f
         const val DERIVED = 0.3f
         const val COMPOUND = 0.4f
         const val SUFFIX_AFTER_SUFFIX = 0.6f
         const val SUFFIX = 0.2f
         const val PREFIX = 0.8f
+        const val SHORT_AFTER_PREFIX = 0.6f
         const val BOUND_NOUN_BONUS = 2.5f
         // More per syllable than a particle, so particles are split off unknown words
         const val UNKNOWN_BASE = 2.0f
@@ -679,12 +851,45 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
         // Units written as symbols, which a Hangul run can follow like a noun (12.4%다)
         val UNITS = setOf('%', '℃', '°', '㎞', '㎡', '㎏', '$', '€', '¥', '￦')
 
+        // Common surnames, of which names are the surname and a given name of two syllables
+        val SURNAMES = setOf(
+            "김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황", "안",
+            "송", "류", "유", "전", "홍", "고", "문", "양", "손", "배", "백", "허", "남", "심", "노", "하", "곽",
+            "성", "차", "주", "우", "구", "민", "나", "진", "지", "엄", "채", "원", "천", "방", "공", "현", "함",
+            "변", "염", "여", "추", "도", "소", "석", "선", "설", "마", "길", "연", "위", "표", "명", "기", "반",
+            "왕", "금", "옥", "육", "인", "맹", "제", "모", "탁", "국", "어", "은", "편", "용", "예", "경", "봉",
+            "남궁", "황보", "제갈", "선우", "독고", "사공", "서문"
+        )
+
+        // Syllables common in given names, either first or second
+        val GIVEN_NAME_SYLLABLES = (
+            "가강건경계관광교구국규균근금기길나남다담대덕도동두라란래려련령록룡류률륜리린림명모무문미민배범별병보복봉빈" +
+                "산상서석선설섭성세소솔송수숙순슬승시식신아안애양연열영예오옥완용우욱운웅원유윤율은익인일자재정제조종" +
+                "주준중지진찬창채천철초춘충태택하학한해혁현형혜호홍화환효후훈휘희"
+            ).toSet()
+
+        // Last syllables of given names that are also suffixes (-민 in 이재민)
+        val NAME_FINALS = "민진호영연은우정재현준훈희경석철용혁환빈윤아나미".toSet()
+
+        // Number words that continue a number written in digits (2천만원)
+        val NUMBER_UNITS = setOf("십", "백", "천", "만", "억", "조")
+
+        // Suffixes that follow a counter after a number: 1일부로 (taking effect on the 1st), 10명가량
+        val COUNTER_SUFFIXES = listOf("부", "째", "경", "께", "당", "쯤", "가량", "여")
+
         val CLOSING = setOf('”', '’', '"', '\'', ')', ']', '》', '〉', '」', '』')
 
         val PREFINAL_ORDER = mapOf("시" to 1, "으시" to 1, "었" to 2, "았" to 2, "였" to 2, "었었" to 2, "았었" to 2, "였었" to 2, "겠" to 3)
 
         val D_IRREGULAR = setOf("듣", "걷", "묻", "싣", "닫", "붇", "컫", "긷", "눋")
         val S_IRREGULAR = setOf("짓", "낫", "잇", "붓", "젓", "긋", "잣")
+        val R_IRREGULAR = setOf("이르", "푸르", "누르")
+
+        // 하 contracted with the next syllable's ㄱ, ㄷ or ㅈ
+        val HA_CONTRACTIONS = mapOf('치' to '지', '케' to '게', '토' to '도')
+
+        // Finals after which 하 can drop: ㄱ, ㅂ, ㅅ
+        val VOICELESS_FINALS = setOf(Hangul.G, Hangul.B, Hangul.S)
 
         val AUX_CONNECTIVES = setOf("어", "아", "여", "고", "게", "지")
 

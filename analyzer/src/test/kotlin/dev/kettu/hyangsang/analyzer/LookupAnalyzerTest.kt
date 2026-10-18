@@ -210,6 +210,162 @@ class LookupAnalyzerTest {
         assertEquals(Tag.PREFIX, analyzer.analyze("제253조").first().morphemes[0].tag)
     }
 
+    @Test
+    fun `우 irregular`() {
+        val lexicon = Lexicon(DICTIONARY + word("푸다", "Verb"))
+        assertEquals("푸다 + -어", best("퍼", analyzer = LookupAnalyzer(lexicon)))
+        assertEquals("푸다 + -었- + -다", best("펐다", analyzer = LookupAnalyzer(lexicon)))
+    }
+
+    @Test
+    fun `러 irregular`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("이르다", "Verb"), word("-러", "Ending")))
+        // Not 이르다 + -러, in order to
+        assertEquals("이르다 + -어", best("이르러", analyzer = LookupAnalyzer(lexicon)))
+        assertEquals("이르다 + -었- + -다", best("이르렀다", analyzer = LookupAnalyzer(lexicon)))
+    }
+
+    @Test
+    fun `ㅎ irregular in ㅒ`() {
+        assertEquals("하얗다 + -아", best("하얘"))
+        assertEquals("하얗다 + -았- + -다", best("하얬다"))
+    }
+
+    @Test
+    fun `으 dropping before a separate 아`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("모으다", "Verb"), word("-아서", "Ending")))
+        assertEquals("모으다 + -아서", best("모아서", analyzer = LookupAnalyzer(lexicon)))
+    }
+
+    @Test
+    fun `하 contracted in adjectives`() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(
+                word("순탄하다", "Adjective"), word("깨끗하다", "Adjective"), word("간편하다", "Adjective"),
+                word("-지", "Ending"), word("-게", "Ending"),
+                word("전망", "Noun"), word("전망하다", "Verb"), word("-치", "Affix")
+            )
+        )
+        val analyzer = LookupAnalyzer(lexicon)
+        assertEquals("순탄하다 + -지", best("순탄치", analyzer = analyzer))
+        assertEquals("간편하다 + -게", best("간편케", analyzer = analyzer))
+        // After ㄱ, ㅂ and ㅅ, 하 drops
+        assertEquals("깨끗하다 + -지", best("깨끗지", analyzer = analyzer))
+        // Verbs don't contract, and nouns often end in -치 (forecast)
+        assertEquals("전망 + -치", best("전망치", analyzer = analyzer))
+    }
+
+    @Test
+    fun `copula contracted with a noun`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("누구", "Pronoun"), word("-ㄴ가", "Ending"), word("아메리카", "Noun")))
+        val analyzer = LookupAnalyzer(lexicon)
+        assertEquals("누구 + 이다 + -ㄴ가", best("누군가", analyzer = analyzer))
+        // Only with an ending of its own, not a modifier ending followed by a particle
+        assertTrue(analyzer.analyze("아메리칸은").first().morphemes.none { it.tag == Tag.COPULA })
+    }
+
+    @Test
+    fun `colloquial endings`() {
+        assertEquals("하다 + -였- + -구요", best("했구요"))
+    }
+
+    @Test
+    fun `counters are preferred after a number`() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(
+                word("대", "Bound Noun"), word("대가", "Noun", "Intermediate"), word("여대", "Noun", "Advanced"),
+                word("-여", "Affix", "Intermediate"), word("일", "Noun"), word("일", "Bound Noun"), word("일부", "Noun"),
+                word("-부", "Affix", "Advanced"), word("로", "Particle")
+            )
+        )
+        val analyzer = LookupAnalyzer(lexicon)
+        // 대가 is a price, 여대 a women's university
+        assertEquals("10 + 대 + 가", best("10대가", analyzer = analyzer))
+        assertEquals("200 + -여 + 대 + 가", best("200여대가", analyzer = analyzer))
+        // Taking effect on the 1st, not 일부, some
+        assertEquals("1 + 일 + -부 + 로", best("1일부로", analyzer = analyzer))
+    }
+
+    @Test
+    fun `number words continue a number`() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(
+                word("만", "Numeral"), word("천", "Numeral"), word("원", "Bound Noun"), word("만원", "Noun", "Advanced"),
+                word("천만", "Numeral", "Intermediate")
+            )
+        )
+        val analyzer = LookupAnalyzer(lexicon)
+        // 만원 is a full house
+        assertEquals(listOf("10", "만", "원"), analyzer.analyze("10만원").first().morphemes.map { it.form })
+        assertEquals(listOf("2", "천", "만", "원"), analyzer.analyze("2천만원").first().morphemes.map { it.form })
+        assertEquals("원", analyzer.analyze("2천만원").first().content?.form)
+        assertEquals(listOf(Tag.NUMBER, Tag.NUMERAL), analyzer.analyze("300만").first().morphemes.map { it.tag })
+    }
+
+    @Test
+    fun `조 before a number is part of it`() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(
+                word("조", "Numeral", "Intermediate"), word("조", "Bound Noun", "Intermediate"), word("천", "Numeral"),
+                word("억", "Numeral"), word("원", "Bound Noun")
+            )
+        )
+        val analyzer = LookupAnalyzer(lexicon)
+        // A trillion, not the counter for articles (제2조)
+        assertEquals(Tag.NUMERAL, analyzer.analyze("5조5천억원").first().morphemes[1].tag)
+        assertEquals("조", analyzer.analyze("5조5천억원").first().content?.form)
+    }
+
+    @Test
+    fun `counters keep the tag of their most basic entry`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("분", "Noun"), word("분", "Bound Noun", "Intermediate"), word("분기", "Noun")))
+        // As other nouns do, so lookups treat them the same, such as for the sentence's context words
+        val counter = LookupAnalyzer(lexicon).analyze("10분에").first().morphemes[1]
+        assertEquals("분" to Tag.NOUN, counter.form to counter.tag)
+    }
+
+    @Test
+    fun `the copula after a unit`() {
+        val lexicon = Lexicon(DICTIONARY + word("다", "Adverb"))
+        assertEquals("12.4 + 이다 + -다", best("12.4%다", analyzer = LookupAnalyzer(lexicon)))
+    }
+
+    @Test
+    fun `제 between article numbers`() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(word("조", "Bound Noun", "Intermediate"), word("조제", "Noun", "Advanced"), word("제-", "Affix"), word("호", "Bound Noun"))
+        )
+        assertEquals("제- + 2 + 조 + 제- + 1 + 호", best("제2조제1호", analyzer = LookupAnalyzer(lexicon)))
+    }
+
+    @Test
+    fun names() {
+        val lexicon = Lexicon(
+            DICTIONARY + listOf(
+                word("한지", "Noun", "Advanced"), word("-민", "Affix", "Intermediate"),
+                word("김", "Noun"), word("-정", "Affix", "Advanced"),
+                word("이란", "Noun", null), word("과", "Particle"),
+                word("고양", "Noun", "Advanced"), word("-시", "Affix", "Advanced"),
+                word("한국", "Noun", null), word("은행", "Noun")
+            )
+        )
+        val analyzer = LookupAnalyzer(lexicon)
+        assertEquals("한지민 + 이", best("한지민이", analyzer = analyzer))
+        assertEquals(Tag.UNKNOWN, analyzer.analyze("한지민이").first().morphemes[0].tag)
+        assertEquals("김정은", best("김정은", analyzer = analyzer))
+        // A word and a particle, ending or suffix (Iran, Goyang City), or a compound
+        assertEquals("이란 + 과", best("이란과", analyzer = analyzer))
+        assertEquals("고양 + -시", best("고양시", analyzer = analyzer))
+        assertEquals("한국 + 은행 + 은", best("한국은행은", analyzer = analyzer))
+    }
+
+    @Test
+    fun `prefixes rarely come before nouns of one syllable`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("고-", "Affix", "Intermediate"), word("베", "Noun", "Intermediate")))
+        val morphemes = LookupAnalyzer(lexicon).analyze("고베에서").first().morphemes
+        assertEquals(listOf("고베", "에서"), morphemes.map { it.form })
+    }
+
     companion object {
         private fun word(word: String, pos: String, level: String? = "Beginner") = DictionaryRow(word, pos, level, "Word")
 

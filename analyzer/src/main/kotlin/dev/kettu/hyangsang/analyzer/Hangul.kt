@@ -20,12 +20,14 @@ internal object Hangul {
     const val I_B = 7 // ㅂ
     const val I_S = 9 // ㅅ
     const val I_NG = 11 // ㅇ, no sound
-    const val I_H = 18
+    const val I_P = 17 // ㅍ
+    const val I_H = 18 // ㅎ
 
     // Medials
     const val A = 0
     const val AE = 1
     const val YA = 2
+    const val YAE = 3
     const val EO = 4
     const val E = 5
     const val YEO = 6
@@ -41,6 +43,7 @@ internal object Hangul {
     const val I = 20
 
     // Finals
+    const val G = 1
     const val N = 4
     const val D = 7
     const val L = 8

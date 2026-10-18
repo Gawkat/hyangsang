@@ -300,7 +300,8 @@ class DictionaryRepositoryTest {
         createEntry("금", "Noun", origin = "金", homonymNumber = 2, semanticCategory = "개념 > 시간"),
         createEntry("금", "Noun", origin = "金", homonymNumber = 3, semanticCategory = "자연 > 자원"),
         createEntry("반-", "Affix", origin = "反"),
-        createEntry("대통령", "Noun", origin = "大統領")
+        createEntry("대통령", "Noun", origin = "大統領"),
+        createEntry("장관", "Noun", origin = "長官")
     )
 
     private suspend fun lookUpHanja(word: String, sentence: String = ""): Map<String, List<String>> =
