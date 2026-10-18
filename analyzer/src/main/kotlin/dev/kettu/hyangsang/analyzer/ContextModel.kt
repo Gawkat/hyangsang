@@ -73,6 +73,16 @@ class ContextModel(
         // -ln of the share of a common ending, about 3%
         const val COMMON_ENDING = 3.5f
 
+        /**
+         * The counts bundled with the analyzer, `context-counts.tsv`, made from the UD Korean
+         * training sets.
+         */
+        fun bundled(): ContextModel {
+            val stream = ContextModel::class.java.getResourceAsStream("context-counts.tsv")
+                ?: error("context-counts.tsv is missing from the analyzer's resources")
+            return stream.bufferedReader().useLines { ContextModel(it) }
+        }
+
         /** An ending with its 아/어 and 여 forms merged, as treebanks and analyzers differ there. */
         fun normalizeEnding(form: String): String = when {
             form.startsWith("았") || form.startsWith("였") -> "었" + form.drop(1)

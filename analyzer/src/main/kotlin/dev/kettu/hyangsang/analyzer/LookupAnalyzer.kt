@@ -191,8 +191,8 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                     val before = word.getOrNull(run.range.first - 1)
                     val afterNominal = before != null && (before.isLetterOrDigit() || before in CLOSING || before in UNITS)
                     val beforeNumber = word.getOrNull(run.range.last + 1)?.isDigit() == true
-                    // 제 before a number is the prefix (제253조)
-                    if (beforeNumber && index < runs.lastIndex && text in lexicon.prefixes) {
+                    // 제 before a number is the prefix (제253조), but not between numbers (5조5천)
+                    if (beforeNumber && !afterNominal && index < runs.lastIndex && text in lexicon.prefixes) {
                         listOf(Analysis(listOf(Morpheme(text, Tag.PREFIX, run.range.first, run.range.last + 1)), 0f))
                     } else {
                         Search(text, run.range.first, afterNominal, afterQuote = before in CLOSING).run()
@@ -399,37 +399,46 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
                 val right = rest.drop(i)
                 for ((stem, endingRest, ruleCost, surface) in splits(left, right, rest.start + i - 1)) {
                     if (endingRest.isEmpty) continue
-                    val (tag, entryCost) = stemTag(stem, kind) ?: continue
                     val base = when (kind) {
                         PredicateKind.ANY -> CONTENT + PREDICATE_PRIOR
                         PredicateKind.AUX -> GRAMMATICAL + AUXILIARY
                         else -> GRAMMATICAL
                     }
-                    with(Morpheme(stem, tag, rest.start, rest.start + i)) {
-                        endings(endingRest, surface, cost + base + entryCost + ruleCost, 0)
+                    for ((tag, entryCost) in stemTags(stem, kind)) {
+                        with(Morpheme(stem, tag, rest.start, rest.start + i)) {
+                            endings(endingRest, surface, cost + base + entryCost + ruleCost, 0)
+                        }
                     }
                 }
             }
         }
 
-        private fun stemTag(stem: String, kind: PredicateKind): Pair<Tag, Float>? = when (kind) {
-            PredicateKind.COPULA -> if (stem == "이") Tag.COPULA to 0f else null
-            PredicateKind.SUFFIX -> lexicon.predicateSuffixes[stem]?.let { c ->
-                // Suffixes that are verbs of their own too (하다, 되다) are shown as those
-                lexicon.predicates[stem]?.minByOrNull { it.value }?.let { it.key to minOf(c, it.value) }
-                    ?: (Tag.PREDICATE_SUFFIX to c)
-            }
-            PredicateKind.AUX -> lexicon.predicates[stem]?.let { tags ->
-                tags.entries.filter { it.key == Tag.AUX_VERB || it.key == Tag.AUX_ADJECTIVE }.minByOrNull { it.value }?.toPair()
-                    ?: if (stem in AUXILIARIES) tags.minBy { it.value }.let { Tag.AUX_VERB to it.value } else null
-            }
+        /**
+         * The tags [stem] can have as a predicate of [kind], with their costs. A stem that's both
+         * a verb and an adjective (크다) is both, for the context to choose from.
+         */
+        private fun stemTags(stem: String, kind: PredicateKind): List<Pair<Tag, Float>> = when (kind) {
+            PredicateKind.COPULA -> if (stem == "이") listOf(Tag.COPULA to 0f) else emptyList()
+            PredicateKind.SUFFIX -> listOfNotNull(
+                lexicon.predicateSuffixes[stem]?.let { c ->
+                    // Suffixes that are verbs of their own too (하다, 되다) are shown as those
+                    lexicon.predicates[stem]?.minByOrNull { it.value }?.let { it.key to minOf(c, it.value) }
+                        ?: (Tag.PREDICATE_SUFFIX to c)
+                }
+            )
+            PredicateKind.AUX -> listOfNotNull(
+                lexicon.predicates[stem]?.let { tags ->
+                    tags.entries.filter { it.key == Tag.AUX_VERB || it.key == Tag.AUX_ADJECTIVE }.minByOrNull { it.value }?.toPair()
+                        ?: if (stem in AUXILIARIES) tags.minBy { it.value }.let { Tag.AUX_VERB to it.value } else null
+                }
+            )
             PredicateKind.ANY -> lexicon.predicates[stem]?.let { tags ->
                 // Auxiliaries on their own are their main verb (있다), and verbs win ties with
-                // adjectives (크다), which are more often looked up as verbs
-                tags.entries.filter { it.key == Tag.VERB || it.key == Tag.ADJECTIVE }
-                    .minWithOrNull(compareBy<Map.Entry<Tag, Float>> { it.value }.thenBy { it.key != Tag.VERB })?.toPair()
-                    ?: tags.minBy { it.value }.toPair()
-            }
+                // adjectives, which are more often looked up as verbs
+                val main = tags.entries.filter { it.key == Tag.VERB || it.key == Tag.ADJECTIVE }
+                    .map { if (it.key == Tag.ADJECTIVE) it.key to it.value + ADJECTIVE_TIE else it.toPair() }
+                main.ifEmpty { listOf(tags.minBy { it.value }.toPair()) }
+            }.orEmpty()
         }
 
         /**
@@ -638,6 +647,7 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
         // Numerals written in Hangul are rare in news, which writes numbers in digits
         const val NUMERAL = 0.3f
         const val AUXILIARY = 0.3f
+        const val ADJECTIVE_TIE = 0.01f
         const val IRREGULAR = 0.25f
         const val CONTRACTED_PARTICLE = 0.4f
         const val ADVERB_PARTICLE = 0.3f
@@ -651,7 +661,7 @@ class LookupAnalyzer(private val lexicon: Lexicon, private val context: ContextM
         const val SUFFIX_AFTER_SUFFIX = 0.6f
         const val SUFFIX = 0.2f
         const val PREFIX = 0.8f
-        const val BOUND_NOUN_BONUS = 0.8f
+        const val BOUND_NOUN_BONUS = 2.5f
         // More per syllable than a particle, so particles are split off unknown words
         const val UNKNOWN_BASE = 2.0f
         const val UNKNOWN_PER_SYLLABLE = 0.5f
