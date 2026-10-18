@@ -1,5 +1,6 @@
 package dev.kettu.hyangsang.data.repository
 
+import dev.kettu.hyangsang.analyzer.Tag
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
 
@@ -16,7 +17,7 @@ data class LookupContext(
 
 /** What comes before a word in its sentence, as far as bound nouns (수, 중, 간) care. */
 internal enum class PrecedingWord {
-    /** A noun without a particle, or a verb in modifier form (맛볼 수, 정부 간) */
+    /** A noun without a particle, a determiner, or a verb in modifier form (정부 간, 맛볼 수) */
     MODIFIER,
 
     /** The start of the sentence, punctuation or a particle, where bound nouns can't follow */
@@ -28,25 +29,27 @@ internal enum class PrecedingWord {
 /**
  * What a lookup knows when ranking the homonyms of one search term.
  *
- * @param tokenPos the Open Korean Text POS of the token the term came from, or null if unknown
- * @param contextNouns nouns from the surrounding sentence
+ * @param tokenPos the analyzer's tag for the token the term came from, or null if unknown
+ * @param contextWords nouns and predicate stems from the surrounding sentence
  * @param categoryPrefixes semantic categories that fit the feed, matched as prefixes
- * @param isCounter whether the term follows a number, as in 3명 or 26일
+ * @param isCounter whether the term follows a number, as in 3명, 26일 or 두 바퀴
+ * @param afterNumberWord whether that number is a word (두 바퀴, 몇 명) rather than digits
  * @param preceding what comes before the term in the sentence, if the term starts the word
  */
 internal class HomonymRanking(
-    private val tokenPos: String?,
-    private val contextNouns: Set<String>,
+    private val tokenPos: Tag?,
+    private val contextWords: Set<String>,
     private val categoryPrefixes: List<String>,
     private val isCounter: Boolean = false,
+    private val afterNumberWord: Boolean = false,
     private val preceding: PrecedingWord = PrecedingWord.UNKNOWN
 ) {
     /**
      * Ranks by, in order: being a counter when the term follows a number, being a bound noun
-     * when the preceding word allows one, POS matching the tapped token, nouns shared between
-     * the sentence and the entry's definitions and examples,
-     * a semantic category fitting the feed, vocabulary level (easier words are more likely the
-     * common meaning), and homonym number.
+     * when the preceding word allows one, POS matching the tapped token, words shared between
+     * the sentence and the entry's examples and definitions, a semantic category fitting the
+     * feed, vocabulary level (easier words are more likely the common meaning), and homonym
+     * number.
      */
     val comparator: Comparator<DictionaryWithSenses> =
         compareBy<DictionaryWithSenses> { counterRank(it) }
@@ -57,12 +60,18 @@ internal class HomonymRanking(
             .thenBy { levelRank(it.entry.vocabularyLevel) }
             .thenBy { it.entry.homonymNumber }
 
-    // Counters are bound nouns defined as a unit for counting (명: 사람을 세는 단위). After a
-    // number, the large number words (천, 만, 억, 조) are numerals instead.
+    // Counters are defined as a unit for counting (명: 사람을 세는 단위), and after digits are
+    // mostly bound nouns. After a number word, units of any kind come first (두 통, two buckets).
+    // After a number, the large number words (천, 만, 억, 조) are numerals instead.
     private fun counterRank(entry: DictionaryWithSenses): Int {
         if (!isCounter) return 0
         val pos = entry.entry.partOfSpeech
         if (entry.entry.word in NUMBER_WORDS) return if (pos == "Numeral") 0 else 1
+        if (afterNumberWord) return when {
+            isUnit(entry) -> 0
+            pos == "Bound Noun" -> 1
+            else -> 2
+        }
         return when {
             pos == "Bound Noun" && isUnit(entry) -> 0
             pos == "Bound Noun" -> 1
@@ -86,18 +95,21 @@ internal class HomonymRanking(
     private fun isUnit(entry: DictionaryWithSenses) = entry.senses.any { "단위" in it.sense.definitionKo }
 
     private fun posMismatch(entry: DictionaryWithSenses): Int {
-        val expected = tokenPos?.let { OKT_TO_DICTIONARY_POS[it] } ?: return 0
+        val expected = tokenPos?.let { DICTIONARY_POS[it] } ?: return 0
         return if (entry.entry.partOfSpeech in expected) 0 else 1
     }
 
-    // Counts sentence nouns found anywhere in the entry's text. Substring matching sidesteps
-    // tokenizing the dictionary side, where the nouns carry particles (바다로, 배를).
+    // Counts the sentence's words found in the entry's examples, and half as much in its
+    // definitions, which are written in more general words. Substring matching sidesteps
+    // analyzing the dictionary side, where the nouns carry particles (바다로, 배를) and the stems
+    // endings (먹었다).
     private fun contextOverlap(entry: DictionaryWithSenses): Int {
-        if (contextNouns.isEmpty()) return 0
-        val texts = entry.senses.flatMap { sense ->
-            listOf(sense.sense.definitionKo) + sense.examples.map { it.example }
+        if (contextWords.isEmpty()) return 0
+        val examples = entry.senses.flatMap { sense -> sense.examples.map { it.example } }
+        val definitions = entry.senses.map { it.sense.definitionKo }
+        return contextWords.sumOf { word ->
+            (if (examples.any { it.contains(word) }) 2 else 0) + (if (definitions.any { it.contains(word) }) 1 else 0)
         }
-        return contextNouns.count { noun -> texts.any { it.contains(noun) } }
     }
 
     private fun categoryMismatch(entry: DictionaryWithSenses): Int {
@@ -116,20 +128,30 @@ internal class HomonymRanking(
     companion object {
         private val NUMBER_WORDS = setOf("십", "백", "천", "만", "억", "조")
 
-        // Open Korean Text POS names to the dictionary's (translated) POS names
-        private val OKT_TO_DICTIONARY_POS = mapOf(
-            "Noun" to setOf("Noun", "Pronoun", "Numeral", "Bound Noun"),
-            "ProperNoun" to setOf("Noun"),
-            "Verb" to setOf("Verb", "Auxiliary Verb"),
-            "Adjective" to setOf("Adjective", "Auxiliary Adjective"),
-            "Adverb" to setOf("Adverb"),
-            "Determiner" to setOf("Determiner"),
-            "Modifier" to setOf("Determiner"),
-            "Exclamation" to setOf("Interjection"),
-            "Josa" to setOf("Particle"),
-            "Eomi" to setOf("Ending"),
-            "Suffix" to setOf("Affix"),
-            "VerbPrefix" to setOf("Affix")
+        // The analyzer gives a word the class of its most basic nominal entry, not of the one
+        // the sentence uses, so nominals only tell nominals from the rest. Which bound noun or
+        // noun it is comes from the words around it (see boundNounRank).
+        private val NOMINAL_POS = setOf("Noun", "Pronoun", "Numeral", "Bound Noun")
+
+        // The analyzer's tags to the dictionary's (translated) POS names
+        private val DICTIONARY_POS = mapOf(
+            Tag.NOUN to NOMINAL_POS,
+            Tag.PRONOUN to NOMINAL_POS,
+            Tag.NUMERAL to NOMINAL_POS,
+            Tag.BOUND_NOUN to NOMINAL_POS,
+            Tag.UNKNOWN to setOf("Noun"),
+            Tag.VERB to setOf("Verb"),
+            Tag.AUX_VERB to setOf("Auxiliary Verb"),
+            Tag.ADJECTIVE to setOf("Adjective"),
+            Tag.AUX_ADJECTIVE to setOf("Auxiliary Adjective"),
+            Tag.ADVERB to setOf("Adverb"),
+            Tag.DETERMINER to setOf("Determiner"),
+            Tag.INTERJECTION to setOf("Interjection"),
+            Tag.PARTICLE to setOf("Particle"),
+            Tag.ENDING to setOf("Ending"),
+            Tag.PREFIX to setOf("Affix"),
+            Tag.SUFFIX to setOf("Affix"),
+            Tag.PREDICATE_SUFFIX to setOf("Affix")
         )
 
         /**

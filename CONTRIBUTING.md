@@ -62,8 +62,8 @@ articles copied from news sites.
 * `parser` - a plain Kotlin library that turns article pages into content blocks, with a parser per
   news site and a generic fallback
 * `analyzer` - a plain Kotlin library that splits Korean words into dictionary headwords, particles
-  and endings, built on the bundled dictionary. It's to replace Open Korean Text in word lookups
-  (see [docs/lookup-analyzer.md](docs/lookup-analyzer.md)), which don't use it yet.
+  and endings, built on the bundled dictionary. Word lookups use it (see
+  [docs/lookup-analyzer.md](docs/lookup-analyzer.md)).
 * `tools/dictionary-generator` - builds the bundled dictionary from the NIKL dictionary data
 * `tools/analyzer-counts` - builds the analyzer's context counts from the UD Korean treebanks
 
@@ -97,19 +97,22 @@ skipped without the bundled dictionary. It runs three sets of cases in `app/src/
 
 The format of the sets is described in the test.
 
-Lookups still use Open Korean Text. To evaluate them with the `analyzer` module instead, add
-`-PlookupAnalyzer=lexicon`, and optionally `-PlexContext=<counts file>` for its context counts:
+The analyzer uses its bundled context counts. To evaluate it with other counts, add
+`-PlexContext=<counts file>`:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlookupAnalyzer=lexicon
+./gradlew :app:testDebugUnitTest --tests '*LookupEvaluationTest' -PlexContext=<counts file>
 ```
+
+Until Open Korean Text is removed from the build, `-PlookupAnalyzer=okt` evaluates it instead, for
+comparison. Lookups no longer have its patches, so it scores below its old baselines.
 
 To collect cases for `lookup-eval.tsv` while reading, turn on Report wrong lookups in the app's
 settings. The lookup sheet then gets a button for saving a lookup that shows the wrong entry. Switch
 to the right entry first, if the sheet has it, and it's saved as the expected one. Saved lookups are
 shared from the settings as tab-separated rows. Their first five columns are the evaluation set's,
-so a row with an expected entry can be added to the set as it is. The rest, such as how Open Korean
-Text split the word, help find the cause.
+so a row with an expected entry can be added to the set as it is. The rest, such as how the analyzer
+split the word, help find the cause.
 See [Dictionary lookup ranking](#dictionary-lookup-ranking) for how to use them.
 
 ## Release builds

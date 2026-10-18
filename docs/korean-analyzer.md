@@ -1,6 +1,6 @@
 # Korean analyzer: Open Korean Text, Kiwi and our own
 
-Word lookups use [Open Korean Text](https://github.com/open-korean-text/open-korean-text) (OKT) to
+Word lookups used [Open Korean Text](https://github.com/open-korean-text/open-korean-text) (OKT) to
 find the dictionary forms of a tapped word. OKT is no longer developed and often misses
 conjugations, so in October 2026 it was compared with [Kiwi](https://github.com/bab2min/Kiwi)
 0.24.0, an actively developed analyzer with an Android library.
@@ -11,8 +11,8 @@ and patched as errors were found.
 
 **Decision: replace OKT with our own dictionary-driven analyzer, in stages.** A prototype built
 afterwards for what a lookup needs came close to Kiwi's accuracy at about 14 MB of memory. See
-[lookup-analyzer.md](lookup-analyzer.md) for its results and the stages. Until lookups switch to
-it, they use OKT, and OKT's errors are still patched in `DictionaryRepository`.
+[lookup-analyzer.md](lookup-analyzer.md) for its results and the stages. Lookups use it now, and
+the OKT patches below were removed with the switch.
 
 ## How it was measured
 
@@ -65,7 +65,8 @@ Kiwi models are about half the size but don't load in current versions.
 ## OKT errors to patch
 
 Reading words in the articles where the two analyzers disagreed, Kiwi was right in 48 of 60 and
-OKT in 3. OKT's common errors, patched in `DictionaryRepository` until OKT is replaced:
+OKT in 3. OKT's common errors, which were patched in `DictionaryRepository` until lookups switched
+to the new analyzer:
 
 * Very common conjugated words read as nouns: 통해, 지난, 크게, 다른, 대한, 앞서
 * 는 after a closing quote mark (없다”는) read as a form of 늘다

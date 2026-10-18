@@ -38,7 +38,19 @@ interface DictionaryDao {
     @Transaction
     @Query("SELECT * FROM dictionary_entries WHERE origin IN (:origins)")
     fun getEntriesForOrigins(origins: List<String>): Flow<List<DictionaryWithSenses>>
+
+    /** Every entry, as much as the analyzer's lexicon needs. Blocks, so call off the main thread. */
+    @Query("SELECT word, partOfSpeech, vocabularyLevel, lexicalUnit FROM dictionary_entries")
+    fun getLexiconRows(): List<LexiconRow>
 }
+
+/** An entry as the analyzer's lexicon needs it. */
+data class LexiconRow(
+    val word: String,
+    val partOfSpeech: String?,
+    val vocabularyLevel: String?,
+    val lexicalUnit: String?
+)
 
 data class DictionaryWithSenses(
     @androidx.room.Embedded val entry: DictionaryEntry,

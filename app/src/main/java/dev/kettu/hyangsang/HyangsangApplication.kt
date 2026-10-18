@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 import java.util.concurrent.atomic.AtomicBoolean
 
 class HyangsangApplication : Application() {
@@ -78,16 +77,10 @@ class HyangsangApplication : Application() {
     fun loadReaderResources() {
         if (!readerResourcesLoaded.compareAndSet(false, true)) return
 
-        // Loaded separately, so it doesn't wait for the feed refresh to finish
+        // Building the analyzer opens the dictionary, which copies the bundled one on first
+        // launch or after an update. Both would otherwise delay the first lookup.
         applicationScope.launch {
-            // Initialize Open Korean Text resources
-            OpenKoreanTextProcessorJava.loadResources()
-        }
-
-        // Opening copies the bundled dictionary on first launch or after an update, which would
-        // otherwise delay the first lookup
-        applicationScope.launch {
-            container.dictionaryDatabase.openHelper.writableDatabase
+            container.koreanAnalyzer.value
         }
     }
 

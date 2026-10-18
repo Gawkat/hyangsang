@@ -4,10 +4,10 @@ import dev.kettu.hyangsang.analyzer.LookupAnalyzer
 import dev.kettu.hyangsang.analyzer.Tag
 
 /**
- * [KoreanAnalyzer] using the dictionary-driven [LookupAnalyzer], which is to replace Open Korean
- * Text. Lookups don't use it yet. Its best analysis of each word is turned into tokens like Open Korean
- * Text's: a predicate with its endings is one token with the dictionary form as stem, and the
- * endings follow it as tokens of their own with the dictionary's form (-면서) as stem.
+ * [KoreanAnalyzer] using the dictionary-driven [LookupAnalyzer]. Its best analysis of each word
+ * is turned into tokens: a predicate with its endings is one token with the dictionary form as
+ * stem, and the endings follow it as tokens of their own with the dictionary's form (-면서) as
+ * stem. Other morphemes are a token each.
  *
  * With a sentence, the words around each word are taken from it, for the analyzer's context.
  */
@@ -26,6 +26,22 @@ class LexiconKoreanAnalyzer(private val analyzer: LookupAnalyzer) : KoreanAnalyz
         }
     }
 
+    // Each word on its own, which is enough for these, and much less work than with the context
+    override fun contextWords(sentence: String): List<String> =
+        sentence.split(WHITESPACE).filter { it.isNotEmpty() }.flatMap { word ->
+            analyzer.analyze(word, limit = 1).firstOrNull()?.morphemes.orEmpty().mapNotNull { m ->
+                when {
+                    m.tag == Tag.NOUN || m.tag == Tag.UNKNOWN -> m.form
+                    // The noun of 하다 and 되다 verbs, as their stems contract (도착했다)
+                    m.tag.isPredicate && m.tag.isContent && m.form.length > 2 && m.form.last() in "하되" ->
+                        m.form.dropLast(1)
+                    // One-syllable stems are part of too many other words
+                    m.tag.isPredicate && m.tag.isContent && m.form.length > 1 -> m.form
+                    else -> null
+                }
+            }
+        }
+
     private fun core(word: String) = word.trim { !it.isLetterOrDigit() }
 
     private fun tokens(word: String, previous: String?, next: String?): List<KoreanToken> {
@@ -35,27 +51,15 @@ class LexiconKoreanAnalyzer(private val analyzer: LookupAnalyzer) : KoreanAnalyz
         while (i < morphemes.size) {
             val m = morphemes[i]
             when {
-                m.tag.isNominal || m.tag == Tag.PREFIX -> tokens += KoreanToken(m.form, "Noun")
-                m.tag == Tag.SUFFIX -> tokens += KoreanToken(m.form, "Suffix")
                 m.tag == Tag.COPULA -> Unit
                 m.tag.isPredicate -> {
                     var last = i
                     while (morphemes.getOrNull(last + 1)?.tag == Tag.ENDING) last++
                     val surface = word.substring(m.start.coerceAtMost(word.length), morphemes[last].end.coerceAtMost(word.length))
-                    tokens += when (m.tag) {
-                        Tag.PREDICATE_SUFFIX -> KoreanToken(surface, "Suffix", m.form + "다")
-                        Tag.ADJECTIVE, Tag.AUX_ADJECTIVE -> KoreanToken(surface, "Adjective", m.headword)
-                        else -> KoreanToken(surface, "Verb", m.headword)
-                    }
+                    tokens += KoreanToken(surface, m.tag, m.headword.removePrefix("-"))
                 }
-                m.tag == Tag.PARTICLE -> tokens += KoreanToken(m.form, "Josa")
-                m.tag == Tag.ENDING -> tokens += KoreanToken(m.form, "Eomi", m.headword)
-                m.tag == Tag.ADVERB -> tokens += KoreanToken(m.form, "Adverb")
-                m.tag == Tag.DETERMINER -> tokens += KoreanToken(m.form, "Determiner")
-                m.tag == Tag.INTERJECTION -> tokens += KoreanToken(m.form, "Exclamation")
-                m.tag == Tag.NUMBER -> tokens += KoreanToken(m.form, "Number")
-                m.tag == Tag.FOREIGN -> tokens += KoreanToken(m.form, "Alpha")
-                else -> tokens += KoreanToken(m.form, "Foreign")
+                m.tag == Tag.ENDING -> tokens += KoreanToken(m.form, m.tag, m.headword)
+                else -> tokens += KoreanToken(m.form, m.tag)
             }
             i++
         }
