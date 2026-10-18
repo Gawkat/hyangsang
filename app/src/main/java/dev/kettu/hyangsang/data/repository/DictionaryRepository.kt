@@ -11,11 +11,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import org.openkoreantext.processor.KoreanTokenJava
-import org.openkoreantext.processor.OpenKoreanTextProcessorJava
 
 class DictionaryRepository(
-    private val dictionaryDao: DictionaryDao
+    private val dictionaryDao: DictionaryDao,
+    private val analyzer: KoreanAnalyzer = OktAnalyzer
 ) {
     /**
      * @param terms search terms, each with the Open Korean Text POS of the token it came from, or
@@ -196,7 +195,7 @@ class DictionaryRepository(
     }
 
     // Open Korean Text stems 됐다 and 돼 as 돼다, and 되어 and 되었다 as 되어다, instead of 되다
-    private fun stemOf(token: KoreanTokenJava): String =
+    private fun stemOf(token: KoreanToken): String =
         (if (!token.stem.isNullOrEmpty()) token.stem else token.text).let {
             when {
                 it.endsWith("돼다") -> it.dropLast(2) + "되다"
@@ -206,7 +205,9 @@ class DictionaryRepository(
         }
 
     private fun getHangulSearchTerms(word: String, neighbors: Neighbors = Neighbors()): SearchTerms {
-        val javaTokens = tokenize(word)
+        // The words around it, for analyzers that use the context
+        val context = listOfNotNull(neighbors.previous, word, neighbors.next).takeIf { it.size > 1 }?.joinToString(" ")
+        val javaTokens = analyzer.tokenize(word, context)
         val terms = LinkedHashMap<String, String?>()
         val compounds = mutableListOf<String>()
         val splitParts = mutableSetOf<String>()
@@ -523,9 +524,7 @@ class DictionaryRepository(
         "${token.text}/${token.pos}$stem"
     }
 
-    private fun tokenize(text: String) =OpenKoreanTextProcessorJava.tokensToJavaKoreanTokenList(
-        OpenKoreanTextProcessorJava.tokenize(OpenKoreanTextProcessorJava.normalize(text))
-    ).filter { it.pos.toString() !in listOf("Space", "Punctuation") }
+    private fun tokenize(text: String) = analyzer.tokenize(text)
 
     // Nouns in the sentence other than the looked up word itself, for matching against entries
     private fun contextNouns(sentence: String, searchTerms: Set<String>): Set<String> =
