@@ -147,6 +147,47 @@ On the x86_64 emulator, building the analyzer from the installed dictionary took
 entries 0.54 s, lexicon 0.46 s, counts 0.34 s), in the background as the app starts. The first
 lookup in an article then took 35 ms.
 
+### Coverage
+
+Step 4 of the [Plan](#plan) filled the gaps listed under [Where it goes wrong](#where-it-goes-wrong),
+in the `analyzer` module:
+
+* **Names:** a common surname and two syllables common in given names are one name (한지민,
+  김정은, 이재명), unless the dictionary has the name or the given name, the start is a word that a
+  particle, ending or suffix follows (이란과, 연구다, 고양시), the name would end inside a longer
+  word (한국은행), or the word reads as a predicate (모아준). No list of names is bundled.
+* **Foreign and place names:** a prefix before a one-syllable noun costs more, so 고베, 단둥 and
+  노벨 stay whole instead of 고- + 베.
+* **Numbers:** after digits, counters (the dictionary's bound nouns) win over longer nouns
+  (10대가 is 대 + 가, not 대가), number words continue the number (10만원 is 만 + 원, not 만원),
+  여 means more than (200여대), a few suffixes follow counters (1일부로 is 일 + -부 + 로), 제 starts
+  the next article number (제2조제1호), and a unit symbol is followed by the copula (12.4%다).
+* **Rules:** the 우 and 러 irregulars (퍼, 이르러), ㅎ forms in ㅒ and ㅖ (하얘), 으 dropping
+  before a separate 아 (모아서), 하 contracted in adjectives (순탄치, 간편케, 깨끗지), the copula
+  contracted into a noun (누군가, 어딘지, 친굽니다) and -구요.
+
+`LookupEvaluationTest`, expected entry shown first: dictionary dev 340 (unchanged), test 316
+(was 315), real articles 64 (unchanged). The first confirming run got 63 on the article set. Its
+losses pointed to two side effects, which were then fixed: counters were tagged as bound nouns
+rather than with their entry's tag, which left them out of the sentence's context words (10분에),
+and 조 before a digit was read as the counter for articles (5조5천억원). So the article set informed
+these two fixes. 5조5천억원에 still opens on 원 rather than 조, as 원 after the number words is now a
+counter rather than the suffix -원.
+
+Distinct words in the saved articles whose analysis changed, with a random sample of 40 per kind
+read by hand:
+
+| Kind | Changed | Sample: better / worse / no better |
+|---|---|---|
+| Numbers | 479 (230 split differently, the rest tags only) | 39 / 0 / 1 of the re-split |
+| Names | 210 | 38 / 0 / 2 |
+| Prefix before a one-syllable noun | 69 | 23 / 1 / 16 |
+| Rules | 93 (52 split differently) | 19 / 4 / 17 |
+
+The prefix change leaves some words made of a prefix and a noun as unknown words (탈북, 비핵화),
+which the lookup still splits into the dictionary's words. Most of the words the rules made worse
+are names and titles split differently (조선신보가, 백두대간).
+
 ## Where it goes wrong
 
 On 268 saved articles, Lex's main headword isn't among Kiwi's for 9% of words. In a sample of 60 of
@@ -154,16 +195,18 @@ those read by hand, Kiwi was right in about 27, Lex in about 6, and the rest wer
 differences in how far words are split (Lex keeps the dictionary's 자극적 where Kiwi has 자극 +
 -적). In the sample and in the treebank misses:
 
-* **Proper names** (about half of Kiwi's wins): names are split into dictionary words, as in
+* **Proper names** (about half of Kiwi's wins): names were split into dictionary words, as in
   한지민 → 한지 + 민, 신의주 → 신의 + 주, 고베 → 고- + 베. Kiwi has a large list of names. The
   lookup splits nouns itself, so this mostly shows unrelated entries rather than hiding the right
-  one.
+  one. Step 4 added a rule for Korean names and made prefixes before one-syllable nouns costlier
+  (see [Coverage](#coverage)); place names such as 신의주 are still split.
 * **Homographs that need context:** a noun or a conjugated form (볼 cheek / 보다, 담은, 낼, 가게,
   투자가), and verbs with the same forms (사는 살다 / 사다). The treebank counts fix common
   cases; the rest needs a real language model.
-* **After numbers:** 12.4%다, 200여대가 (read as 여대), 1일부로 (일부).
+* **After numbers:** 12.4%다, 200여대가 (read as 여대), 1일부로 (일부). Fixed in step 4.
 * **Missing rules:** 우 and 러 irregulars (퍼, 이르러), ㅎ forms in ㅒ (하얘), contractions
-  such as 순탄치 (순탄하지) and 누군가, colloquial spellings (했구요, 알앗는데).
+  such as 순탄치 (순탄하지) and 누군가, colloquial spellings (했구요, 알앗는데). Fixed in step 4,
+  except misspellings such as 알앗는데.
 * **Conventions, not errors:** the dictionary has 다른 and 이런 as determiners and 없이 as an
   adverb, which the treebanks analyze as adjectives.
 

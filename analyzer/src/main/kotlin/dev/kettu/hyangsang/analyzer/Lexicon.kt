@@ -14,6 +14,9 @@ class Lexicon(rows: Iterable<DictionaryRow>) {
     /** Nouns, pronouns, numerals and bound nouns, with their tag and cost. */
     internal val nominals = HashMap<String, Pair<Tag, Float>>()
 
+    /** Words that are bound nouns in one of their entries, such as counters (명, 대), with that entry's cost. */
+    internal val boundNouns = HashMap<String, Float>()
+
     /** Verb and adjective stems (공부하 for 공부하다), with each tag they have and its cost. */
     internal val predicates = HashMap<String, MutableMap<Tag, Float>>()
     internal val adverbs = HashMap<String, Float>()
@@ -60,7 +63,10 @@ class Lexicon(rows: Iterable<DictionaryRow>) {
                     "Noun" -> addNominal(word, Tag.NOUN, cost)
                     "Pronoun" -> addNominal(word, Tag.PRONOUN, cost)
                     "Numeral" -> addNominal(word, Tag.NUMERAL, cost)
-                    "Bound Noun" -> addNominal(word, Tag.BOUND_NOUN, cost)
+                    "Bound Noun" -> {
+                        addNominal(word, Tag.BOUND_NOUN, cost)
+                        boundNouns.merge(word, cost, ::minOf)
+                    }
                     "Verb", "Adjective", "Auxiliary Verb", "Auxiliary Adjective" -> if (word.endsWith("다") && word.length > 1) {
                         val tag = when (row.partOfSpeech) {
                             "Verb" -> Tag.VERB
@@ -121,6 +127,10 @@ class Lexicon(rows: Iterable<DictionaryRow>) {
         // Contracted particles the dictionary has no entries for
         val EXTRA_PARTICLES = setOf("에선", "에겐", "한텐", "론", "으론", "보단", "께선", "에서도", "이란", "에게선")
 
-        val EXTRA_ENDINGS = setOf("ㄴ다는", "는다는", "다는", "라는", "으라는", "냐는", "느냐는", "자는", "려는", "으려는")
+        val EXTRA_ENDINGS = setOf(
+            "ㄴ다는", "는다는", "다는", "라는", "으라는", "냐는", "느냐는", "자는", "려는", "으려는",
+            // Colloquial spellings: 했구요 (했고요)
+            "구요"
+        )
     }
 }

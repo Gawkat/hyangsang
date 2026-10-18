@@ -240,7 +240,7 @@ class LookupEvaluationTest {
         // Correct cases in each set as of the last ranking change
         private const val BASELINE_NEWS = 64
         private const val BASELINE_KRDICT_DEV = 340
-        private const val BASELINE_KRDICT_TEST = 315
+        private const val BASELINE_KRDICT_TEST = 316
 
         private val DICTIONARY = File("src/main/assets/dictionary.db")
 
