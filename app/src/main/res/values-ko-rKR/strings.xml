@@ -38,6 +38,19 @@
     <string name="view_license_information">라이선스 정보 보기</string>
     <string name="about_label">앱 소개</string>
     <string name="dictionary_attribution_label">사전 출처</string>
+    <string name="language_data_attribution_label">언어 분석 데이터 출처</string>
+    <string name="language_data_attribution_text">
+        <![CDATA[이 앱에는 Universal Dependencies의 두 트리뱅크(2.18 릴리스)의 학습 데이터에서 만든 통계가 들어 있습니다.
+        <br><br>
+        UD Korean GSD - Ryan McDonald, Joakim Nivre, Daniel Zeman, Jinho Choi, Jayeol Chun, Na-Rae Han, Jena Hwang<br><a href="https://github.com/UniversalDependencies/UD_Korean-GSD">github.com/UniversalDependencies/UD_Korean-GSD</a>
+        <br><br>
+        UD Korean Kaist - Jinho Choi, Jayeol Chun, Na-Rae Han, Jena Hwang, KAIST 트리 태깅 코퍼스에서 생성<br><a href="https://github.com/UniversalDependencies/UD_Korean-Kaist">github.com/UniversalDependencies/UD_Korean-Kaist</a>
+        <br><br>
+        Jayeol Chun, Na-Rae Han, Jena D. Hwang and Jinho D. Choi. Building Universal Dependency Treebanks in Korean. LREC 2018.<br>
+        Ryan McDonald et al. Universal Dependency Annotation for Multilingual Parsing. ACL 2013.
+        <br><br>
+        트리뱅크는 크리에이티브 커먼즈 저작자표시-동일조건변경허락 4.0 라이선스로 배포됩니다. 이 통계도 트리뱅크를 바탕으로 만들었으며, 같은 라이선스로 공유합니다.<br><a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ko">creativecommons.org/licenses/by-sa/4.0</a>]]>
+    </string>
     <string name="app_name_romanized">Hyangsang</string>
     <string name="saved_nav">저장됨</string>
     <string name="all_articles">전체 기사</string>

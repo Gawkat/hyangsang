@@ -65,6 +65,7 @@ articles copied from news sites.
   and endings, built on the bundled dictionary. It's to replace Open Korean Text in word lookups
   (see [docs/lookup-analyzer.md](docs/lookup-analyzer.md)), which don't use it yet.
 * `tools/dictionary-generator` - builds the bundled dictionary from the NIKL dictionary data
+* `tools/analyzer-counts` - builds the analyzer's context counts from the UD Korean treebanks
 
 ## Tests
 
@@ -188,7 +189,31 @@ is regenerated. The version is the NIKL release date followed by a two-digit rev
 they match.
 
 Then run `LookupEvaluationTest`, since a new release can break the lookup evaluation sets (see
-[Dictionary lookup ranking](#dictionary-lookup-ranking)).
+[Dictionary lookup ranking](#dictionary-lookup-ranking)), and regenerate the analyzer's context
+counts (see [The analyzer's context counts](#the-analyzers-context-counts)).
+
+### The analyzer's context counts
+
+The `analyzer` module ranks analyses with counts from the UD Korean GSD and Kaist treebanks,
+`context-counts.tsv` in its resources. Only the counts for words the analyzer can read in more than
+one way are kept, so regenerate them when the dictionary or the analyzer's candidates change:
+
+1. Download `ko_gsd-ud-train.conllu` from
+   [UD_Korean-GSD](https://github.com/UniversalDependencies/UD_Korean-GSD) and
+   `ko_kaist-ud-train.conllu` from
+   [UD_Korean-Kaist](https://github.com/UniversalDependencies/UD_Korean-Kaist), about 41 MB in
+   total. Use only the training sets: the test sets are for measuring the analyzer.
+2. Put them in `tools/analyzer-counts/data`, which is ignored by git.
+3. Run the generator, which also needs the bundled dictionary:
+
+   ```bash
+   ./gradlew :tools:analyzer-counts:run
+   ```
+
+The counts are licensed CC BY-SA 4.0, like the treebanks. If you use a different release, update
+`context-counts-attribution.md` next to the counts, and the language data attribution in the app's
+strings if the authors change. Measure the result with `LookupEvaluationTest`, as described in
+[docs/lookup-analyzer.md](docs/lookup-analyzer.md#how-it-was-measured).
 
 ### Dictionary lookup ranking
 

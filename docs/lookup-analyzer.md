@@ -75,6 +75,20 @@ Lex shows the right headword more often than OKT. Whether it then shows the righ
 up to `HomonymRanking`, which was tuned with OKT's tokens. All the differences on the article set
 are homonyms of the right headword (수, 원, 이상).
 
+The prototype's counts above were made from the treebanks' test sets. The counts in the `analyzer`
+module are made from their training sets instead (see [Plan](#plan)):
+
+| Set | No counts | Test-set counts | Training-set counts |
+|---|---|---|---|
+| Dictionary, dev | 275 (449) | 275 (451) | 274 (451) |
+| Dictionary, test | 275 (433) | 277 (436) | 273 (433) |
+| Real articles | 62 (88) | 64 (88) | 63 (88) |
+
+The training sets have about nine times as much text, most of it Kaist's news, fiction and academic
+text. Counts from GSD's training set alone got 275 (451) on the dev set. The differences are a few
+cases each, and the counts' weights were picked with the test-set counts, before
+`HomonymRanking` is re-tuned for the analyzer.
+
 On an x86_64 emulator, in the same process, Lex measured first:
 
 | | OKT | Lex |
@@ -116,10 +130,13 @@ OKT is replaced in stages, each its own pull request:
    conjugation and contraction rule. The app has a `KoreanAnalyzer` interface with OKT
    (`OktAnalyzer`) as the default, and an adapter for the new analyzer (`LexiconKoreanAnalyzer`)
    that lookups don't use yet. `LookupEvaluationTest` can evaluate it (see below).
-2. **Counts:** make them from the treebanks' training sets instead of their test sets, keep only
-   words with several analyses, and attribute them. The UD Korean treebanks are licensed CC BY-SA
-   4.0, which Creative Commons lists as compatible with GPLv3 (one-way), so the derived counts can
-   ship under GPLv3 with attribution. Check each treebank's license file first.
+2. **Counts (done):** made from the GSD and Kaist training sets (UD 2.18) by
+   `tools/analyzer-counts`, and committed as `context-counts.tsv` in the `analyzer` module's
+   resources, with `context-counts-attribution.md` next to it and an attribution in the app's
+   settings. Only words the analyzer can read in more than one way, and that were seen at least
+   twice, are kept. That leaves out 28% of the counts and changes none of the evaluation results.
+   The UD Korean treebanks are licensed CC BY-SA 4.0, which Creative Commons lists as compatible
+   with GPLv3 (one-way), so the derived counts ship under CC BY-SA 4.0 with attribution.
 3. **Switch lookups to it:** use it through `KoreanAnalyzer` in `DictionaryRepository`, and remove
    the OKT patches it makes unnecessary (misread predicates, 돼다 and 되어다, 늘다 after quotes,
    noun + 하다 splits). Give `HomonymRanking` its finer parts of speech (bound noun, determiner) and
@@ -144,7 +161,9 @@ comparison's. `LookupEvaluationTest` evaluates the analyzer instead of OKT with:
 ```
 
 `-PlexContext` is optional. Without counts, the analyzer gets 275 (449), 275 (433) and 62 (88) on
-the three sets.
+the three sets. The committed counts are
+`analyzer/src/main/resources/dev/kettu/hyangsang/analyzer/context-counts.tsv`; CONTRIBUTING.md
+describes how to regenerate them.
 
 Some caveats:
 
