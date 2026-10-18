@@ -172,6 +172,15 @@ class LookupAnalyzerTest {
     }
 
     @Test
+    fun `a bound noun after a word outweighs the counts`() {
+        // 산 alone is far more often the noun
+        val lexicon = Lexicon(DICTIONARY + word("산", "Noun"))
+        val analyzer = LookupAnalyzer(lexicon, ContextModel.bundled())
+        assertEquals("산", analyzer.analyze("산", "어제").first().content?.headword)
+        assertEquals("사다", analyzer.analyze("산", "어제", "것이다").first().content?.headword)
+    }
+
+    @Test
     fun `punctuation is left out`() {
         assertEquals("학교 + 에", best("“학교에,"))
         assertTrue(analyzer.analyze("...").isEmpty())
@@ -182,6 +191,23 @@ class LookupAnalyzerTest {
         val ending = analyzer.analyze("됐다면").first().morphemes.last()
         assertEquals("었다면", ending.form)
         assertEquals(listOf("었", "다면"), ending.parts)
+    }
+
+    @Test
+    fun `a stem that is a verb and an adjective is both`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("크다", "Verb"), word("크다", "Adjective"), word("-게", "Ending")))
+        val tags = LookupAnalyzer(lexicon).analyze("크게").map { it.morphemes.first().tag }
+        // Verbs win ties, and the counts tell them apart
+        assertEquals(listOf(Tag.VERB, Tag.ADJECTIVE), tags.take(2))
+        assertEquals(Tag.ADJECTIVE, LookupAnalyzer(lexicon, ContextModel.bundled()).analyze("크게").first().morphemes.first().tag)
+    }
+
+    @Test
+    fun `number words between numbers are not prefixes`() {
+        val lexicon = Lexicon(DICTIONARY + listOf(word("조", "Numeral"), word("조-", "Affix"), word("제-", "Affix")))
+        val analyzer = LookupAnalyzer(lexicon)
+        assertEquals(Tag.NUMERAL, analyzer.analyze("5조5").first().morphemes[1].tag)
+        assertEquals(Tag.PREFIX, analyzer.analyze("제253조").first().morphemes[0].tag)
     }
 
     companion object {
