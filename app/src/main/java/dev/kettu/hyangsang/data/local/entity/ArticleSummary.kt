@@ -7,9 +7,10 @@ import androidx.room.Relation
 // time the list changes would grow with the whole index
 data class ArticleSummary(
     val id: Long,
-    val feedId: Long,
+    val feedId: Long?,
     val title: String,
     val description: String,
+    val sourceUrl: String?,
     val addedDate: String,
     val pubDate: String?,
     val lastReadDate: String?,
@@ -22,5 +23,5 @@ data class ArticleSummaryWithFeed(
         parentColumn = "feedId",
         entityColumn = "id"
     )
-    val feed: RssFeed
+    val feed: RssFeed? // Null for imported articles
 )

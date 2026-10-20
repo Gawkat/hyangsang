@@ -381,6 +381,7 @@ fun DiscoverScreenPreview() {
                         feedId = 1,
                         title = "스타크래프트 2: 자유의 날개 다시 보기",
                         description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
+                        sourceUrl = "https://example.com/1",
                         pubDate = Clock.System.now().toString(),
                         addedDate = Clock.System.now().toString(),
                         lastReadDate = null,

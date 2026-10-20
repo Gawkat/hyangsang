@@ -70,6 +70,7 @@
     <string name="unsave_article">저장 취소</string>
     <string name="saved_empty_title">저장된 기사가 없습니다</string>
     <string name="saved_empty_body">기사의 북마크를 누르면 나중에 읽을 수 있도록 여기에 저장됩니다.</string>
+    <string name="pasted_text">붙여넣은 글</string>
     <string name="unread_counts_setting">읽지 않은 기사 수</string>
     <string name="unread_counts_summary">피드 목록에 개수 표시</string>
     <string name="dictionary_section">사전</string>

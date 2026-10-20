@@ -27,6 +27,8 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.ArticleSummary
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.ui.components.displayTitle
+import dev.kettu.hyangsang.ui.components.sourceLabel
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlin.time.Clock
@@ -69,14 +71,14 @@ fun ArticleRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "${articleWithFeed.feed.title} · $time",
+                    text = "${sourceLabel(articleWithFeed.feed, article.sourceUrl)} · $time",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = article.title,
+                    text = displayTitle(article.title, article.sourceUrl),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
                     color = if (isRead) {
@@ -129,6 +131,7 @@ fun ArticleRowPreview() {
                     feedId = 1,
                     title = "스타크래프트 2: 자유의 날개 다시 보기",
                     description = "실시간 전략 게임의 전설, 스타크래프트 2의 캠페인과 멀티플레이어 매력을 심층 분석합니다.",
+                    sourceUrl = "https://example.com/1",
                     pubDate = Clock.System.now().toString(),
                     addedDate = Clock.System.now().toString(),
                     lastReadDate = null,

@@ -58,6 +58,7 @@
     <string name="unsave_article">Remove from Saved</string>
     <string name="saved_empty_title">No saved articles</string>
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
+    <string name="pasted_text">Pasted text</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
     <string name="dictionary_section">Dictionary</string>

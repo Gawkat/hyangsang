@@ -64,7 +64,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         if (!article.content.isNullOrEmpty()) return article
 
         return try {
-            val content = fetchContent(article)
+            val (content, pageTitle) = fetchContent(article) ?: return article
+            // A shared link is stored before its page is downloaded, so its title comes from the page
+            val title = article.title.ifBlank { pageTitle.orEmpty() }
+            if (title != article.title) articleDao.updateTitle(article.id, title)
             // The content may have been cleared and is now downloaded again, so a stored position
             // has to be clamped to the new content like a refresh does
             articleDao.replaceContent(
@@ -74,6 +77,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
                 parserVersion = ArticleParser.VERSION
             )
             article.copy(
+                title = title,
                 content = content,
                 parserVersion = ArticleParser.VERSION,
                 scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
@@ -89,7 +93,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // The stored content is only replaced when the new parse looks complete
     suspend fun refreshArticleContent(article: Article): ContentRefresh {
         val content = try {
-            fetchContent(article)
+            fetchContent(article)?.content ?: return ContentRefresh.Unchanged
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -115,6 +119,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // Removes old unsaved articles, then the downloaded text of ones not opened for a while.
     // Saved articles are never touched
     suspend fun pruneStorage(articleRetention: ArticleRetention, contentRetention: ContentRetention) {
+        articleDao.deleteUnsavedImports()
         articleRetention.days?.let { articleDao.deleteUnsavedOlderThan(cutoff(it)) }
         contentRetention.days?.let { articleDao.clearContentNotOpenedSince(cutoff(it)) }
     }
@@ -122,15 +127,25 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     @OptIn(ExperimentalTime::class)
     private fun cutoff(days: Int): String = (Clock.System.now() - days.days).toString()
 
-    // Stored content from an older parser, which may have missed what a fix now extracts
-    fun needsReparse(article: Article): Boolean =
-        !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
+    // Stored content from an older parser, which may have missed what a fix now extracts.
+    // Pasted text has no page to parse again
+    fun needsReparse(article: Article): Boolean = article.sourceUrl != null &&
+            !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
 
-    private suspend fun fetchContent(article: Article): List<ContentBlock> =
-        withContext(Dispatchers.IO) {
-            val url = article.sourceUrl
-            ArticleParser().parse(url, Jsoup.connect(url).get(), article.title)
+    // Null for pasted text, which has no page to download
+    private suspend fun fetchContent(article: Article): FetchedPage? {
+        val url = article.sourceUrl ?: return null
+        return withContext(Dispatchers.IO) {
+            val document = Jsoup.connect(url).get()
+            val pageTitle = ArticleParser.pageTitle(document)
+            FetchedPage(
+                ArticleParser().parse(url, document, article.title.ifBlank { pageTitle }),
+                pageTitle
+            )
         }
+    }
+
+    private data class FetchedPage(val content: List<ContentBlock>, val title: String?)
 }
 
 // Makes the search text match literally inside a LIKE pattern that uses ESCAPE '\'
