@@ -115,4 +115,44 @@ class MigrationTest {
             assertEquals(0, it.getInt(1))
         }
     }
+
+    @Test
+    fun migrate17To18_keepsArticlesAndAllowsImports() {
+        helper.createDatabase(TEST_DB, 17).apply {
+            execSQL(
+                "INSERT INTO rss_feeds (id, title, url, category, isEnabled, lastSynced) " +
+                    "VALUES (1, 'Feed', 'https://example.com/rss', 'News', 1, '2026-09-25T00:00:00Z')"
+            )
+            execSQL(
+                "INSERT INTO articles (id, feedId, title, description, content, sourceUrl, addedDate, pubDate, lastReadDate, scrollPosition, savedDate, parserVersion) " +
+                    "VALUES (1, 1, 'Title', 'Description', '[]', 'https://example.com/a', '2026-09-25T00:00:00Z', NULL, NULL, 4, '2026-09-26T00:00:00Z', 2)"
+            )
+            close()
+        }
+
+        // Also validates the rebuilt table and its indices against the exported v18 schema
+        val db = helper.runMigrationsAndValidate(TEST_DB, 18, true, MIGRATION_17_18)
+
+        db.query("SELECT feedId, sourceUrl, scrollPosition, savedDate, parserVersion FROM articles WHERE id = 1").use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
+            assertEquals("https://example.com/a", it.getString(1))
+            assertEquals(4, it.getInt(2))
+            assertEquals("2026-09-26T00:00:00Z", it.getString(3))
+            assertEquals(2, it.getInt(4))
+        }
+        // Pasted text has neither a feed nor a URL
+        db.execSQL(
+            "INSERT INTO articles (feedId, title, description, content, sourceUrl, addedDate, scrollPosition) " +
+                "VALUES (NULL, 'Pasted', '', '[]', NULL, '2026-10-20T00:00:00Z', 0)"
+        )
+        db.execSQL(
+            "INSERT INTO articles (feedId, title, description, content, sourceUrl, addedDate, scrollPosition) " +
+                "VALUES (NULL, 'Pasted 2', '', '[]', NULL, '2026-10-20T00:00:00Z', 0)"
+        )
+        db.query("SELECT count(*) FROM articles WHERE feedId IS NULL").use {
+            it.moveToFirst()
+            assertEquals(2, it.getInt(0))
+        }
+    }
 }

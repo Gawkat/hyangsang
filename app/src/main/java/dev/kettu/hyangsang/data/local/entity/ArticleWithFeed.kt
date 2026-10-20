@@ -9,5 +9,5 @@ data class ArticleWithFeed(
         parentColumn = "feedId",
         entityColumn = "id"
     )
-    val feed: RssFeed
+    val feed: RssFeed? // Null for imported articles
 )

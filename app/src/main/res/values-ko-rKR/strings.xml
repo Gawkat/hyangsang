@@ -31,6 +31,8 @@
     <string name="article_reload_unchanged">기사에 변경된 내용이 없습니다</string>
     <string name="article_reload_failed">기사를 다시 불러오지 못했습니다</string>
     <string name="article_download_failed">기사를 내려받지 못했습니다. 인터넷 연결을 확인하고 다시 시도하거나 브라우저로 열어 보세요.</string>
+    <string name="article_download_blocked">이 사이트는 향상이 페이지를 내려받는 것을 허용하지 않습니다. 브라우저로 열어 보세요.</string>
+    <string name="article_not_found">페이지가 없습니다. 삭제되었거나 링크가 잘못되었을 수 있습니다.</string>
     <string name="article_no_text">이 기사에서 본문을 찾지 못했습니다. 사진이나 동영상 기사일 수 있습니다.</string>
     <string name="try_again_button">다시 시도</string>
     <string name="article_not_found_label">기사를 찾을 수 없습니다</string>
@@ -70,6 +72,16 @@
     <string name="unsave_article">저장 취소</string>
     <string name="saved_empty_title">저장된 기사가 없습니다</string>
     <string name="saved_empty_body">기사의 북마크를 누르면 나중에 읽을 수 있도록 여기에 저장됩니다.</string>
+    <string name="pasted_text">붙여넣은 글</string>
+    <string name="imported_filter">가져온 글</string>
+    <string name="imported_empty_title">가져온 글이 없습니다</string>
+    <string name="imported_empty_body">다른 앱에서 링크나 글을 향상으로 공유하거나, +를 눌러 붙여넣으세요.</string>
+    <string name="add_text_title">글 추가</string>
+    <string name="add_text_button">추가</string>
+    <string name="add_text_title_label">제목</string>
+    <string name="add_text_body_label">본문</string>
+    <string name="add_text_paste">붙여넣기</string>
+    <string name="add_text_too_long">너무 깁니다: %1$s자 (최대 %2$s자)</string>
     <string name="unread_counts_setting">읽지 않은 기사 수</string>
     <string name="unread_counts_summary">피드 목록에 개수 표시</string>
     <string name="dictionary_section">사전</string>

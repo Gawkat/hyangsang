@@ -30,6 +30,8 @@
     <string name="article_reload_unchanged">No changes to the article</string>
     <string name="article_reload_failed">Couldn\'t reload the article</string>
     <string name="article_download_failed">Couldn\'t download the article. Check your connection and try again, or open it in the browser.</string>
+    <string name="article_download_blocked">This site doesn\'t let 향상 download its pages. Open it in the browser instead.</string>
+    <string name="article_not_found">This page doesn\'t exist. It may have been removed, or the link may be wrong.</string>
     <string name="article_no_text">No text was found in this article. It may be a photo or video page.</string>
     <string name="try_again_button">Try again</string>
     <string name="article_not_found_label">Article not found</string>
@@ -58,6 +60,16 @@
     <string name="unsave_article">Remove from Saved</string>
     <string name="saved_empty_title">No saved articles</string>
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
+    <string name="pasted_text">Pasted text</string>
+    <string name="imported_filter">Imported</string>
+    <string name="imported_empty_title">Nothing imported yet</string>
+    <string name="imported_empty_body">Share a link or text with 향상 from another app, or tap + to paste it.</string>
+    <string name="add_text_title">Add text</string>
+    <string name="add_text_button">Add</string>
+    <string name="add_text_title_label">Title</string>
+    <string name="add_text_body_label">Text</string>
+    <string name="add_text_paste">Paste</string>
+    <string name="add_text_too_long">Too long: %1$s characters, of at most %2$s</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
     <string name="dictionary_section">Dictionary</string>

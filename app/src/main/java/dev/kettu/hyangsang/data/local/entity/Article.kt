@@ -30,11 +30,13 @@ import kotlin.time.ExperimentalTime
 data class Article @OptIn(ExperimentalTime::class) constructor(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val feedId: Long,
+    // Null for an article the user imported rather than one from a feed
+    val feedId: Long?,
     val title: String,
     val description: String,
     val content: List<ContentBlock>? = null,
-    val sourceUrl: String,
+    // Null for pasted text, which can't be downloaded again
+    val sourceUrl: String?,
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
     val lastReadDate: String? = null,

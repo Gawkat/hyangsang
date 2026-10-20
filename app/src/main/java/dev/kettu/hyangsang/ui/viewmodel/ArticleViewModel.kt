@@ -9,7 +9,9 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.repository.ArticleRepository
+import dev.kettu.hyangsang.data.repository.ContentDownload
 import dev.kettu.hyangsang.data.repository.ContentRefresh
+import dev.kettu.hyangsang.data.repository.DownloadFailure
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +38,8 @@ sealed class ArticleUiState {
         val isRefreshing: Boolean = false,
         // Outcome of the last reload, until the reader has shown it
         val refreshResult: ContentRefresh? = null,
-        // The article has no content because downloading it failed
-        val downloadFailed: Boolean = false
+        // Why the article has no content, if downloading it failed
+        val downloadFailure: DownloadFailure? = null
     ) : ArticleUiState()
     data class Error(val message: String) : ArticleUiState()
 }
@@ -66,8 +68,13 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             initialValue = emptyList()
         )
 
-    val savedArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> =
-        articleRepository.getSavedArticleSummaries().stateIn(
+    private val _savedImportedOnly = MutableStateFlow(false)
+    val savedImportedOnly: StateFlow<Boolean> = _savedImportedOnly.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val savedArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> = _savedImportedOnly
+        .flatMapLatest { articleRepository.getSavedArticleSummaries(importedOnly = it) }
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -101,6 +108,17 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
         }
     }
 
+    fun setSavedImportedOnly(importedOnly: Boolean) {
+        _savedImportedOnly.value = importedOnly
+    }
+
+    // Both return the id of the article to open
+    suspend fun importLink(url: String, title: String?): Long =
+        articleRepository.importLink(url, title)
+
+    suspend fun importText(title: String, text: String): Long =
+        articleRepository.importText(title, text)
+
     fun setSaved(articleId: Long, saved: Boolean) {
         viewModelScope.launch {
             articleRepository.setSaved(articleId, saved)
@@ -133,14 +151,14 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 return@launch
             }
 
-            var downloadFailed = false
+            var downloadFailure: DownloadFailure? = null
             if (articleWithFeed.article.content.isNullOrEmpty()) {
-                val updatedArticle =
-                    articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)
-                if (updatedArticle != null) {
-                    articleWithFeed = articleWithFeed.copy(article = updatedArticle)
-                } else {
-                    downloadFailed = true
+                when (val download =
+                    articleRepository.fetchAndSaveArticleContent(articleWithFeed.article)) {
+                    is ContentDownload.Done ->
+                        articleWithFeed = articleWithFeed.copy(article = download.article)
+
+                    is ContentDownload.Failed -> downloadFailure = download.reason
                 }
             }
 
@@ -150,7 +168,7 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             )
 
             _currentArticleState.value =
-                ArticleUiState.Success(articleWithFeed, downloadFailed = downloadFailed)
+                ArticleUiState.Success(articleWithFeed, downloadFailure = downloadFailure)
 
             // Shows the stored content right away and swaps in the new parse if it differs
             if (articleRepository.needsReparse(articleWithFeed.article)) {
@@ -167,16 +185,19 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
         updateSuccess(articleId) { it.copy(isRefreshing = true) }
 
         refreshJob = viewModelScope.launch {
-            val updated =
+            val download =
                 articleRepository.fetchAndSaveArticleContent(current.articleWithFeed.article)
             updateSuccess(articleId) {
-                it.copy(
-                    articleWithFeed = updated
-                        ?.let { article -> it.articleWithFeed.copy(article = article) }
-                        ?: it.articleWithFeed,
-                    isRefreshing = false,
-                    downloadFailed = updated == null
-                )
+                when (download) {
+                    is ContentDownload.Done -> it.copy(
+                        articleWithFeed = it.articleWithFeed.copy(article = download.article),
+                        isRefreshing = false,
+                        downloadFailure = null
+                    )
+
+                    is ContentDownload.Failed ->
+                        it.copy(isRefreshing = false, downloadFailure = download.reason)
+                }
             }
         }
     }
@@ -207,7 +228,7 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             }
             updateSuccess(articleId) {
                 val withContent = if (updated != null) {
-                    it.copy(articleWithFeed = updated, downloadFailed = false)
+                    it.copy(articleWithFeed = updated, downloadFailure = null)
                 } else {
                     it
                 }

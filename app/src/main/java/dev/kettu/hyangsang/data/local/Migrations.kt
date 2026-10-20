@@ -36,4 +36,28 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+// Articles can be imported, without a feed or, for pasted text, a source URL. SQLite can't drop
+// NOT NULL from a column, so the table is rebuilt
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE `articles_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`feedId` INTEGER, `title` TEXT NOT NULL, `description` TEXT NOT NULL, " +
+                    "`content` TEXT, `sourceUrl` TEXT, `addedDate` TEXT NOT NULL, `pubDate` TEXT, " +
+                    "`lastReadDate` TEXT, `scrollPosition` INTEGER NOT NULL, `savedDate` TEXT, " +
+                    "`parserVersion` INTEGER NOT NULL DEFAULT 0, " +
+                    "FOREIGN KEY(`feedId`) REFERENCES `rss_feeds`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("INSERT INTO `articles_new` SELECT * FROM `articles`")
+        db.execSQL("DROP TABLE `articles`")
+        db.execSQL("ALTER TABLE `articles_new` RENAME TO `articles`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_articles_feedId` ON `articles` (`feedId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_articles_pubDate` ON `articles` (`pubDate`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_articles_addedDate` ON `articles` (`addedDate`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_articles_sourceUrl` ON `articles` (`sourceUrl`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_articles_savedDate` ON `articles` (`savedDate`)")
+    }
+}
+
+val ALL_MIGRATIONS =
+    arrayOf(MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)

@@ -30,7 +30,7 @@ interface ArticleDao {
     @Transaction
     @Query(
         """
-        SELECT a.id, a.feedId, a.title, a.description, a.addedDate, a.pubDate, a.lastReadDate,
+        SELECT a.id, a.feedId, a.title, a.description, a.sourceUrl, a.addedDate, a.pubDate, a.lastReadDate,
             a.savedDate
         FROM articles a
         INNER JOIN rss_feeds f ON f.id = a.feedId
@@ -50,14 +50,20 @@ interface ArticleDao {
         unreadOnly: Boolean
     ): Flow<List<ArticleSummaryWithFeed>>
 
+    // Imported articles are the ones without a feed
     @Transaction
     @Query(
         """
-        SELECT id, feedId, title, description, addedDate, pubDate, lastReadDate, savedDate
-        FROM articles WHERE savedDate IS NOT NULL ORDER BY savedDate DESC
+        SELECT id, feedId, title, description, sourceUrl, addedDate, pubDate, lastReadDate, savedDate
+        FROM articles
+        WHERE savedDate IS NOT NULL AND (:importedOnly = 0 OR feedId IS NULL)
+        ORDER BY savedDate DESC
     """
     )
-    fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>>
+    fun getSavedArticleSummaries(importedOnly: Boolean = false): Flow<List<ArticleSummaryWithFeed>>
+
+    @Query("SELECT id FROM articles WHERE sourceUrl = :url")
+    suspend fun getArticleIdBySourceUrl(url: String): Long?
 
     // Feeds without unread articles, and feeds that are off, are left out
     @Query(
@@ -103,11 +109,12 @@ interface ArticleDao {
     )
 
     // Drops the downloaded text of unsaved articles not opened since the cutoff; it's downloaded
-    // again on the next open. Content fetched without being opened falls back to addedDate
+    // again on the next open. Content fetched without being opened falls back to addedDate.
+    // Imported articles are left to deleteUnsavedImports, as pasted text can't be downloaded
     @Query(
         """
         UPDATE articles SET content = NULL, parserVersion = 0
-        WHERE savedDate IS NULL AND content IS NOT NULL
+        WHERE savedDate IS NULL AND content IS NOT NULL AND feedId IS NOT NULL
             AND COALESCE(lastReadDate, addedDate) < :cutoff
     """
     )
@@ -118,16 +125,29 @@ interface ArticleDao {
     @Query(
         """
         DELETE FROM articles
-        WHERE savedDate IS NULL AND addedDate < :cutoff AND (pubDate IS NULL OR pubDate < :cutoff)
+        WHERE savedDate IS NULL AND feedId IS NOT NULL AND addedDate < :cutoff
+            AND (pubDate IS NULL OR pubDate < :cutoff)
     """
     )
     suspend fun deleteUnsavedOlderThan(cutoff: String): Int
+
+    // An imported article only lives in the saved list, so unsaving it removes it. Deleting it
+    // here rather than on unsave lets the unsave be undone
+    @Query("DELETE FROM articles WHERE feedId IS NULL AND savedDate IS NULL")
+    suspend fun deleteUnsavedImports(): Int
+
+    @Query("UPDATE articles SET title = :title WHERE id = :id")
+    suspend fun updateTitle(id: Long, title: String)
 
     @Query("UPDATE articles SET parserVersion = :parserVersion WHERE id = :id")
     suspend fun updateParserVersion(id: Long, parserVersion: Int)
 
     @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id")
     suspend fun updateSavedDate(id: Long, savedDate: String?)
+
+    // Keeps the date of an article that was already saved, so it doesn't move in the saved list
+    @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id AND savedDate IS NULL")
+    suspend fun saveIfUnsaved(id: Long, savedDate: String)
 
     @OptIn(ExperimentalTime::class)
     @Query("UPDATE articles SET scrollPosition = :position, lastReadDate = :timestamp WHERE id = :id")

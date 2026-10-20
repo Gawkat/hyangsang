@@ -23,6 +23,8 @@ import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.ui.components.displayTitle
+import dev.kettu.hyangsang.ui.components.sourceLabel
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -39,7 +41,8 @@ fun ArticleHeader(
 ) {
     Column(modifier = modifier.padding(bottom = 24.dp)) {
         ClickableText(
-            text = articleWithFeed.feed.title.toUpperCase(Locale.current),
+            text = sourceLabel(articleWithFeed.feed, articleWithFeed.article.sourceUrl)
+                .toUpperCase(Locale.current),
             textId = "feed-title",
             selectedRange = selection.rangeIn("feed-title"),
             onWordClick = onWordClick,
@@ -50,7 +53,7 @@ fun ArticleHeader(
         )
 
         ClickableText(
-            text = articleWithFeed.article.title,
+            text = displayTitle(articleWithFeed.article.title, articleWithFeed.article.sourceUrl),
             textId = "article-title",
             selectedRange = selection.rangeIn("article-title"),
             onWordClick = onWordClick,
@@ -65,9 +68,12 @@ fun ArticleHeader(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(bottom = 8.dp)
         ) {
-            if (articleWithFeed.article.pubDate != null) {
+            // An imported article has no publication date, so it shows when it was added
+            val date = articleWithFeed.article.pubDate
+                ?: articleWithFeed.article.addedDate.takeIf { articleWithFeed.feed == null }
+            if (date != null) {
                 Text(
-                    text = DateTimeUtils.formatDateTime(articleWithFeed.article.pubDate),
+                    text = DateTimeUtils.formatDateTime(date),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -18,6 +18,12 @@ class ArticleParser {
             else -> link
         }
 
+        /** The title a page gives itself, for a link that was shared without one. */
+        fun pageTitle(document: Document): String? =
+            document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: document.title().trim().takeIf { it.isNotEmpty() }
+
         private fun hostOf(url: String): String = try {
             URI(url).host.removePrefix("www.")
         } catch (_: Exception) {

@@ -8,10 +8,12 @@ import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.parser.PlainText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -31,8 +33,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         unreadOnly = unreadOnly
     )
 
-    fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>> =
-        articleDao.getSavedArticleSummaries()
+    fun getSavedArticleSummaries(importedOnly: Boolean): Flow<List<ArticleSummaryWithFeed>> =
+        articleDao.getSavedArticleSummaries(importedOnly)
 
     // Unread article count per feed id; feeds without unread articles are left out
     fun getUnreadCounts(): Flow<Map<Long, Int>> = articleDao.getUnreadCounts()
@@ -58,13 +60,60 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     suspend fun restoreSavedDate(id: Long, savedDate: String) =
         articleDao.updateSavedDate(id, savedDate)
 
-    // Downloads the article the first time it's opened. Returns null when the download fails,
-    // so the reader can offer to try again
-    suspend fun fetchAndSaveArticleContent(article: Article): Article? {
-        if (!article.content.isNullOrEmpty()) return article
+    // Imports a shared link as a saved article, downloaded like a feed's when it's first opened.
+    // A link that's already stored, from a feed or shared before, is saved and reused instead
+    @OptIn(ExperimentalTime::class)
+    suspend fun importLink(url: String, title: String?): Long {
+        val now = Clock.System.now().toString()
+        articleDao.getArticleIdBySourceUrl(url)?.let { id ->
+            articleDao.saveIfUnsaved(id, now)
+            return id
+        }
+        return articleDao.insertArticle(
+            Article(
+                feedId = null,
+                title = title.orEmpty(),
+                description = "",
+                sourceUrl = url,
+                addedDate = now,
+                pubDate = null,
+                savedDate = now
+            )
+        )
+    }
+
+    // Imports pasted or shared text as a saved article. Without a title, the start of the text
+    // stands in for one
+    @OptIn(ExperimentalTime::class)
+    suspend fun importText(title: String, text: String): Long {
+        val content = PlainText.blocks(text)
+        val firstParagraph = (content.firstOrNull() as? ContentBlock.Text)?.text.orEmpty()
+        val now = Clock.System.now().toString()
+        return articleDao.insertArticle(
+            Article(
+                feedId = null,
+                title = title.trim().ifEmpty { firstParagraph.take(IMPORTED_TITLE_LENGTH) },
+                description = firstParagraph.take(IMPORTED_DESCRIPTION_LENGTH),
+                content = content,
+                sourceUrl = null,
+                addedDate = now,
+                pubDate = null,
+                savedDate = now,
+                parserVersion = ArticleParser.VERSION
+            )
+        )
+    }
+
+    // Downloads the article the first time it's opened. A failure says why, so the reader can
+    // offer what might help
+    suspend fun fetchAndSaveArticleContent(article: Article): ContentDownload {
+        if (!article.content.isNullOrEmpty()) return ContentDownload.Done(article)
 
         return try {
-            val content = fetchContent(article)
+            val (content, pageTitle) = fetchContent(article) ?: return ContentDownload.Done(article)
+            // A shared link is stored before its page is downloaded, so its title comes from the page
+            val title = article.title.ifBlank { pageTitle.orEmpty() }
+            if (title != article.title) articleDao.updateTitle(article.id, title)
             // The content may have been cleared and is now downloaded again, so a stored position
             // has to be clamped to the new content like a refresh does
             articleDao.replaceContent(
@@ -73,15 +122,18 @@ class ArticleRepository(private val articleDao: ArticleDao) {
                 maxPosition = content.lastIndex,
                 parserVersion = ArticleParser.VERSION
             )
-            article.copy(
-                content = content,
-                parserVersion = ArticleParser.VERSION,
-                scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+            ContentDownload.Done(
+                article.copy(
+                    title = title,
+                    content = content,
+                    parserVersion = ArticleParser.VERSION,
+                    scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+                )
             )
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            null
+        } catch (e: Exception) {
+            ContentDownload.Failed(DownloadFailure.of(e))
         }
     }
 
@@ -89,7 +141,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // The stored content is only replaced when the new parse looks complete
     suspend fun refreshArticleContent(article: Article): ContentRefresh {
         val content = try {
-            fetchContent(article)
+            fetchContent(article)?.content ?: return ContentRefresh.Unchanged
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -115,6 +167,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // Removes old unsaved articles, then the downloaded text of ones not opened for a while.
     // Saved articles are never touched
     suspend fun pruneStorage(articleRetention: ArticleRetention, contentRetention: ContentRetention) {
+        articleDao.deleteUnsavedImports()
         articleRetention.days?.let { articleDao.deleteUnsavedOlderThan(cutoff(it)) }
         contentRetention.days?.let { articleDao.clearContentNotOpenedSince(cutoff(it)) }
     }
@@ -122,15 +175,25 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     @OptIn(ExperimentalTime::class)
     private fun cutoff(days: Int): String = (Clock.System.now() - days.days).toString()
 
-    // Stored content from an older parser, which may have missed what a fix now extracts
-    fun needsReparse(article: Article): Boolean =
-        !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
+    // Stored content from an older parser, which may have missed what a fix now extracts.
+    // Pasted text has no page to parse again
+    fun needsReparse(article: Article): Boolean = article.sourceUrl != null &&
+            !article.content.isNullOrEmpty() && article.parserVersion < ArticleParser.VERSION
 
-    private suspend fun fetchContent(article: Article): List<ContentBlock> =
-        withContext(Dispatchers.IO) {
-            val url = article.sourceUrl
-            ArticleParser().parse(url, Jsoup.connect(url).get(), article.title)
+    // Null for pasted text, which has no page to download
+    private suspend fun fetchContent(article: Article): FetchedPage? {
+        val url = article.sourceUrl ?: return null
+        return withContext(Dispatchers.IO) {
+            val document = Jsoup.connect(url).get()
+            val pageTitle = ArticleParser.pageTitle(document)
+            FetchedPage(
+                ArticleParser().parse(url, document, article.title.ifBlank { pageTitle }),
+                pageTitle
+            )
         }
+    }
+
+    private data class FetchedPage(val content: List<ContentBlock>, val title: String?)
 }
 
 // Makes the search text match literally inside a LIKE pattern that uses ESCAPE '\'
@@ -138,6 +201,34 @@ internal fun escapeLike(text: String): String =
     text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 enum class ContentRefresh { Updated, Unchanged, Failed }
+
+sealed interface ContentDownload {
+    data class Done(val article: Article) : ContentDownload
+    data class Failed(val reason: DownloadFailure) : ContentDownload
+}
+
+enum class DownloadFailure {
+    // The site refused the download, often bot protection that a browser gets past
+    BLOCKED,
+
+    // The page doesn't exist, so trying again won't help
+    NOT_FOUND,
+
+    // No connection, a timeout or a server error, which may pass
+    OTHER;
+
+    companion object {
+        fun of(e: Exception): DownloadFailure = when ((e as? HttpStatusException)?.statusCode) {
+            401, 403, 451 -> BLOCKED
+            404, 410 -> NOT_FOUND
+            else -> OTHER
+        }
+    }
+}
+
+// How much of an imported text's first paragraph stands in for a missing title, and shows in lists
+private const val IMPORTED_TITLE_LENGTH = 40
+private const val IMPORTED_DESCRIPTION_LENGTH = 200
 
 // A refresh shorter than this fraction of the stored text is more likely an error, consent or
 // paywall page than the article itself
