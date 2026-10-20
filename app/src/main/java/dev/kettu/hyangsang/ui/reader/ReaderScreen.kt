@@ -83,6 +83,7 @@ import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.repository.ContentRefresh
+import dev.kettu.hyangsang.data.repository.DownloadFailure
 import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.components.SourceInfoSheet
@@ -115,7 +116,7 @@ fun ReaderScreen(
     refreshResult: ContentRefresh?,
     onRefreshClick: () -> Unit,
     onRefreshResultShown: () -> Unit,
-    downloadFailed: Boolean,
+    downloadFailure: DownloadFailure?,
     onRetryDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
     collectLookupReports: Boolean = false
@@ -156,7 +157,7 @@ fun ReaderScreen(
         refreshResult = refreshResult,
         onRefreshClick = onRefreshClick,
         onRefreshResultShown = onRefreshResultShown,
-        downloadFailed = downloadFailed,
+        downloadFailure = downloadFailure,
         onRetryDownloadClick = onRetryDownloadClick,
         modifier = modifier
     )
@@ -181,7 +182,7 @@ fun ReaderContent(
     refreshResult: ContentRefresh?,
     onRefreshClick: () -> Unit,
     onRefreshResultShown: () -> Unit,
-    downloadFailed: Boolean,
+    downloadFailure: DownloadFailure?,
     onRetryDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
     onReportLookup: ((shown: DictionaryWithSenses?, picked: DictionaryWithSenses?, note: String) -> Unit)? = null
@@ -461,7 +462,7 @@ fun ReaderContent(
             if (contentBlocks.isEmpty()) {
                 item(key = "missing-content") {
                     MissingContent(
-                        downloadFailed = downloadFailed,
+                        downloadFailure = downloadFailure,
                         isRetrying = isRefreshing,
                         onRetryClick = onRetryDownloadClick,
                         onOpenInBrowserClick = {
@@ -576,7 +577,7 @@ fun ReaderScreenPreview() {
             refreshResult = null,
             onRefreshClick = {},
             onRefreshResultShown = {},
-            downloadFailed = false,
+            downloadFailure = null,
             onRetryDownloadClick = {}
         )
     }
@@ -586,7 +587,7 @@ fun ReaderScreenPreview() {
 // page had no text the parser could find, such as a photo or video page
 @Composable
 private fun MissingContent(
-    downloadFailed: Boolean,
+    downloadFailure: DownloadFailure?,
     isRetrying: Boolean,
     onRetryClick: () -> Unit,
     onOpenInBrowserClick: () -> Unit,
@@ -599,14 +600,20 @@ private fun MissingContent(
     ) {
         Text(
             text = stringResource(
-                if (downloadFailed) R.string.article_download_failed else R.string.article_no_text
+                when (downloadFailure) {
+                    DownloadFailure.BLOCKED -> R.string.article_download_blocked
+                    DownloadFailure.NOT_FOUND -> R.string.article_not_found
+                    DownloadFailure.OTHER -> R.string.article_download_failed
+                    null -> R.string.article_no_text
+                }
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (downloadFailed) {
+            // Trying again only helps when the failure may pass
+            if (downloadFailure == DownloadFailure.OTHER) {
                 Button(onClick = onRetryClick, enabled = !isRetrying) {
                     Text(stringResource(R.string.try_again_button))
                 }
