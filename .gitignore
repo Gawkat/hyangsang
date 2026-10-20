@@ -9,6 +9,15 @@
 /.idea/assetWizardSettings.xml
 /.idea/planningMode.xml
 /.idea/deploymentTargetSelector.xml
+# Written by the IDE from the Gradle build, or specific to one machine
+/.idea/gradle.xml
+/.idea/kotlinc.xml
+/.idea/compiler.xml
+/.idea/misc.xml
+/.idea/deviceManager.xml
+/.idea/appInsightsSettings.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/markdown.xml
 .DS_Store
 /build
 /captures
