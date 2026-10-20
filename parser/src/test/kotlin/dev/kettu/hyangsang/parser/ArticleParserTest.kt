@@ -240,4 +240,19 @@ class ArticleParserTest {
         assertTrue(result[1] is ContentBlock.Text)
         assertEquals("Main content start.", (result[1] as ContentBlock.Text).text)
     }
+
+    @Test
+    fun `pageTitle prefers the Open Graph title`() {
+        val doc = Jsoup.parse(
+            "<html><head><title>기사 제목 | 신문</title>" +
+                "<meta property=\"og:title\" content=\" 기사 제목 \"></head></html>"
+        )
+        assertEquals("기사 제목", ArticleParser.pageTitle(doc))
+    }
+
+    @Test
+    fun `pageTitle falls back to the title element`() {
+        assertEquals("제목", ArticleParser.pageTitle(Jsoup.parse("<title> 제목 </title>")))
+        assertEquals(null, ArticleParser.pageTitle(Jsoup.parse("<p>본문</p>")))
+    }
 }

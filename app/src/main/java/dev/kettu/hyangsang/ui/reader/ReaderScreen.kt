@@ -86,6 +86,7 @@ import dev.kettu.hyangsang.data.repository.ContentRefresh
 import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.components.SourceInfoSheet
+import dev.kettu.hyangsang.ui.components.displayTitle
 import dev.kettu.hyangsang.ui.settings.openInBrowser
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
@@ -122,8 +123,8 @@ fun ReaderScreen(
     val lookupResult by dictionaryViewModel.lookupResult.collectAsState()
     val isLookingUp by dictionaryViewModel.isLookingUp.collectAsState()
     val context = LocalContext.current
-    val feedCategory = remember(articleWithFeed.feed.category) {
-        DefaultCategory.byLabel(context)[articleWithFeed.feed.category]
+    val feedCategory = remember(articleWithFeed.feed?.category) {
+        articleWithFeed.feed?.let { DefaultCategory.byLabel(context)[it.category] }
     }
 
     ReaderContent(
@@ -137,7 +138,9 @@ fun ReaderScreen(
         onClearLookup = { dictionaryViewModel.clearLookup() },
         onReportLookup = if (collectLookupReports) {
             { shown, picked, note ->
-                dictionaryViewModel.reportLookup(shown, picked, note, articleWithFeed.article.sourceUrl)
+                dictionaryViewModel.reportLookup(
+                    shown, picked, note, articleWithFeed.article.sourceUrl.orEmpty()
+                )
                 Toast.makeText(context, R.string.lookup_report_saved, Toast.LENGTH_SHORT).show()
             }
         } else {
@@ -208,7 +211,9 @@ fun ReaderContent(
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showSourceInfo by rememberSaveable { mutableStateOf(false) }
-    val source = remember(articleWithFeed.feed.url) { DefaultSource.forUrl(articleWithFeed.feed.url) }
+    val source = remember(articleWithFeed.feed?.url) {
+        articleWithFeed.feed?.let { DefaultSource.forUrl(it.url) }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     // The article snapshot doesn't update, so the saved state is tracked locally
     var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
@@ -262,7 +267,7 @@ fun ReaderContent(
                         exit = fadeOut()
                     ) {
                         Text(
-                            text = article.title,
+                            text = displayTitle(article.title, article.sourceUrl),
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -296,8 +301,10 @@ fun ReaderContent(
                             contentDescription = stringResource(R.string.text_layout_title)
                         )
                     }
-                    // Material's top app bar fits three actions; the rest go in the overflow menu
-                    Box {
+                    // Material's top app bar fits three actions; the rest go in the overflow menu.
+                    // Pasted text has nothing to open or reload, and no feed to describe
+                    val sourceUrl = article.sourceUrl
+                    if (sourceUrl != null) Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 Icons.Filled.MoreVert,
@@ -315,7 +322,7 @@ fun ReaderContent(
                                 },
                                 onClick = {
                                     showMenu = false
-                                    openInBrowser(context, article.sourceUrl)
+                                    openInBrowser(context, sourceUrl)
                                 }
                             )
                             DropdownMenuItem(
@@ -457,7 +464,9 @@ fun ReaderContent(
                         downloadFailed = downloadFailed,
                         isRetrying = isRefreshing,
                         onRetryClick = onRetryDownloadClick,
-                        onOpenInBrowserClick = { openInBrowser(context, article.sourceUrl) },
+                        onOpenInBrowserClick = {
+                            article.sourceUrl?.let { openInBrowser(context, it) }
+                        },
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 }

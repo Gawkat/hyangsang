@@ -163,6 +163,55 @@ class ArticleDaoTest {
         dao.updateSavedDate(3, "2026-10-03T01:00:00Z")
         val saved = dao.getSavedArticleSummaries().first().single()
         assertEquals(3L, saved.article.id)
-        assertEquals("Sports", saved.feed.title)
+        assertEquals("Sports", saved.feed?.title)
+    }
+
+    private fun imported(id: Long, sourceUrl: String?, saved: Boolean) = Article(
+        id = id,
+        feedId = null,
+        title = "가져온 글 $id",
+        description = "",
+        content = listOf(ContentBlock.Text("본문")),
+        sourceUrl = sourceUrl,
+        addedDate = "2026-01-01T00:00:00Z",
+        pubDate = null,
+        savedDate = if (saved) "2026-10-04T00:00:00Z" else null
+    )
+
+    @Test
+    fun keepsImportsOutOfDiscoverAndFiltersThemInSaved(): Unit = runBlocking {
+        dao.insertArticles(listOf(imported(5, "https://example.org/a", saved = true), imported(6, null, saved = true)))
+        dao.updateSavedDate(3, "2026-10-03T01:00:00Z")
+
+        assertEquals(listOf(3L, 2L, 1L, 4L), ids())
+        assertEquals(mapOf(newsFeed to 1, sportsFeed to 2), dao.getUnreadCounts().first())
+        assertEquals(
+            setOf(3L, 5L, 6L),
+            dao.getSavedArticleSummaries().first().map { it.article.id }.toSet()
+        )
+        val imports = dao.getSavedArticleSummaries(importedOnly = true).first()
+        assertEquals(setOf(5L, 6L), imports.map { it.article.id }.toSet())
+        assertNull(imports.first().feed)
+    }
+
+    @Test
+    fun prunesImportsOnlyOnceUnsaved(): Unit = runBlocking {
+        dao.insertArticles(
+            listOf(
+                imported(5, "https://example.org/a", saved = true),
+                imported(6, null, saved = true),
+                imported(7, null, saved = false)
+            )
+        )
+
+        // Old and never opened, but pasted text can't be downloaded again
+        dao.deleteUnsavedOlderThan("2026-07-01T00:00:00Z")
+        dao.clearContentNotOpenedSince("2026-10-01T00:00:00Z")
+        assertEquals(listOf(ContentBlock.Text("본문")), dao.getArticleById(7)?.content)
+
+        assertEquals(1, dao.deleteUnsavedImports())
+        assertNull(dao.getArticleById(7))
+        assertEquals(5L, dao.getArticleIdBySourceUrl("https://example.org/a"))
+        assertEquals(6L, dao.getArticleById(6)?.id)
     }
 }
