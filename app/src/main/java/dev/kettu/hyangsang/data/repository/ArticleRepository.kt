@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -103,13 +104,13 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         )
     }
 
-    // Downloads the article the first time it's opened. Returns null when the download fails,
-    // so the reader can offer to try again
-    suspend fun fetchAndSaveArticleContent(article: Article): Article? {
-        if (!article.content.isNullOrEmpty()) return article
+    // Downloads the article the first time it's opened. A failure says why, so the reader can
+    // offer what might help
+    suspend fun fetchAndSaveArticleContent(article: Article): ContentDownload {
+        if (!article.content.isNullOrEmpty()) return ContentDownload.Done(article)
 
         return try {
-            val (content, pageTitle) = fetchContent(article) ?: return article
+            val (content, pageTitle) = fetchContent(article) ?: return ContentDownload.Done(article)
             // A shared link is stored before its page is downloaded, so its title comes from the page
             val title = article.title.ifBlank { pageTitle.orEmpty() }
             if (title != article.title) articleDao.updateTitle(article.id, title)
@@ -121,16 +122,18 @@ class ArticleRepository(private val articleDao: ArticleDao) {
                 maxPosition = content.lastIndex,
                 parserVersion = ArticleParser.VERSION
             )
-            article.copy(
-                title = title,
-                content = content,
-                parserVersion = ArticleParser.VERSION,
-                scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+            ContentDownload.Done(
+                article.copy(
+                    title = title,
+                    content = content,
+                    parserVersion = ArticleParser.VERSION,
+                    scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+                )
             )
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            null
+        } catch (e: Exception) {
+            ContentDownload.Failed(DownloadFailure.of(e))
         }
     }
 
@@ -198,6 +201,30 @@ internal fun escapeLike(text: String): String =
     text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 enum class ContentRefresh { Updated, Unchanged, Failed }
+
+sealed interface ContentDownload {
+    data class Done(val article: Article) : ContentDownload
+    data class Failed(val reason: DownloadFailure) : ContentDownload
+}
+
+enum class DownloadFailure {
+    // The site refused the download, often bot protection that a browser gets past
+    BLOCKED,
+
+    // The page doesn't exist, so trying again won't help
+    NOT_FOUND,
+
+    // No connection, a timeout or a server error, which may pass
+    OTHER;
+
+    companion object {
+        fun of(e: Exception): DownloadFailure = when ((e as? HttpStatusException)?.statusCode) {
+            401, 403, 451 -> BLOCKED
+            404, 410 -> NOT_FOUND
+            else -> OTHER
+        }
+    }
+}
 
 // How much of an imported text's first paragraph stands in for a missing title, and shows in lists
 private const val IMPORTED_TITLE_LENGTH = 40
