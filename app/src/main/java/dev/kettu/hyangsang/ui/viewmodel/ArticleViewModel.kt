@@ -66,8 +66,13 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             initialValue = emptyList()
         )
 
-    val savedArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> =
-        articleRepository.getSavedArticleSummaries().stateIn(
+    private val _savedImportedOnly = MutableStateFlow(false)
+    val savedImportedOnly: StateFlow<Boolean> = _savedImportedOnly.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val savedArticlesWithFeed: StateFlow<List<ArticleSummaryWithFeed>> = _savedImportedOnly
+        .flatMapLatest { articleRepository.getSavedArticleSummaries(importedOnly = it) }
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -100,6 +105,17 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
             articleRepository.restoreSavedDate(articleId, savedDate)
         }
     }
+
+    fun setSavedImportedOnly(importedOnly: Boolean) {
+        _savedImportedOnly.value = importedOnly
+    }
+
+    // Both return the id of the article to open
+    suspend fun importLink(url: String, title: String?): Long =
+        articleRepository.importLink(url, title)
+
+    suspend fun importText(title: String, text: String): Long =
+        articleRepository.importText(title, text)
 
     fun setSaved(articleId: Long, saved: Boolean) {
         viewModelScope.launch {

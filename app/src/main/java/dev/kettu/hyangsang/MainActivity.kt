@@ -55,6 +55,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
+import dev.kettu.hyangsang.data.importing.SharedText
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.FeedGrouping
@@ -63,7 +64,9 @@ import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
+import dev.kettu.hyangsang.parser.PlainText
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
+import dev.kettu.hyangsang.ui.importing.AddTextScreen
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.saved.SavedScreen
@@ -78,11 +81,17 @@ import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
+    // A link or text shared from another app, until the main screens have opened it
+    private val sharedText = MutableStateFlow<SharedText?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A recreated activity has already handled the share that started it
+        if (savedInstanceState == null) readShare(intent)
         enableEdgeToEdge()
         val app = application as HyangsangApplication
         app.loadReaderResources()
@@ -151,6 +160,8 @@ class MainActivity : AppCompatActivity() {
                     setupPending == null -> Surface(modifier = Modifier.fillMaxSize()) {}
 
                     else -> MainApp(
+                        sharedText = sharedText.collectAsState().value,
+                        onSharedTextHandled = { sharedText.value = null },
                         prefsRepository = prefsRepository,
                         lookupReportRepository = app.container.lookupReportRepository,
                         articleViewModel = articleViewModel,
@@ -171,6 +182,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        readShare(intent)
+    }
+
+    private fun readShare(intent: Intent) {
+        if (intent.action != Intent.ACTION_SEND) return
+        val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+        if (text.isNullOrBlank()) return
+        sharedText.value = SharedText.classify(text, intent.getStringExtra(Intent.EXTRA_SUBJECT))
+    }
+
     private companion object {
         // Same scrims enableEdgeToEdge() uses by default for 3-button navigation
         val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
@@ -185,6 +208,7 @@ private object Routes {
     const val SETTINGS = "settings"
     const val TEXT_LAYOUT = "text_layout"
     const val LICENSES = "licenses"
+    const val ADD_TEXT = "add_text"
     const val READER = "reader/{articleId}"
 
     fun reader(articleId: Long) = "reader/$articleId"
@@ -199,6 +223,8 @@ private data class NavItem(
 
 @Composable
 fun MainApp(
+    sharedText: SharedText?,
+    onSharedTextHandled: () -> Unit,
     prefsRepository: UserPreferencesRepository,
     lookupReportRepository: LookupReportRepository,
     articleViewModel: ArticleViewModel,
@@ -221,6 +247,9 @@ fun MainApp(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
     val savedArticles by articleViewModel.savedArticlesWithFeed.collectAsState()
+    val savedImportedOnly by articleViewModel.savedImportedOnly.collectAsState()
+    // What the Add text screen starts with: empty from Saved, or text shared from another app
+    var addTextDraft by remember { mutableStateOf(SharedText.Text("", null)) }
     val unreadCounts by articleViewModel.unreadCounts.collectAsState()
     val filterCriteria by articleViewModel.filterCriteria.collectAsState()
     val feeds by rssFeedViewModel.feeds.collectAsState()
@@ -262,6 +291,24 @@ fun MainApp(
     // Show the top of the list whenever the drawer selection changes
     LaunchedEffect(filterCriteria.selectedCategory, filterCriteria.selectedFeedId) {
         discoverListState.scrollToItem(0)
+    }
+
+    // A shared link opens in the reader; shared text can be checked before it's added
+    LaunchedEffect(sharedText) {
+        when (val shared = sharedText ?: return@LaunchedEffect) {
+            is SharedText.Link -> navController.navigate(
+                Routes.reader(articleViewModel.importLink(shared.url, shared.title))
+            )
+
+            is SharedText.Text -> {
+                addTextDraft = shared
+                navController.navigate(Routes.ADD_TEXT) {
+                    // A second share replaces a draft that wasn't added
+                    popUpTo(Routes.ADD_TEXT) { inclusive = true }
+                }
+            }
+        }
+        onSharedTextHandled()
     }
 
     val closeDrawerThen: (() -> Unit) -> Unit = { action ->
@@ -373,6 +420,14 @@ fun MainApp(
                 composable(Routes.SAVED) { entry ->
                     SavedScreen(
                         savedArticles = savedArticles,
+                        importedOnly = savedImportedOnly,
+                        onImportedOnlyChange = articleViewModel::setSavedImportedOnly,
+                        onAddTextClick = {
+                            entry.ifResumed {
+                                addTextDraft = SharedText.Text("", null)
+                                navController.navigate(Routes.ADD_TEXT)
+                            }
+                        },
                         onArticleClick = { articleId ->
                             entry.ifResumed { navController.navigate(Routes.reader(articleId)) }
                         },
@@ -414,6 +469,35 @@ fun MainApp(
                     TextLayoutScreen(
                         settings = readerSettings,
                         onSettingsChange = { scope.launch { prefsRepository.setReaderSettings(it) } },
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } }
+                    )
+                }
+                composable(Routes.ADD_TEXT) { entry ->
+                    // Without a title from the share, a short first line becomes one
+                    val (initialTitle, initialText) = remember(addTextDraft) {
+                        addTextDraft.title?.let { it to addTextDraft.text }
+                            ?: PlainText.splitTitle(addTextDraft.text)
+                    }
+                    AddTextScreen(
+                        initialTitle = initialTitle.orEmpty(),
+                        initialText = initialText,
+                        onAdd = { title, text ->
+                            entry.ifResumed {
+                                scope.launch {
+                                    // A link on its own is downloaded rather than kept as text
+                                    val link = (SharedText.classify(text) as? SharedText.Link)
+                                        ?.takeIf { it.url == text.trim() }
+                                    val articleId = if (link != null) {
+                                        articleViewModel.importLink(link.url, title.ifBlank { null })
+                                    } else {
+                                        articleViewModel.importText(title, text)
+                                    }
+                                    navController.navigate(Routes.reader(articleId)) {
+                                        popUpTo(Routes.ADD_TEXT) { inclusive = true }
+                                    }
+                                }
+                            }
+                        },
                         onBackClick = { entry.ifResumed { navController.popBackStack() } }
                     )
                 }
