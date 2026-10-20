@@ -59,6 +59,15 @@
     <string name="saved_empty_title">No saved articles</string>
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
     <string name="pasted_text">Pasted text</string>
+    <string name="imported_filter">Imported</string>
+    <string name="imported_empty_title">Nothing imported yet</string>
+    <string name="imported_empty_body">Share a link or text with 향상 from another app, or tap + to paste it.</string>
+    <string name="add_text_title">Add text</string>
+    <string name="add_text_button">Add</string>
+    <string name="add_text_title_label">Title</string>
+    <string name="add_text_body_label">Text</string>
+    <string name="add_text_paste">Paste</string>
+    <string name="add_text_too_long">Too long: %1$s characters, of at most %2$s</string>
     <string name="unread_counts_setting">Unread counts</string>
     <string name="unread_counts_summary">Show counts in the feed list</string>
     <string name="dictionary_section">Dictionary</string>

@@ -11,9 +11,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -31,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.local.entity.ArticleSummary
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.ui.discover.ArticleRow
 import kotlinx.coroutines.launch
@@ -39,6 +45,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SavedScreen(
     savedArticles: List<ArticleSummaryWithFeed>,
+    importedOnly: Boolean,
+    onImportedOnlyChange: (Boolean) -> Unit,
+    onAddTextClick: () -> Unit,
     onArticleClick: (Long) -> Unit,
     onUnsave: (Long) -> Unit,
     onUndoUnsave: (articleId: Long, savedDate: String) -> Unit,
@@ -50,72 +59,113 @@ fun SavedScreen(
     val undoLabel = stringResource(R.string.undo)
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.saved_nav)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.saved_nav)) },
+                actions = {
+                    IconButton(onClick = onAddTextClick) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.add_text_title)
+                        )
+                    }
+                }
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
     ) { innerPadding ->
-        if (savedArticles.isEmpty()) {
-            SavedEmptyState(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
+        Column(modifier = Modifier.padding(innerPadding)) {
+            FilterChip(
+                selected = importedOnly,
+                onClick = { onImportedOnlyChange(!importedOnly) },
+                label = { Text(stringResource(R.string.imported_filter)) },
+                leadingIcon = if (importedOnly) {
+                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                } else {
+                    null
+                },
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 16.dp),
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-            ) {
-                items(savedArticles, key = { it.article.id }) { articleWithFeed ->
-                    val article = articleWithFeed.article
-                    ArticleRow(
-                        articleWithFeed = articleWithFeed,
-                        onClick = { onArticleClick(article.id) },
-                        onSaveClick = {
-                            val savedDate = article.savedDate
-                            onUnsave(article.id)
-                            scope.launch {
-                                snackbarHostState.currentSnackbarData?.dismiss()
-                                val result = snackbarHostState.showSnackbar(
-                                    message = removedMessage,
-                                    actionLabel = undoLabel,
-                                    duration = SnackbarDuration.Long
-                                )
-                                if (result == SnackbarResult.ActionPerformed && savedDate != null) {
-                                    onUndoUnsave(article.id, savedDate)
-                                }
-                            }
-                        },
-                        showSavedTime = true,
-                        modifier = Modifier.animateItem()
-                    )
+            SavedList(
+                savedArticles = savedArticles,
+                importedOnly = importedOnly,
+                onArticleClick = onArticleClick,
+                onSaveClick = { article ->
+                    val savedDate = article.savedDate
+                    onUnsave(article.id)
+                    scope.launch {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        val result = snackbarHostState.showSnackbar(
+                            message = removedMessage,
+                            actionLabel = undoLabel,
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed && savedDate != null) {
+                            onUndoUnsave(article.id, savedDate)
+                        }
+                    }
                 }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SavedList(
+    savedArticles: List<ArticleSummaryWithFeed>,
+    importedOnly: Boolean,
+    onArticleClick: (Long) -> Unit,
+    onSaveClick: (ArticleSummary) -> Unit
+) {
+    if (savedArticles.isEmpty()) {
+        SavedEmptyState(
+            importedOnly = importedOnly,
+            modifier = Modifier.fillMaxSize()
+        )
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(bottom = 16.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(savedArticles, key = { it.article.id }) { articleWithFeed ->
+                val article = articleWithFeed.article
+                ArticleRow(
+                    articleWithFeed = articleWithFeed,
+                    onClick = { onArticleClick(article.id) },
+                    onSaveClick = { onSaveClick(article) },
+                    showSavedTime = true,
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SavedEmptyState(modifier: Modifier = Modifier) {
+private fun SavedEmptyState(importedOnly: Boolean, modifier: Modifier = Modifier) {
     Box(contentAlignment = Alignment.Center, modifier = modifier.padding(32.dp)) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = Icons.Outlined.BookmarkBorder,
+                imageVector = if (importedOnly) Icons.Outlined.PostAdd else Icons.Outlined.BookmarkBorder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(48.dp)
             )
             Text(
-                text = stringResource(R.string.saved_empty_title),
+                text = stringResource(
+                    if (importedOnly) R.string.imported_empty_title else R.string.saved_empty_title
+                ),
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = stringResource(R.string.saved_empty_body),
+                text = stringResource(
+                    if (importedOnly) R.string.imported_empty_body else R.string.saved_empty_body
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

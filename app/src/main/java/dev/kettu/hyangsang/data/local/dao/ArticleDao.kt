@@ -145,6 +145,10 @@ interface ArticleDao {
     @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id")
     suspend fun updateSavedDate(id: Long, savedDate: String?)
 
+    // Keeps the date of an article that was already saved, so it doesn't move in the saved list
+    @Query("UPDATE articles SET savedDate = :savedDate WHERE id = :id AND savedDate IS NULL")
+    suspend fun saveIfUnsaved(id: Long, savedDate: String)
+
     @OptIn(ExperimentalTime::class)
     @Query("UPDATE articles SET scrollPosition = :position, lastReadDate = :timestamp WHERE id = :id")
     suspend fun updateProgress(

@@ -8,6 +8,7 @@ import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.parser.PlainText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -31,8 +32,8 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         unreadOnly = unreadOnly
     )
 
-    fun getSavedArticleSummaries(): Flow<List<ArticleSummaryWithFeed>> =
-        articleDao.getSavedArticleSummaries()
+    fun getSavedArticleSummaries(importedOnly: Boolean): Flow<List<ArticleSummaryWithFeed>> =
+        articleDao.getSavedArticleSummaries(importedOnly)
 
     // Unread article count per feed id; feeds without unread articles are left out
     fun getUnreadCounts(): Flow<Map<Long, Int>> = articleDao.getUnreadCounts()
@@ -57,6 +58,50 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     // Used to undo an unsave without moving the article in the saved list
     suspend fun restoreSavedDate(id: Long, savedDate: String) =
         articleDao.updateSavedDate(id, savedDate)
+
+    // Imports a shared link as a saved article, downloaded like a feed's when it's first opened.
+    // A link that's already stored, from a feed or shared before, is saved and reused instead
+    @OptIn(ExperimentalTime::class)
+    suspend fun importLink(url: String, title: String?): Long {
+        val now = Clock.System.now().toString()
+        articleDao.getArticleIdBySourceUrl(url)?.let { id ->
+            articleDao.saveIfUnsaved(id, now)
+            return id
+        }
+        return articleDao.insertArticle(
+            Article(
+                feedId = null,
+                title = title.orEmpty(),
+                description = "",
+                sourceUrl = url,
+                addedDate = now,
+                pubDate = null,
+                savedDate = now
+            )
+        )
+    }
+
+    // Imports pasted or shared text as a saved article. Without a title, the start of the text
+    // stands in for one
+    @OptIn(ExperimentalTime::class)
+    suspend fun importText(title: String, text: String): Long {
+        val content = PlainText.blocks(text)
+        val firstParagraph = (content.firstOrNull() as? ContentBlock.Text)?.text.orEmpty()
+        val now = Clock.System.now().toString()
+        return articleDao.insertArticle(
+            Article(
+                feedId = null,
+                title = title.trim().ifEmpty { firstParagraph.take(IMPORTED_TITLE_LENGTH) },
+                description = firstParagraph.take(IMPORTED_DESCRIPTION_LENGTH),
+                content = content,
+                sourceUrl = null,
+                addedDate = now,
+                pubDate = null,
+                savedDate = now,
+                parserVersion = ArticleParser.VERSION
+            )
+        )
+    }
 
     // Downloads the article the first time it's opened. Returns null when the download fails,
     // so the reader can offer to try again
@@ -153,6 +198,10 @@ internal fun escapeLike(text: String): String =
     text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 enum class ContentRefresh { Updated, Unchanged, Failed }
+
+// How much of an imported text's first paragraph stands in for a missing title, and shows in lists
+private const val IMPORTED_TITLE_LENGTH = 40
+private const val IMPORTED_DESCRIPTION_LENGTH = 200
 
 // A refresh shorter than this fraction of the stored text is more likely an error, consent or
 // paywall page than the article itself

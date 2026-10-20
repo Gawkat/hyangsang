@@ -71,6 +71,15 @@
     <string name="saved_empty_title">저장된 기사가 없습니다</string>
     <string name="saved_empty_body">기사의 북마크를 누르면 나중에 읽을 수 있도록 여기에 저장됩니다.</string>
     <string name="pasted_text">붙여넣은 글</string>
+    <string name="imported_filter">가져온 글</string>
+    <string name="imported_empty_title">가져온 글이 없습니다</string>
+    <string name="imported_empty_body">다른 앱에서 링크나 글을 향상으로 공유하거나, +를 눌러 붙여넣으세요.</string>
+    <string name="add_text_title">글 추가</string>
+    <string name="add_text_button">추가</string>
+    <string name="add_text_title_label">제목</string>
+    <string name="add_text_body_label">본문</string>
+    <string name="add_text_paste">붙여넣기</string>
+    <string name="add_text_too_long">너무 깁니다: %1$s자 (최대 %2$s자)</string>
     <string name="unread_counts_setting">읽지 않은 기사 수</string>
     <string name="unread_counts_summary">피드 목록에 개수 표시</string>
     <string name="dictionary_section">사전</string>
