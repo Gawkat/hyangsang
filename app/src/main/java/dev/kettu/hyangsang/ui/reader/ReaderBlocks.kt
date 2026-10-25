@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -256,6 +257,15 @@ fun LazyListScope.contentBlocks(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = layout.paragraphSpacing / 2)
+                )
+            }
+
+            ContentBlock.Divider -> {
+                HorizontalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = 48.dp)
+                        .padding(top = layout.paragraphSpacing / 2, bottom = layout.paragraphSpacing * 1.5f),
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
         }

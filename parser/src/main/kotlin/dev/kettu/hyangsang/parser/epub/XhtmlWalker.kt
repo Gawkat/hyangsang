@@ -188,7 +188,7 @@ internal class XhtmlWalker(
             "svg" -> element.descendants("image").firstOrNull()?.let { image(it, caption = null) }
             "figure" -> figure(element)
             "table" -> table(element)
-            "hr" -> add(ContentBlock.Text("* * *"))
+            "hr" -> add(ContentBlock.Divider)
             else -> if (element.hasBlocks()) visit(element) else paragraph(element)
         }
         flush()

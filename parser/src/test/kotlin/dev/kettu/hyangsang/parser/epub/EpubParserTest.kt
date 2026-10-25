@@ -50,6 +50,19 @@ class EpubParserTest {
     }
 
     @Test
+    fun keepsSectionBreaksAsDividers() {
+        val book = book(
+            TestEpub()
+                .nav("one.xhtml" to "첫째 장")
+                .chapter("one.xhtml", "<p>앞 문단.</p><hr/><p>뒤 문단.</p>")
+        )
+        assertEquals(
+            listOf(ContentBlock.Text("앞 문단."), ContentBlock.Divider, ContentBlock.Text("뒤 문단.")),
+            book.chapters.single().blocks
+        )
+    }
+
+    @Test
     fun dropsADividerPageThatRepeatsTheTitle() {
         val book = book(
             TestEpub()
