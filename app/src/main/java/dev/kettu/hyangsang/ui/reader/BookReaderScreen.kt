@@ -73,8 +73,8 @@ import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.repository.LookupContext
 import dev.kettu.hyangsang.data.repository.charCount
 import dev.kettu.hyangsang.parser.epub.EpubParser
+import dev.kettu.hyangsang.ui.components.readingTimeText
 import dev.kettu.hyangsang.ui.library.percentText
-import dev.kettu.hyangsang.ui.library.readingTimeText
 import dev.kettu.hyangsang.ui.viewmodel.BookReaderViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import kotlinx.coroutines.FlowPreview

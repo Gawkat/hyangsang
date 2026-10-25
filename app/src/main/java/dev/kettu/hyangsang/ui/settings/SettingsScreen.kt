@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
@@ -79,13 +80,14 @@ import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.ReaderFont
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.data.prefs.ReadingSpeed
 import dev.kettu.hyangsang.ui.reader.formatLineSpacing
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 
 private enum class SettingsDialog {
-    THEME, PALETTE, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, LANGUAGE_DATA_ATTRIBUTION, PALETTE_ATTRIBUTION, DELETE_LOOKUP_REPORTS
+    THEME, PALETTE, READING_SPEED, FEED_SYNC_INTERVAL, ARTICLE_RETENTION, CONTENT_RETENTION, DICTIONARY_ATTRIBUTION, LANGUAGE_DATA_ATTRIBUTION, PALETTE_ATTRIBUTION, DELETE_LOOKUP_REPORTS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,6 +99,8 @@ fun SettingsScreen(
     onPaletteChange: (ThemePalette) -> Unit,
     readerSettings: ReaderSettings,
     onTextLayoutClick: () -> Unit,
+    readingSpeed: ReadingSpeed,
+    onReadingSpeedChange: (ReadingSpeed) -> Unit,
     showUnreadCounts: Boolean,
     onShowUnreadCountsChange: (Boolean) -> Unit,
     feedSyncInterval: FeedSyncInterval,
@@ -134,6 +138,14 @@ fun SettingsScreen(
         }
     }
 
+    val readingSpeedOptions = listOf(
+        ReadingSpeed.BEGINNER to R.string.reading_speed_beginner,
+        ReadingSpeed.INTERMEDIATE to R.string.reading_speed_intermediate,
+        ReadingSpeed.ADVANCED to R.string.reading_speed_advanced,
+        ReadingSpeed.FLUENT to R.string.reading_speed_fluent
+    ).map { (speed, label) ->
+        speed to stringResource(R.string.reading_speed_option, stringResource(label), speed.wordsPerMinute)
+    }
     val feedSyncOptions = listOf(
         FeedSyncInterval.OFF to stringResource(R.string.background_refresh_off),
         FeedSyncInterval.SIX_HOURS to stringResource(R.string.background_refresh_6_hours),
@@ -208,6 +220,12 @@ fun SettingsScreen(
                 leadingContent = { Icon(Icons.Outlined.FormatSize, contentDescription = null) },
                 trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onTextLayoutClick)
+            )
+            SettingsItem(
+                icon = Icons.Outlined.Speed,
+                title = stringResource(R.string.reading_speed_setting),
+                summary = readingSpeedOptions.labelFor(readingSpeed),
+                onClick = { openDialog = SettingsDialog.READING_SPEED }
             )
 
             SectionHeader(stringResource(R.string.feeds_title))
@@ -355,6 +373,14 @@ fun SettingsScreen(
             options = paletteOptions,
             selected = currentPalette,
             onSelect = { onPaletteChange(it); dismiss() },
+            onDismiss = dismiss
+        )
+
+        SettingsDialog.READING_SPEED -> ChoiceDialog(
+            title = stringResource(R.string.reading_speed_setting),
+            options = readingSpeedOptions,
+            selected = readingSpeed,
+            onSelect = { onReadingSpeedChange(it); dismiss() },
             onDismiss = dismiss
         )
 
@@ -564,6 +590,8 @@ fun SettingsScreenPreview() {
             onPaletteChange = {},
             readerSettings = ReaderSettings(),
             onTextLayoutClick = {},
+            readingSpeed = ReadingSpeed.DEFAULT,
+            onReadingSpeedChange = {},
             showUnreadCounts = false,
             onShowUnreadCountsChange = {},
             feedSyncInterval = FeedSyncInterval.DEFAULT,

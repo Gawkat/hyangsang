@@ -24,12 +24,11 @@ import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.components.displayTitle
+import dev.kettu.hyangsang.ui.components.readingTimeText
 import dev.kettu.hyangsang.ui.components.sourceLabel
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-
-private const val wordsPerMinute = 200
 
 @Composable
 fun ArticleHeader(
@@ -82,14 +81,13 @@ fun ArticleHeader(
 
         val content = articleWithFeed.article.content
         val wordCount = remember(content) { countWords(content) }
-        val readingTime = maxOf(1, wordCount / wordsPerMinute)
 
         // Left out while there's no text, such as after a failed download
         if (wordCount > 0) {
             Text(
                 text = stringResource(
                     R.string.reading_time_and_words,
-                    pluralStringResource(R.plurals.reading_time, readingTime, readingTime),
+                    readingTimeText(wordCount),
                     pluralStringResource(R.plurals.word_count, wordCount, wordCount)
                 ),
                 style = MaterialTheme.typography.bodySmall,

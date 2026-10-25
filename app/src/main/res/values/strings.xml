@@ -163,6 +163,12 @@
     </plurals>
     <string name="delete">Delete</string>
     <string name="lookup_reports_share_subject">Hyangsang lookup reports</string>
+    <string name="reading_speed_setting">Reading speed</string>
+    <string name="reading_speed_option">%1$s · %2$d words a minute</string>
+    <string name="reading_speed_beginner">Beginner</string>
+    <string name="reading_speed_intermediate">Intermediate</string>
+    <string name="reading_speed_advanced">Advanced</string>
+    <string name="reading_speed_fluent">Fluent</string>
     <string name="background_refresh_setting">Background refresh</string>
     <string name="background_refresh_off">Off</string>
     <string name="background_refresh_6_hours">Every 6 hours</string>
