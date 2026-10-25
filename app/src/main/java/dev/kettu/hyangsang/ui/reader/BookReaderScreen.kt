@@ -71,7 +71,6 @@ import dev.kettu.hyangsang.data.local.entity.BookChapter
 import dev.kettu.hyangsang.data.local.entity.ChapterInfo
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.repository.LookupContext
-import dev.kettu.hyangsang.data.repository.charCount
 import dev.kettu.hyangsang.parser.epub.EpubParser
 import dev.kettu.hyangsang.ui.components.readingTimeText
 import dev.kettu.hyangsang.ui.library.percentText
@@ -144,12 +143,14 @@ fun BookReaderScreen(
     val imageDir = remember(currentBook.folder) { viewModel.imageDir(currentBook) }
     val isLastChapter = chapter.chapterIndex == currentBook.chapterCount - 1
 
-    // How far into the book the first block on screen is
+    // How far into the book the screen is: the chapters before, and the part of this one scrolled
+    // through, as the article reader measures it
+    val scrollMeasure = remember(chapter) { ScrollMeasure(chapter.content, firstBlockItem = 1) }
     val progress by remember(chapter, currentBook.totalChars) {
         derivedStateOf {
-            val block = (listState.firstVisibleItemIndex - 1).coerceIn(0, chapter.content.size)
-            val chars = chapter.charsBefore + chapter.content.take(block).sumOf { it.charCount() }
-            if (currentBook.totalChars == 0) 0f else chars.toFloat() / currentBook.totalChars
+            val inChapter = scrollMeasure.progress(listState.layoutInfo) ?: 0f
+            val chars = chapter.charsBefore + inChapter * chapter.charCount
+            if (currentBook.totalChars == 0) 0f else chars / currentBook.totalChars
         }
     }
 
