@@ -1,26 +1,20 @@
 package dev.kettu.hyangsang.ui.reader
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,7 +40,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,23 +49,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.defaults.DefaultSource
@@ -94,12 +80,6 @@ import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-
-// Upper bound for the lookup sheet, as a fraction of the window height
-private const val LOOKUP_SHEET_MAX_FRACTION = 0.55f
-
-// BottomSheetDefaults.DragHandle: 4dp tall with 22dp vertical padding
-private val DRAG_HANDLE_HEIGHT = 48.dp
 
 @Composable
 fun ReaderScreen(
@@ -194,21 +174,8 @@ fun ReaderContent(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val density = LocalDensity.current
-    val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
-    val lookupSheetMaxPx = windowHeight * LOOKUP_SHEET_MAX_FRACTION
-    val lookupSheetMaxHeight = with(density) { lookupSheetMaxPx.toDp() }
-    // The drag handle and navigation bar padding sit outside the sheet content, so leave room
-    // for them to keep the whole sheet within LOOKUP_SHEET_MAX_FRACTION
-    val navigationBarBottom = WindowInsets.navigationBars.getBottom(density)
-    val lookupContentMaxHeight = with(density) {
-        (lookupSheetMaxPx - DRAG_HANDLE_HEIGHT.toPx() - navigationBarBottom).toDp()
-    }
-
-    // Selections point at block indices, so a reload with new content drops them
-    var selection by remember(contentBlocks) { mutableStateOf<WordSelection?>(null) }
-    var lookupWord by remember { mutableStateOf("") }
-    var showLookupSheet by remember { mutableStateOf(false) }
+    // A reload with new content drops the selection
+    val lookup = rememberWordLookup(listState, onLookupWord, resetKey = contentBlocks)
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showSourceInfo by rememberSaveable { mutableStateOf(false) }
@@ -219,32 +186,7 @@ fun ReaderContent(
     // The article snapshot doesn't update, so the saved state is tracked locally
     var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
     val showTitleInBar by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
-
-    val currentOnLookupWord by rememberUpdatedState(onLookupWord)
-    val currentWindowHeight by rememberUpdatedState(windowHeight)
-    val onWordClick: (WordSelection, String) -> Unit = remember {
-        { wordSelection, word ->
-            selection = wordSelection
-            lookupWord = word
-            currentOnLookupWord(word, wordSelection.sentence)
-            showLookupSheet = true
-
-            // Scroll the tapped line above where the lookup sheet will be, so the sentence
-            // being looked up stays readable
-            wordSelection.anchorY?.let { anchorY ->
-                val visibleBottom = currentWindowHeight * (1 - LOOKUP_SHEET_MAX_FRACTION) -
-                        with(density) { 16.dp.toPx() }
-                if (anchorY > visibleBottom) {
-                    scope.launch { listState.animateScrollBy(anchorY - visibleBottom) }
-                }
-            }
-        }
-    }
-
-    val bodyStyle = readerBodyStyle(readerSettings)
-    val fontFamily = readerSettings.font.fontFamily()
-    val margin = readerSettings.margin.dp.dp
-    val paragraphSpacing = (readerSettings.textSize * readerSettings.lineSpacing * 0.5f).dp
+    val layout = readerLayout(readerSettings)
 
     LaunchedEffect(refreshResult) {
         val message = when (refreshResult) {
@@ -366,99 +308,21 @@ fun ReaderContent(
                 .padding(innerPadding)
                 .fillMaxSize(),
             contentPadding = PaddingValues(
-                start = margin,
-                end = margin,
+                start = layout.margin,
+                end = layout.margin,
                 top = 16.dp,
-                // Room to scroll the last paragraphs above the lookup sheet
-                bottom = if (showLookupSheet) lookupSheetMaxHeight else 16.dp
+                bottom = lookupBottomPadding(lookup)
             )
         ) {
             item(key = "header", contentType = "header") {
                 ArticleHeader(
                     articleWithFeed = articleWithFeed,
-                    selection = selection,
-                    onWordClick = onWordClick,
-                    fontFamily = fontFamily
+                    selection = lookup.selection,
+                    onWordClick = lookup.onWordClick,
+                    fontFamily = layout.fontFamily
                 )
             }
-            itemsIndexed(
-                items = contentBlocks,
-                contentType = { _, block -> block::class }
-            ) { index, block ->
-                val textId = "block-$index"
-                val selectedRange = selection.rangeIn(textId)
-                when (block) {
-                    is ContentBlock.Text -> {
-                        ParagraphContent(
-                            textBlock = block,
-                            textId = textId,
-                            selectedRange = selectedRange,
-                            style = bodyStyle,
-                            onWordClick = onWordClick
-                        )
-                        Spacer(modifier = Modifier.height(paragraphSpacing))
-                    }
-
-                    is ContentBlock.Image -> {
-                        ArticleImage(
-                            url = block.url,
-                            caption = block.caption,
-                            captionSpans = block.captionSpans,
-                            fontFamily = fontFamily,
-                            width = block.width,
-                            height = block.height,
-                            textId = textId,
-                            selectedRange = selectedRange,
-                            onWordClick = onWordClick,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-
-                    is ContentBlock.Heading -> {
-                        ArticleHeading(
-                            text = block.text,
-                            level = block.level,
-                            textId = textId,
-                            selectedRange = selectedRange,
-                            onWordClick = onWordClick,
-                            fontFamily = fontFamily
-                        )
-                    }
-
-                    is ContentBlock.Dateline -> {
-                        ClickableText(
-                            text = block.text,
-                            textId = textId,
-                            selectedRange = selectedRange,
-                            onWordClick = onWordClick,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontStyle = FontStyle.Italic,
-                                fontFamily = fontFamily
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                        )
-                    }
-
-                    is ContentBlock.Footer -> {
-                        ClickableText(
-                            text = block.text,
-                            textId = textId,
-                            selectedRange = selectedRange,
-                            onWordClick = onWordClick,
-                            style = bodyStyle.copy(
-                                fontSize = bodyStyle.fontSize * 0.8f,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = paragraphSpacing / 2)
-                        )
-                    }
-                }
-            }
+            contentBlocks(contentBlocks, lookup, layout)
             if (contentBlocks.isEmpty()) {
                 item(key = "missing-content") {
                     MissingContent(
@@ -484,33 +348,13 @@ fun ReaderContent(
             )
         }
 
-        if (showLookupSheet) {
-            // No scrim and no half-expanded state: the article stays visible, and one back
-            // press closes the sheet
-            ModalBottomSheet(
-                onDismissRequest = {
-                    showLookupSheet = false
-                    selection = null
-                    onClearLookup()
-                },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                scrimColor = Color.Transparent
-            ) {
-                DefinitionOverlay(
-                    selectedWord = lookupWord,
-                    lookupResults = lookupResult,
-                    isLoading = isLookingUp,
-                    onSearchWeb = { term ->
-                        openInBrowser(
-                            context,
-                            Constants.WEB_DICTIONARY_SEARCH_URL + Uri.encode(term)
-                        )
-                    },
-                    modifier = Modifier.heightIn(max = lookupContentMaxHeight),
-                    onReport = onReportLookup
-                )
-            }
-        }
+        LookupSheet(
+            lookup = lookup,
+            lookupResult = lookupResult,
+            isLookingUp = isLookingUp,
+            onClearLookup = onClearLookup,
+            onReportLookup = onReportLookup
+        )
 
         if (showSourceInfo && source != null) {
             SourceInfoSheet(source = source, onDismiss = { showSourceInfo = false })

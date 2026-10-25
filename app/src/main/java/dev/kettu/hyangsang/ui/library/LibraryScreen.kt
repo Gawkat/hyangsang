@@ -53,6 +53,7 @@ fun LibraryScreen(
     onBookSortChange: (BookSort) -> Unit,
     coverFile: (Book) -> File?,
     onBookClick: (Long) -> Unit,
+    onBookOptionsClick: (Long) -> Unit,
     onAddBookClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -126,7 +127,7 @@ fun LibraryScreen(
                     onSortChange = onBookSortChange,
                     coverFile = coverFile,
                     onBookClick = onBookClick,
-                    onBookOptionsClick = onBookClick,
+                    onBookOptionsClick = onBookOptionsClick,
                     onAddClick = onAddBookClick,
                     modifier = Modifier.fillMaxSize()
                 )
