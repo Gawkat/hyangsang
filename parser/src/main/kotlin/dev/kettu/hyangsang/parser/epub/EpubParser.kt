@@ -69,7 +69,7 @@ class EpubParser(private val limits: EpubLimits = EpubLimits()) {
 
     companion object {
         /** Raise when a change should reach books already imported, which are then parsed again. */
-        const val VERSION = 2
+        const val VERSION = 3
 
         const val IMAGE_PREFIX = "book-image:"
 
@@ -131,6 +131,9 @@ private class BookReader(private val archive: EpubArchive, imageDir: File) {
             .mapNotNull { manifest[it.attr("idref")] }
             .filter { it.isDocument() }
         if (spine.isEmpty()) throw EpubInvalidException("Empty spine")
+        // Cover pages are often left out of the reading order with linear="no"
+        val firstPage = spineElement.descendants("itemref")
+            .firstNotNullOfOrNull { ref -> manifest[ref.attr("idref")]?.takeIf { it.isDocument() } }!!
 
         val toc = navToc(manifest.values) ?: ncxToc(manifest, spineElement) ?: emptyList()
         val chapters = ChapterAssembler(archive, images, toc).assemble(spine.map { it.path })
@@ -144,7 +147,7 @@ private class BookReader(private val archive: EpubArchive, imageDir: File) {
                 title = metadata?.firstText("title"),
                 author = metadata?.firstText("creator"),
                 language = metadata?.firstText("language"),
-                cover = coverPath(opf, manifest)?.let { images.store(it) },
+                cover = coverPath(opf, opfFolder, manifest, firstPage)?.let { images.store(it) },
                 chapters = chapters
             )
         )
@@ -222,10 +225,31 @@ private class BookReader(private val archive: EpubArchive, imageDir: File) {
         return TocEntry(path, href.substringAfter('#', "").ifEmpty { null }, text)
     }
 
-    private fun coverPath(opf: Document, manifest: Map<String, ManifestItem>): String? {
+    /**
+     * The cover image: the one EPUB 3 or EPUB 2 metadata names, or else the image on the cover
+     * page, which the EPUB 2 guide names or which is a first page with an image and no text.
+     */
+    private fun coverPath(
+        opf: Document,
+        opfFolder: String,
+        manifest: Map<String, ManifestItem>,
+        firstPage: ManifestItem
+    ): String? {
         manifest.values.firstOrNull { "cover-image" in it.properties }?.let { return it.path }
         val coverId = opf.descendants("meta").firstOrNull { it.attr("name") == "cover" }?.attr("content")
-        return coverId?.let { manifest[it] }?.takeIf { it.mediaType.startsWith("image/") }?.path
+        coverId?.let { manifest[it] }?.takeIf { it.mediaType.startsWith("image/") }?.let { return it.path }
+
+        val guidePage = opf.descendants("reference")
+            .firstOrNull { it.attr("type").equals("cover", ignoreCase = true) }
+            ?.let { EpubArchive.resolve(opfFolder, it.attr("href")) }
+        val page = guidePage ?: firstPage.path
+        val document = archive.readText(page)?.let { xml(it) } ?: return null
+        val body = document.descendants("body").firstOrNull() ?: return null
+        if (guidePage == null && body.text().isNotBlank()) return null
+        val image = body.descendants(null).firstOrNull { it.localName() == "img" || it.localName() == "image" }
+            ?: return null
+        val src = image.attr("src").ifEmpty { image.attrIgnoreCase("href") }
+        return EpubArchive.resolve(EpubArchive.folderOf(page), src)
     }
 }
 
@@ -312,7 +336,29 @@ private class ChapterAssembler(
         } else {
             draft.blocks
         }
-        return EpubChapter(title, blocks)
+        return EpubChapter(title, blocks.drop(titlePageLength(blocks, draft.title)))
+    }
+
+    /**
+     * How many blocks at the start only repeat the title in pieces, as on a divider page that
+     * shows "1" and "바다" for the chapter "1부 ─ 바다". Only for a title from the table of contents.
+     */
+    private fun titlePageLength(blocks: List<ContentBlock>, title: String?): Int {
+        val compactTitle = title?.filterNot { it.isWhitespace() } ?: return 0
+        var length = 0
+        var count = 0
+        for (block in blocks.take(MAX_TITLE_PAGE_BLOCKS)) {
+            val text = when (block) {
+                is ContentBlock.Heading -> block.text
+                is ContentBlock.Text -> block.text
+                else -> break
+            }.filterNot { it.isWhitespace() }
+            if (text.isEmpty() || text !in compactTitle) break
+            length += text.length
+            count++
+        }
+        // Something has to follow, and the pieces can't add up to more than the title
+        return if (count < blocks.size && length <= compactTitle.length) count else 0
     }
 
     // A chapter without text, such as a cover page or an illustration, is kept with the chapter
@@ -386,6 +432,8 @@ internal class ImageStore(private val archive: EpubArchive, private val dir: Fil
 }
 
 internal const val TOC_MARKER = "hyangsang-toc"
+
+private const val MAX_TITLE_PAGE_BLOCKS = 3
 
 private val WHITESPACE = Regex("\\s+")
 

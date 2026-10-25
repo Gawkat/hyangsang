@@ -50,6 +50,20 @@ class EpubParserTest {
     }
 
     @Test
+    fun dropsADividerPageThatRepeatsTheTitle() {
+        val book = book(
+            TestEpub()
+                .nav("part1.xhtml" to "1부 ─ 바다", "part2.xhtml" to "나의 오후")
+                .chapter("part1.xhtml", "<h1>1</h1><p>바다</p>")
+                .chapter("text1.xhtml", "<p>바다는 조용했다.</p>")
+                .chapter("part2.xhtml", "<p>나의</p><p>오후</p><p>나의</p><p>오후가 길었다.</p>")
+        )
+        assertEquals(listOf("바다는 조용했다."), texts(book.chapters[0]))
+        // Lines that only happen to be in the title add up to more than it
+        assertEquals(listOf("나의", "오후", "나의", "오후가 길었다."), texts(book.chapters[1]))
+    }
+
+    @Test
     fun readsChaptersFromAnNcx() {
         val book = book(
             TestEpub()
@@ -213,6 +227,40 @@ class EpubParserTest {
         )
         assertEquals("1.png", book.cover)
         assertNull(book.author)
+    }
+
+    @Test
+    fun findsACoverPageWithoutMetadata() {
+        val book = book(
+            TestEpub()
+                .file("OEBPS/front.jpg", TestEpub.PNG)
+                .chapter("cover.xhtml", """<div><img src="front.jpg"/></div>""", itemref = """linear="no"""")
+                .chapter("one.xhtml", "<p>본문.</p>")
+        )
+        assertEquals("1.jpg", book.cover)
+        assertEquals(listOf("본문."), texts(book.chapters.single()))
+    }
+
+    @Test
+    fun findsTheCoverPageTheGuideNames() {
+        val book = book(
+            TestEpub()
+                .file("OEBPS/front.png", TestEpub.PNG)
+                .chapter("one.xhtml", "<p>본문.</p>")
+                .chapter("cover.xhtml", """<p>표지</p><img src="front.png"/>""")
+                .guide("""<reference type="cover" href="cover.xhtml"/>""")
+        )
+        assertEquals("1.png", book.cover)
+    }
+
+    @Test
+    fun doesNotTakeAFirstPageWithTextForACover() {
+        val book = book(
+            TestEpub()
+                .file("OEBPS/pic.png", TestEpub.PNG)
+                .chapter("one.xhtml", """<p>본문.</p><img src="pic.png"/>""")
+        )
+        assertNull(book.cover)
     }
 
     @Test
