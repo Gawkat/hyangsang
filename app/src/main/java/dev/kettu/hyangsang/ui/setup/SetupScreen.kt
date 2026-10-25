@@ -26,7 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.LocalLibrary
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material3.Button
@@ -380,7 +380,7 @@ private fun DoneStep(onFinish: () -> Unit) {
             HintRow(Icons.Outlined.Menu, R.string.setup_hint_drawer_title, R.string.setup_hint_drawer)
             HintRow(Icons.Outlined.RssFeed, R.string.manage_feeds, R.string.setup_hint_manage_feeds)
             HintRow(Icons.Outlined.Add, R.string.setup_hint_own_feeds_title, R.string.setup_hint_own_feeds)
-            HintRow(Icons.Outlined.Bookmarks, R.string.saved_nav, R.string.setup_hint_saved)
+            HintRow(Icons.Outlined.LocalLibrary, R.string.library_nav, R.string.setup_hint_saved)
         }
     }
 }

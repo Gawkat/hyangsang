@@ -41,7 +41,9 @@
     <string name="view_license_information">View license information</string>
     <string name="about_label">About</string>
     <string name="app_name_romanized">Hyangsang</string>
-    <string name="saved_nav">Saved</string>
+    <string name="library_nav">Library</string>
+    <string name="library_articles_tab">Articles</string>
+    <string name="library_books_tab">Books</string>
     <string name="all_articles">All articles</string>
     <string name="categories_label">Categories</string>
     <string name="manage_feeds">Manage feeds</string>
@@ -57,13 +59,16 @@
         <item quantity="other">%1$d articles</item>
     </plurals>
     <string name="save_article">Save article</string>
-    <string name="unsave_article">Remove from Saved</string>
+    <string name="unsave_article">Remove from Library</string>
     <string name="saved_empty_title">No saved articles</string>
     <string name="saved_empty_body">Tap the bookmark on an article to keep it here for later.</string>
     <string name="pasted_text">Pasted text</string>
     <string name="imported_filter">Imported</string>
     <string name="imported_empty_title">Nothing imported yet</string>
     <string name="imported_empty_body">Share a link or text with 향상 from another app, or tap + to paste it.</string>
+    <string name="books_empty_title">No books yet</string>
+    <string name="books_empty_body">Import an EPUB file to read it here, with the dictionary a tap away.</string>
+    <string name="books_empty_drm">Books bought from ebook stores are usually copy-protected and can\'t be opened.</string>
     <string name="add_text_title">Add text</string>
     <string name="add_text_button">Add</string>
     <string name="add_text_title_label">Title</string>
@@ -122,7 +127,7 @@
         <item quantity="other">%1$d feeds couldn\'t update</item>
     </plurals>
     <string name="saved_ago">Saved %1$s</string>
-    <string name="removed_from_saved">Removed from Saved</string>
+    <string name="removed_from_saved">Removed from Library</string>
     <string name="undo">Undo</string>
     <string name="more_options">More options</string>
     <string name="feeds_helper">Tap a feed to rename it, change its category, or remove it.</string>
