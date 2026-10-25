@@ -5,6 +5,7 @@ import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookChapter
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
 import dev.kettu.hyangsang.data.local.entity.ChapterInfo
+import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.parser.epub.EpubParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -142,6 +143,21 @@ class BookRepositoryTest {
         assertEquals(1, book.chapterIndex)
         assertEquals(17, book.totalChars)
         assertEquals(listOf("첫째 장", "둘째 장"), dao.chapters.map { it.title })
+    }
+
+    @Test
+    fun staysAtTheSameTextWhenBlocksChange() = runBlocking {
+        repository.commit(prepare(epub()) as BookImport.Ready, "")
+        val book = dao.books.value.single()
+        // As if an older parser had kept a block of 3 characters before the second paragraph
+        val old = dao.chapters.first()
+        dao.chapters[0] = old.copy(content = listOf(ContentBlock.Text("머리말")) + old.content, charCount = old.charCount + 3)
+        dao.updateBook(book.copy(parserVersion = 1, blockIndex = 1, progressChars = 3))
+
+        repository.reparse(dao.books.value.single())
+        val updated = dao.books.value.single()
+        assertEquals(0, updated.blockIndex)
+        assertEquals(0, updated.progressChars)
     }
 
     @Test

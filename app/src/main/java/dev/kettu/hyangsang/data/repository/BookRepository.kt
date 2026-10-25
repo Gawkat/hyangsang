@@ -160,11 +160,16 @@ class BookRepository(
         }
         val chapters = chapters(parsed)
         val chapterIndex = book.chapterIndex.coerceAtMost(chapters.lastIndex)
+        // Blocks can come and go, so the reader stays as many characters into the chapter
+        val oldChapter = bookDao.getChapter(book.id, book.chapterIndex)
+        val charsIntoChapter = book.progressChars - (oldChapter?.charsBefore ?: book.progressChars)
+        val chapter = chapters[chapterIndex]
+        val blockIndex = if (chapterIndex == book.chapterIndex) blockAt(chapter, charsIntoChapter) else 0
         val updated = book.copy(
             coverFile = parsed.cover,
             chapterIndex = chapterIndex,
-            blockIndex = if (chapterIndex == book.chapterIndex) book.blockIndex else 0,
-            progressChars = book.progressChars.coerceAtMost(chapters.sumOf { it.charCount }),
+            blockIndex = blockIndex,
+            progressChars = chapter.charsBefore + chapter.content.take(blockIndex).sumOf { it.charCount() },
             chapterCount = chapters.size,
             totalChars = chapters.sumOf { it.charCount },
             wordCount = chapters.sumOf { it.wordCount },
@@ -202,6 +207,17 @@ class BookRepository(
             ?.filter { it.isDirectory && it.name !in used && it.lastModified() < cutoff }
             ?.forEach { it.deleteRecursively() }
         Unit
+    }
+
+    // The block the given characters into a chapter fall in, so that a reader whose text moved a
+    // little lands on it or just before it rather than after it
+    private fun blockAt(chapter: BookChapter, chars: Int): Int {
+        var counted = 0
+        chapter.content.forEachIndexed { index, block ->
+            counted += block.charCount()
+            if (counted > chars) return index
+        }
+        return maxOf(0, chapter.content.lastIndex)
     }
 
     private fun chapters(book: EpubBook): List<BookChapter> {
