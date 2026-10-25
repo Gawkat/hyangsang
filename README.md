@@ -21,7 +21,7 @@ support.
     * SBS News
     * BBC News 코리아
 * Built-in offline dictionary with context-aware tap-to-look-up when reading
-* Saved articles
+* A library of saved articles, links and text shared from other apps, and EPUB books
 * Text & layout customization
 * Background sync of feeds
 * English and Korean language support

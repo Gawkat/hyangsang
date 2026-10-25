@@ -60,7 +60,7 @@ articles copied from news sites.
 
 * `app` - the Android app
 * `parser` - a plain Kotlin library that turns article pages into content blocks, with a parser per
-  news site and a generic fallback
+  news site and a generic fallback, and EPUB files into chapters of content blocks
 * `analyzer` - a plain Kotlin library that splits Korean words into dictionary headwords, particles
   and endings, built on the bundled dictionary. Word lookups use it (see
   [docs/lookup-analyzer.md](docs/lookup-analyzer.md)).
@@ -86,6 +86,11 @@ ignored by git since the articles belong to the news sites. Without them those t
 and Gradle reports them as skipped. To run them, save an article page from the site under the name
 the test reads, such as `bbc_sample.html`. They check details of specific articles, so expect to
 adjust the assertions for a different article.
+
+The EPUB parser's tests build small EPUB files in the test, so they need nothing saved. Real books
+are worth trying too, since every tool that makes EPUBs lays them out its own way. Put DRM-free
+`.epub` files in `parser/src/test/resources/epub` and `EpubSamplesTest` parses each one and prints
+its chapters, failing on books it can't read. Without the folder the test is skipped.
 
 `LookupEvaluationTest` measures how often word lookups show the right dictionary entry, and is
 skipped without the bundled dictionary. It runs three sets of cases in `app/src/test/resources`:
@@ -138,6 +143,17 @@ version are parsed again in the background the next time they're opened.
 A parser change that only matters for new articles doesn't need a bump. Each bump re-fetches every
 article once, as it's opened.
 
+### The EPUB parser
+
+Raise `EpubParser.VERSION` in
+`parser/src/main/kotlin/dev/kettu/hyangsang/parser/epub/EpubParser.kt` when the change should reach
+books already imported. Each book keeps the EPUB it was imported from, and books parsed with an
+older version are parsed again from it the next time they're opened. The reader stays at the same
+chapter.
+
+EPUB files are untrusted input. Keep reading the archive through `EpubArchive`, which caps what
+it reads against zip bombs, and never write a file under a name taken from the archive.
+
 ### The built-in feeds
 
 A feed from a new site needs a `DefaultSource`, with a description in both string files. Follow the
@@ -162,6 +178,17 @@ For changes to the entities in `HyangsangDatabase` (articles, feeds, vocabulary)
 
 Without a migration, updating the app crashes for existing users, since Room only falls back to a
 destructive migration from versions before 13.
+
+### The books database schema
+
+Imported books are in a database of their own, `BooksDatabase`, so they can be left out of cloud
+backups (see `data_extraction_rules.xml` and `backup_rules.xml`). Change its entities (books and
+their chapters) the same way as the user database's: raise its `version`, add a migration to its
+builder, commit the schema Room exports to `app/schemas/`, and test the migration. It has no
+destructive fallback, so a missing migration crashes the app for anyone with books.
+
+Keep a chapter's content well under 2 MB, the most a database row can have when it's read back.
+The parser splits long chapters at `EpubParser.MAX_CHAPTER_CHARS` for this.
 
 ### The bundled dictionary
 
