@@ -2,11 +2,14 @@ package dev.kettu.hyangsang
 
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -68,9 +72,12 @@ import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.parser.PlainText
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.importing.AddTextScreen
+import dev.kettu.hyangsang.ui.library.BookDetailsScreen
+import dev.kettu.hyangsang.ui.library.ImportBookSheet
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.library.LibraryScreen
+import dev.kettu.hyangsang.ui.library.displayName
 import dev.kettu.hyangsang.ui.settings.LicensesScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
@@ -79,6 +86,7 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.viewmodel.ArticleUiState
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
+import dev.kettu.hyangsang.ui.viewmodel.BooksViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
 import dev.kettu.hyangsang.ui.viewmodel.VocabularyViewModel
@@ -88,6 +96,9 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
     // A link or text shared from another app, until the main screens have opened it
     private val sharedText = MutableStateFlow<SharedText?>(null)
+
+    // An EPUB file opened or shared from another app, until the Library has started importing it
+    private val sharedBook = MutableStateFlow<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,6 +153,8 @@ class MainActivity : AppCompatActivity() {
 
             val feedViewModel: RssFeedViewModel = viewModel(factory = RssFeedViewModel.Factory)
 
+            val booksViewModel: BooksViewModel = viewModel(factory = BooksViewModel.Factory)
+
             // Null until the database is open. Once shown, the setup stays until the user leaves
             // it, although it stops being pending as soon as the feeds are added
             val setupPending by remember { app.firstRunSetupPending }.collectAsState(initial = null)
@@ -163,6 +176,9 @@ class MainActivity : AppCompatActivity() {
                     else -> MainApp(
                         sharedText = sharedText.collectAsState().value,
                         onSharedTextHandled = { sharedText.value = null },
+                        sharedBook = sharedBook.collectAsState().value,
+                        onSharedBookHandled = { sharedBook.value = null },
+                        booksViewModel = booksViewModel,
                         prefsRepository = prefsRepository,
                         lookupReportRepository = app.container.lookupReportRepository,
                         articleViewModel = articleViewModel,
@@ -189,13 +205,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun readShare(intent: Intent) {
+        readBook(intent)?.let {
+            sharedBook.value = it
+            return
+        }
         if (intent.action != Intent.ACTION_SEND) return
         val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
         if (text.isNullOrBlank()) return
         sharedText.value = SharedText.classify(text, intent.getStringExtra(Intent.EXTRA_SUBJECT))
     }
 
+    // An EPUB file opened with the app, or shared with it
+    private fun readBook(intent: Intent): Uri? {
+        if (intent.type != EPUB_TYPE) return null
+        return when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            else -> null
+        }
+    }
+
     private companion object {
+        const val EPUB_TYPE = "application/epub+zip"
+
         // Same scrims enableEdgeToEdge() uses by default for 3-button navigation
         val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
         val DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
@@ -211,6 +243,9 @@ private object Routes {
     const val LICENSES = "licenses"
     const val ADD_TEXT = "add_text"
     const val READER = "reader/{articleId}"
+    const val BOOK = "book/{bookId}"
+
+    fun book(bookId: Long) = "book/$bookId"
 
     fun reader(articleId: Long) = "reader/$articleId"
 }
@@ -226,6 +261,9 @@ private data class NavItem(
 fun MainApp(
     sharedText: SharedText?,
     onSharedTextHandled: () -> Unit,
+    sharedBook: Uri?,
+    onSharedBookHandled: () -> Unit,
+    booksViewModel: BooksViewModel,
     prefsRepository: UserPreferencesRepository,
     lookupReportRepository: LookupReportRepository,
     articleViewModel: ArticleViewModel,
@@ -250,6 +288,21 @@ fun MainApp(
     val savedArticles by articleViewModel.savedArticlesWithFeed.collectAsState()
     val savedImportedOnly by articleViewModel.savedImportedOnly.collectAsState()
     val libraryTab by prefsRepository.libraryTabFlow.collectAsState(initial = LibraryTab.ARTICLES)
+    val books by booksViewModel.books.collectAsState()
+    val bookSort by booksViewModel.sort.collectAsState()
+    val bookImportState by booksViewModel.importState.collectAsState()
+    val context = LocalContext.current
+    val importBook: (Uri) -> Unit = { uri ->
+        val resolver = context.contentResolver
+        booksViewModel.startImport(
+            open = { resolver.openInputStream(uri) },
+            fileName = { resolver.displayName(uri) }
+        )
+    }
+    // Some apps don't know the EPUB type, so other files are offered too, and the parser decides
+    val pickBook = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(importBook)
+    }
     // What the Add text screen starts with: empty from the Library, or text shared from another app
     var addTextDraft by remember { mutableStateOf(SharedText.Text("", null)) }
     val unreadCounts by articleViewModel.unreadCounts.collectAsState()
@@ -286,7 +339,6 @@ fun MainApp(
     }
 
     // Built-in categories are renamed when the app language changes, so the selection follows
-    val context = LocalContext.current
     val configuration = LocalConfiguration.current
     LaunchedEffect(filterCriteria.selectedCategory, configuration) {
         val selected = filterCriteria.selectedCategory ?: return@LaunchedEffect
@@ -316,6 +368,32 @@ fun MainApp(
             }
         }
         onSharedTextHandled()
+    }
+
+    // An opened or shared book is imported from the Books tab of the Library
+    LaunchedEffect(sharedBook) {
+        val uri = sharedBook ?: return@LaunchedEffect
+        prefsRepository.setLibraryTab(LibraryTab.BOOKS)
+        navController.navigate(Routes.LIBRARY) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+        }
+        importBook(uri)
+        onSharedBookHandled()
+    }
+
+    val untitledBook = stringResource(R.string.untitled_book)
+    bookImportState?.let { state ->
+        ImportBookSheet(
+            state = state,
+            coverFile = booksViewModel::coverFile,
+            onImport = { booksViewModel.confirmImport(untitledBook) },
+            onOpenExisting = { bookId ->
+                booksViewModel.cancelImport()
+                navController.navigate(Routes.book(bookId))
+            },
+            onDismiss = booksViewModel::cancelImport
+        )
     }
 
     val closeDrawerThen: (() -> Unit) -> Unit = { action ->
@@ -443,8 +521,38 @@ fun MainApp(
                         onUnsave = { articleId -> articleViewModel.setSaved(articleId, false) },
                         onUndoUnsave = { articleId, savedDate ->
                             articleViewModel.restoreSavedDate(articleId, savedDate)
+                        },
+                        books = books,
+                        bookSort = bookSort,
+                        onBookSortChange = booksViewModel::setSort,
+                        coverFile = booksViewModel::coverFile,
+                        onBookClick = { bookId ->
+                            entry.ifResumed { navController.navigate(Routes.book(bookId)) }
+                        },
+                        onAddBookClick = {
+                            pickBook.launch(arrayOf("application/epub+zip", "application/octet-stream"))
                         }
                     )
+                }
+                composable(Routes.BOOK) { entry ->
+                    val bookId = entry.arguments?.getString("bookId")?.toLongOrNull() ?: return@composable
+                    val book by remember(bookId) { booksViewModel.getBook(bookId) }.collectAsState(initial = null)
+                    book?.let { current ->
+                        BookDetailsScreen(
+                            book = current,
+                            coverFile = booksViewModel.coverFile(current),
+                            onTitleAndAuthorChange = { title, author ->
+                                booksViewModel.updateTitleAndAuthor(current.id, title, author)
+                            },
+                            onDelete = {
+                                entry.ifResumed {
+                                    booksViewModel.delete(current)
+                                    navController.popBackStack()
+                                }
+                            },
+                            onBackClick = { entry.ifResumed { navController.popBackStack() } }
+                        )
+                    }
                 }
                 composable(Routes.FEEDS) { entry ->
                     FeedsScreen(

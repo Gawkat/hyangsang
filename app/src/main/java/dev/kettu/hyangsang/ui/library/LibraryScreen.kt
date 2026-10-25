@@ -30,7 +30,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
+import dev.kettu.hyangsang.data.local.entity.Book
+import dev.kettu.hyangsang.data.local.entity.BookWithChapter
 import dev.kettu.hyangsang.data.prefs.LibraryTab
+import dev.kettu.hyangsang.ui.viewmodel.BookSort
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +48,12 @@ fun LibraryScreen(
     onArticleClick: (Long) -> Unit,
     onUnsave: (Long) -> Unit,
     onUndoUnsave: (articleId: Long, savedDate: String) -> Unit,
+    books: List<BookWithChapter>,
+    bookSort: BookSort,
+    onBookSortChange: (BookSort) -> Unit,
+    coverFile: (Book) -> File?,
+    onBookClick: (Long) -> Unit,
+    onAddBookClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -53,12 +63,22 @@ fun LibraryScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.library_nav)) },
                 actions = {
-                    if (selectedTab == LibraryTab.ARTICLES) {
-                        IconButton(onClick = onAddTextClick) {
+                    when (selectedTab) {
+                        LibraryTab.ARTICLES -> IconButton(onClick = onAddTextClick) {
                             Icon(
                                 Icons.Filled.Add,
                                 contentDescription = stringResource(R.string.add_text_title)
                             )
+                        }
+
+                        // The empty Books tab has a button of its own
+                        LibraryTab.BOOKS -> if (books.isNotEmpty()) {
+                            IconButton(onClick = onAddBookClick) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = stringResource(R.string.add_epub_file)
+                                )
+                            }
                         }
                     }
                 }
@@ -100,41 +120,17 @@ fun LibraryScreen(
                     snackbarHostState = snackbarHostState
                 )
 
-                LibraryTab.BOOKS -> BooksEmptyState(modifier = Modifier.fillMaxSize())
+                LibraryTab.BOOKS -> BooksTab(
+                    books = books,
+                    sort = bookSort,
+                    onSortChange = onBookSortChange,
+                    coverFile = coverFile,
+                    onBookClick = onBookClick,
+                    onBookOptionsClick = onBookClick,
+                    onAddClick = onAddBookClick,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun BooksEmptyState(modifier: Modifier = Modifier) {
-    Box(contentAlignment = Alignment.Center, modifier = modifier.padding(32.dp)) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(48.dp)
-            )
-            Text(
-                text = stringResource(R.string.books_empty_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = stringResource(R.string.books_empty_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(R.string.books_empty_drm),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

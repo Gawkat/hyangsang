@@ -33,6 +33,11 @@ class HyangsangApplication : Application() {
             container.rssFeedRepository.refreshEnabledFeeds()
         }
 
+        // Imports the user never finished leave their files behind
+        applicationScope.launch {
+            container.bookRepository.cleanUp()
+        }
+
         applicationScope.launch {
             container.userPreferencesRepository.feedSyncIntervalFlow.collect { interval ->
                 FeedSyncWorker.schedule(this@HyangsangApplication, interval)

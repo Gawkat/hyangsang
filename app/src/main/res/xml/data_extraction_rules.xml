@@ -1,19 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup and device transfer for Android 12 and later. See
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
 -->
 <data-extraction-rules>
+    <!-- Books are left out of cloud backups: a few of them would pass the 25 MB quota, and then
+         nothing would be backed up. Device transfers have no quota, so they include books -->
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="database" path="books.db" />
+        <exclude domain="database" path="books.db-shm" />
+        <exclude domain="database" path="books.db-wal" />
+        <exclude domain="file" path="books/" />
     </cloud-backup>
-    <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
-    -->
 </data-extraction-rules>
