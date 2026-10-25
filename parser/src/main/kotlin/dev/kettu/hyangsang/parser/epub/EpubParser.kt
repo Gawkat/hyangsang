@@ -301,7 +301,8 @@ private class ChapterAssembler(
             wholeDocumentTitle != null -> Draft(wholeDocumentTitle).also { drafts.add(it) }
             // Without a table of contents, each document is a chapter
             toc.isEmpty() || drafts.isEmpty() -> Draft(null).also { drafts.add(it) }
-            else -> drafts.last()
+            // A new document starts a new page in paged readers, so it's kept apart here too
+            else -> drafts.last().also { it.blocks.add(ContentBlock.Break) }
         }
         for (piece in pieces) {
             when (piece) {
@@ -351,15 +352,33 @@ private class ChapterAssembler(
 
     // Titles chapters without one by their first heading, and drops a heading that repeats it
     private fun finish(draft: Draft): EpubChapter {
-        val firstHeading = draft.blocks.firstOrNull() as? ContentBlock.Heading
+        val tidied = tidyBreaks(draft.blocks)
+        val firstHeading = tidied.firstOrNull() as? ContentBlock.Heading
         val title = draft.title ?: firstHeading?.text
         val blocks = if (firstHeading != null && firstHeading.text.normalized() == title?.normalized()) {
-            draft.blocks.drop(1)
+            tidied.drop(1)
         } else {
-            draft.blocks
+            tidied
         }
         return EpubChapter(title, blocks.drop(titlePageLength(blocks, draft.title)))
     }
+
+    // One break at a time, and none at the ends or next to a heading or divider, which set the
+    // parts apart already
+    private fun tidyBreaks(blocks: List<ContentBlock>): List<ContentBlock> {
+        val result = mutableListOf<ContentBlock>()
+        for (block in blocks) {
+            val previous = result.lastOrNull()
+            if (block == ContentBlock.Break && (previous == null || previous.setsApart())) continue
+            if (block.setsApart() && previous == ContentBlock.Break) result.removeAt(result.lastIndex)
+            result.add(block)
+        }
+        if (result.lastOrNull() == ContentBlock.Break) result.removeAt(result.lastIndex)
+        return result
+    }
+
+    private fun ContentBlock.setsApart(): Boolean =
+        this == ContentBlock.Break || this == ContentBlock.Divider || this is ContentBlock.Heading
 
     /**
      * How many blocks at the start only repeat the title in pieces, as on a divider page that
@@ -368,8 +387,15 @@ private class ChapterAssembler(
     private fun titlePageLength(blocks: List<ContentBlock>, title: String?): Int {
         val compactTitle = title?.filterNot { it.isWhitespace() } ?: return 0
         var length = 0
+        var pieces = 0
+        // Blocks to drop, with the breaks between and after the pieces
         var count = 0
-        for (block in blocks.take(MAX_TITLE_PAGE_BLOCKS)) {
+        for (block in blocks) {
+            if (block == ContentBlock.Break) {
+                count++
+                continue
+            }
+            if (pieces == MAX_TITLE_PAGE_BLOCKS) break
             val text = when (block) {
                 is ContentBlock.Heading -> block.text
                 is ContentBlock.Text -> block.text
@@ -377,10 +403,11 @@ private class ChapterAssembler(
             }.filterNot { it.isWhitespace() }
             if (text.isEmpty() || text !in compactTitle) break
             length += text.length
+            pieces++
             count++
         }
         // Something has to follow, and the pieces can't add up to more than the title
-        return if (count < blocks.size && length <= compactTitle.length) count else 0
+        return if (pieces > 0 && count < blocks.size && length <= compactTitle.length) count else 0
     }
 
     // A chapter without text, such as a cover page or an illustration, is kept with the chapter
@@ -486,5 +513,5 @@ private fun ContentBlock.length(): Int = when (this) {
     is ContentBlock.Image -> caption?.length ?: 0
     is ContentBlock.Dateline -> text.length
     is ContentBlock.Footer -> text.length
-    ContentBlock.Divider -> 0
+    ContentBlock.Divider, ContentBlock.Break -> 0
 }

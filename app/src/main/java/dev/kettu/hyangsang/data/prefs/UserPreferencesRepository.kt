@@ -29,6 +29,7 @@ class UserPreferencesRepository(private val context: Context) {
         val READER_FONT_WEIGHT = stringPreferencesKey("reader_font_weight")
         val READER_LINE_SPACING = floatPreferencesKey("reader_line_spacing")
         val READER_MARGIN = stringPreferencesKey("reader_margin")
+        val READER_BOOK_PARAGRAPHS = stringPreferencesKey("reader_book_paragraphs")
         val READING_SPEED = stringPreferencesKey("reading_speed")
         val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
         val CONTENT_RETENTION = stringPreferencesKey("content_retention")
@@ -57,7 +58,8 @@ class UserPreferencesRepository(private val context: Context) {
             font = enumOrDefault(preferences[Keys.READER_FONT], ReaderFont.SANS),
             fontWeight = enumOrDefault(preferences[Keys.READER_FONT_WEIGHT], ReaderFontWeight.REGULAR),
             lineSpacing = preferences[Keys.READER_LINE_SPACING] ?: ReaderSettings.DEFAULT_LINE_SPACING,
-            margin = enumOrDefault(preferences[Keys.READER_MARGIN], ReaderMargin.NORMAL)
+            margin = enumOrDefault(preferences[Keys.READER_MARGIN], ReaderMargin.NORMAL),
+            bookParagraphs = enumOrDefault(preferences[Keys.READER_BOOK_PARAGRAPHS], BookParagraphs.INDENTED)
         )
     }.distinctUntilChanged()
 
@@ -167,6 +169,7 @@ class UserPreferencesRepository(private val context: Context) {
             it[Keys.READER_FONT_WEIGHT] = settings.fontWeight.name
             it[Keys.READER_LINE_SPACING] = settings.lineSpacing
             it[Keys.READER_MARGIN] = settings.margin.name
+            it[Keys.READER_BOOK_PARAGRAPHS] = settings.bookParagraphs.name
         }
     }
 

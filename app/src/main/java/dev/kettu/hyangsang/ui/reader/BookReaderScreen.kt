@@ -134,7 +134,7 @@ fun BookReaderScreen(
         onLookupWord = { word, sentence -> dictionaryViewModel.lookupWord(word, LookupContext(sentence)) },
         resetKey = chapter.chapterIndex
     )
-    val layout = readerLayout(readerSettings)
+    val layout = readerLayout(readerSettings, isBook = true)
     var showContents by rememberSaveable { mutableStateOf(false) }
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -304,6 +304,7 @@ fun BookReaderScreen(
             ReaderTextSheet(
                 settings = readerSettings,
                 onSettingsChange = onReaderSettingsChange,
+                showBookParagraphs = true,
                 currentTheme = currentTheme,
                 onThemeChange = onThemeChange,
                 onMoreSettingsClick = {
