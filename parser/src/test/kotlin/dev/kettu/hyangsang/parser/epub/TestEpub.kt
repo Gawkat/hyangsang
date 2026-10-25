@@ -22,10 +22,13 @@ class TestEpub {
 
     fun guide(references: String) = apply { guide = "<guide>$references</guide>" }
 
-    /** Adds a chapter document at OEBPS/[name], in the spine unless [attributes] say otherwise. */
-    fun chapter(name: String, body: String, itemref: String = "") = apply {
+    /**
+     * Adds a chapter document at OEBPS/[name], in the spine unless [itemref]'s attributes say
+     * otherwise, with [head] added to its head.
+     */
+    fun chapter(name: String, body: String, itemref: String = "", head: String = "") = apply {
         val id = "c${manifest.size}"
-        file("OEBPS/$name", xhtml(body))
+        file("OEBPS/$name", xhtml(body, head))
         manifest.add("""<item id="$id" href="$name" media-type="application/xhtml+xml"/>""")
         spine.add("""<itemref idref="$id" $itemref/>""")
     }
@@ -94,10 +97,10 @@ class TestEpub {
     }
 
     companion object {
-        fun xhtml(body: String): String =
+        fun xhtml(body: String, head: String = ""): String =
             """<?xml version="1.0" encoding="UTF-8"?>
             <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-            <head><title>t</title><style>p { margin: 0 }</style></head>
+            <head><title>t</title><style>p { margin: 0 }</style>$head</head>
             <body>$body</body></html>"""
 
         // The PNG signature is enough for the parser, which never decodes images
