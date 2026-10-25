@@ -17,10 +17,14 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,11 +35,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +58,11 @@ import androidx.compose.ui.unit.sp
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
+import dev.kettu.hyangsang.data.local.entity.ChapterInfo
+import dev.kettu.hyangsang.ui.reader.ContentsSheet
 import dev.kettu.hyangsang.ui.viewmodel.BookSort
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import java.io.File
 
 /** The Books tab of the Library: the book being read, then all books in a grid. */
@@ -59,15 +73,40 @@ fun BooksTab(
     onSortChange: (BookSort) -> Unit,
     coverFile: (Book) -> File?,
     onBookClick: (Long) -> Unit,
-    onBookOptionsClick: (Long) -> Unit,
+    onBookDetailsClick: (Long) -> Unit,
+    onBookReadChange: (Book, Boolean) -> Unit,
+    // Gets the book as it was before, to put it back where it was
+    onUndoBookReadChange: (Book) -> Unit,
+    snackbarHostState: SnackbarHostState,
+    chapters: (Long) -> Flow<List<ChapterInfo>>,
+    onChapterClick: (bookId: Long, chapter: Int) -> Unit,
     onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
+    val markedReadMessage = stringResource(R.string.marked_book_read)
+    val markedUnreadMessage = stringResource(R.string.marked_book_unread)
+    val undoLabel = stringResource(R.string.undo)
+
     if (books.isEmpty()) {
         BooksEmptyState(onAddClick = onAddClick, modifier = modifier)
         return
     }
     val current = books.filter { it.book.isStarted }.maxByOrNull { it.book.lastReadDate ?: 0 }
+    var contentsBookId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    books.firstOrNull { it.book.id == contentsBookId }?.book?.let { book ->
+        val bookChapters by remember(book.id) { chapters(book.id) }.collectAsState(initial = emptyList())
+        BookContentsSheet(
+            book = book,
+            chapters = bookChapters,
+            onChapterClick = { index ->
+                contentsBookId = null
+                onChapterClick(book.id, index)
+            },
+            onDismiss = { contentsBookId = null }
+        )
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -93,7 +132,21 @@ fun BooksTab(
                 book = item.book,
                 coverFile = coverFile(item.book),
                 onClick = { onBookClick(item.book.id) },
-                onOptionsClick = { onBookOptionsClick(item.book.id) },
+                onContentsClick = { contentsBookId = item.book.id },
+                onReadChange = { read ->
+                    val before = item.book
+                    onBookReadChange(before, read)
+                    scope.launch {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        val result = snackbarHostState.showSnackbar(
+                            message = if (read) markedReadMessage else markedUnreadMessage,
+                            actionLabel = undoLabel,
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed) onUndoBookReadChange(before)
+                    }
+                },
+                onDetailsClick = { onBookDetailsClick(item.book.id) },
                 modifier = Modifier.animateItem()
             )
         }
@@ -200,9 +253,12 @@ private fun BookGridItem(
     book: Book,
     coverFile: File?,
     onClick: () -> Unit,
-    onOptionsClick: () -> Unit,
+    onContentsClick: () -> Unit,
+    onReadChange: (Boolean) -> Unit,
+    onDetailsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = modifier) {
         BookCover(
             title = book.title,
@@ -231,12 +287,44 @@ private fun BookGridItem(
                     )
                 }
             }
-            IconButton(onClick = onOptionsClick, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Filled.MoreVert,
-                    contentDescription = stringResource(R.string.book_options),
-                    modifier = Modifier.size(20.dp)
-                )
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.book_options),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.book_contents)) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onContentsClick()
+                        }
+                    )
+                    // A book that was opened at all has progress to undo
+                    val opened = book.lastReadDate != null
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (opened) R.string.mark_book_unread else R.string.mark_book_read)) },
+                        leadingIcon = {
+                            Icon(if (opened) Icons.Outlined.RemoveDone else Icons.Outlined.Done, contentDescription = null)
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onReadChange(!opened)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.book_details)) },
+                        leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onDetailsClick()
+                        }
+                    )
+                }
             }
         }
         when {
@@ -245,6 +333,32 @@ private fun BookGridItem(
             book.lastReadDate == null -> StatusText(stringResource(R.string.book_new))
         }
     }
+}
+
+// The reader's contents, with the chapter the book was left at as the current one
+@Composable
+private fun BookContentsSheet(
+    book: Book,
+    chapters: List<ChapterInfo>,
+    onChapterClick: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val currentIndex = when {
+        book.isFinished -> book.chapterCount
+        book.isStarted -> book.chapterIndex
+        else -> -1
+    }
+    val chapter = chapters.getOrNull(currentIndex)
+    ContentsSheet(
+        book = book,
+        chapters = chapters,
+        currentIndex = currentIndex,
+        progressInChapter = if (chapter == null || chapter.charCount == 0) 0f else {
+            ((book.progressChars - chapter.charsBefore).toFloat() / chapter.charCount).coerceIn(0f, 1f)
+        },
+        onChapterClick = onChapterClick,
+        onDismiss = onDismiss
+    )
 }
 
 @Composable

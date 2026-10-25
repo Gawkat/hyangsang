@@ -26,6 +26,8 @@ data class OpenChapter(val chapter: BookChapter, val startBlock: Int)
 
 class BookReaderViewModel(
     private val bookId: Long,
+    // A chapter to open at its start, as from the contents in the Library, instead of the position
+    private val startChapter: Int?,
     private val bookRepository: BookRepository
 ) : ViewModel() {
     val book: StateFlow<Book?> = bookRepository.getBook(bookId)
@@ -53,7 +55,11 @@ class BookReaderViewModel(
                 current = bookRepository.getBook(bookId).first() ?: return@launch
                 _updating.value = false
             }
-            open(current.chapterIndex, current.blockIndex)
+            if (startChapter != null) {
+                open(startChapter, 0)
+            } else {
+                open(current.chapterIndex, current.blockIndex)
+            }
         }
     }
 
@@ -98,8 +104,8 @@ class BookReaderViewModel(
     }
 
     companion object {
-        fun factory(bookId: Long): ViewModelProvider.Factory = viewModelFactory {
-            initializer { BookReaderViewModel(bookId, appContainer.bookRepository) }
+        fun factory(bookId: Long, startChapter: Int?): ViewModelProvider.Factory = viewModelFactory {
+            initializer { BookReaderViewModel(bookId, startChapter, appContainer.bookRepository) }
         }
     }
 }

@@ -142,6 +142,24 @@ class BookRepository(
         bookDao.updatePosition(bookId, chapterIndex, blockIndex, progressChars, now())
 
     /**
+     * Marks a book as read to the end, or as unread: back at its start, as if it was never
+     * opened.
+     */
+    suspend fun setRead(book: Book, read: Boolean) {
+        if (read) {
+            val lastChapter = book.chapterCount - 1
+            val blocks = bookDao.getChapter(book.id, lastChapter)?.content?.size ?: 0
+            bookDao.updatePosition(book.id, lastChapter, blocks, book.totalChars, now())
+        } else {
+            bookDao.updatePosition(book.id, 0, 0, 0, null)
+        }
+    }
+
+    /** Puts a book back where [book] was, as when marking it read or unread is undone. */
+    suspend fun restorePosition(book: Book) =
+        bookDao.updatePosition(book.id, book.chapterIndex, book.blockIndex, book.progressChars, book.lastReadDate)
+
+    /**
      * Parses a book again from its original file, for a newer [EpubParser.VERSION]. The reader
      * stays at the same chapter, as far as the book still has it. Returns false if the book
      * can't be parsed any more, and keeps its content as it was.

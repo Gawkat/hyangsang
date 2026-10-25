@@ -54,10 +54,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import dev.kettu.hyangsang.data.defaults.DefaultCategory
 import dev.kettu.hyangsang.data.importing.SharedText
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
@@ -246,9 +248,10 @@ private object Routes {
     const val ADD_TEXT = "add_text"
     const val READER = "reader/{articleId}"
     const val BOOK = "book/{bookId}"
-    const val BOOK_READER = "book-reader/{bookId}"
+    const val BOOK_READER = "book-reader/{bookId}?chapter={chapter}"
 
-    fun bookReader(bookId: Long) = "book-reader/$bookId"
+    fun bookReader(bookId: Long, chapter: Int? = null) =
+        if (chapter == null) "book-reader/$bookId" else "book-reader/$bookId?chapter=$chapter"
 
     fun book(bookId: Long) = "book/$bookId"
 
@@ -538,18 +541,31 @@ fun MainApp(
                         onBookClick = { bookId ->
                             entry.ifResumed { navController.navigate(Routes.bookReader(bookId)) }
                         },
-                        onBookOptionsClick = { bookId ->
+                        onBookDetailsClick = { bookId ->
                             entry.ifResumed { navController.navigate(Routes.book(bookId)) }
+                        },
+                        onBookReadChange = booksViewModel::setRead,
+                        onUndoBookReadChange = booksViewModel::restorePosition,
+                        bookChapters = booksViewModel::getChapterInfos,
+                        onBookChapterClick = { bookId, chapter ->
+                            entry.ifResumed { navController.navigate(Routes.bookReader(bookId, chapter)) }
                         },
                         onAddBookClick = {
                             pickBook.launch(arrayOf("application/epub+zip", "application/octet-stream"))
                         }
                     )
                 }
-                composable(Routes.BOOK_READER) { entry ->
+                composable(
+                    Routes.BOOK_READER,
+                    arguments = listOf(navArgument("chapter") { type = NavType.IntType; defaultValue = -1 })
+                ) { entry ->
                     val bookId = entry.arguments?.getString("bookId")?.toLongOrNull() ?: return@composable
+                    val chapter = entry.arguments?.getInt("chapter")?.takeIf { it >= 0 }
                     BookReaderScreen(
-                        viewModel = viewModel(key = "book-$bookId", factory = BookReaderViewModel.factory(bookId)),
+                        viewModel = viewModel(
+                            key = "book-$bookId",
+                            factory = BookReaderViewModel.factory(bookId, chapter)
+                        ),
                         dictionaryViewModel = dictionaryViewModel,
                         readerSettings = readerSettings,
                         onReaderSettingsChange = { scope.launch { prefsRepository.setReaderSettings(it) } },

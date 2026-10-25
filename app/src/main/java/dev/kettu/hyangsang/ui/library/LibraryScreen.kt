@@ -32,8 +32,10 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
+import dev.kettu.hyangsang.data.local.entity.ChapterInfo
 import dev.kettu.hyangsang.data.prefs.LibraryTab
 import dev.kettu.hyangsang.ui.viewmodel.BookSort
+import kotlinx.coroutines.flow.Flow
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +55,11 @@ fun LibraryScreen(
     onBookSortChange: (BookSort) -> Unit,
     coverFile: (Book) -> File?,
     onBookClick: (Long) -> Unit,
-    onBookOptionsClick: (Long) -> Unit,
+    onBookDetailsClick: (Long) -> Unit,
+    onBookReadChange: (Book, Boolean) -> Unit,
+    onUndoBookReadChange: (Book) -> Unit,
+    bookChapters: (Long) -> Flow<List<ChapterInfo>>,
+    onBookChapterClick: (bookId: Long, chapter: Int) -> Unit,
     onAddBookClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,7 +133,12 @@ fun LibraryScreen(
                     onSortChange = onBookSortChange,
                     coverFile = coverFile,
                     onBookClick = onBookClick,
-                    onBookOptionsClick = onBookOptionsClick,
+                    onBookDetailsClick = onBookDetailsClick,
+                    onBookReadChange = onBookReadChange,
+                    onUndoBookReadChange = onUndoBookReadChange,
+                    snackbarHostState = snackbarHostState,
+                    chapters = bookChapters,
+                    onChapterClick = onBookChapterClick,
                     onAddClick = onAddBookClick,
                     modifier = Modifier.fillMaxSize()
                 )
