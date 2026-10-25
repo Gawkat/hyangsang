@@ -86,6 +86,13 @@ android {
             providers.gradleProperty("lexContext").orNull?.let { test.systemProperty("lex.context", it) }
         }
     }
+
+    lint {
+        // Also checks parser and analyzer
+        checkDependencies = true
+        // Issues from before lint ran in CI. Only new ones fail the build.
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 kotlin {

@@ -73,6 +73,16 @@ articles copied from news sites.
 ./gradlew :app:testDebugUnitTest :parser:test :analyzer:test
 ```
 
+CI also runs Android Lint, which checks the `parser` and `analyzer` modules along with the app:
+
+```bash
+./gradlew :app:lintDebug
+```
+
+The report is in `app/build/reports`. Issues that were there before lint ran in CI are listed in
+`app/lint-baseline.xml` and don't fail it. When you fix one, run `./gradlew :app:updateLintBaseline`
+to drop it from the baseline. Don't use it to hide new issues.
+
 The instrumented tests, such as the Room migration tests, need a running emulator or device:
 
 ```bash
