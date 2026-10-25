@@ -24,7 +24,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.unit.em
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.parser.ContentSpan
 import dev.kettu.hyangsang.parser.SpanType
@@ -150,6 +152,7 @@ fun ClickableText(
     style: TextStyle,
     modifier: Modifier = Modifier,
     spans: List<ContentSpan> = emptyList(),
+    onNoteClick: ((String) -> Unit)? = null,
 ) {
     val wordRanges = remember(text) { WordRanges.of(text) }
     val highlight = SpanStyle(
@@ -157,8 +160,13 @@ fun ClickableText(
         color = MaterialTheme.colorScheme.onTertiaryContainer
     )
 
-    val annotatedText = remember(text, spans, selectedRange, highlight) {
-        buildWordText(text, spans, selectedRange, highlight)
+    val noteStyle = SpanStyle(
+        color = MaterialTheme.colorScheme.primary,
+        fontSize = 0.75.em,
+        baselineShift = BaselineShift.Superscript
+    )
+    val annotatedText = remember(text, spans, selectedRange, highlight, noteStyle) {
+        buildWordText(text, spans, selectedRange, highlight, noteStyle)
     }
 
     // Only read from the tap handler, never during composition, so updating it does not
@@ -167,6 +175,7 @@ fun ClickableText(
     // A plain holder: onPlaced runs on every scroll frame, and a snapshot write there is wasted work
     val coordinates = remember { CoordinatesHolder() }
     val currentOnWordClick by rememberUpdatedState(onWordClick)
+    val currentOnNoteClick by rememberUpdatedState(onNoteClick)
     val currentTextId by rememberUpdatedState(textId)
 
     Text(
@@ -175,7 +184,7 @@ fun ClickableText(
         onTextLayout = { textLayout = it },
         modifier = modifier
             .onPlaced { coordinates.value = it }
-            .pointerInput(text) {
+            .pointerInput(text, spans) {
                 detectTapGestures { position ->
                     val layout = textLayout ?: return@detectTapGestures
 
@@ -187,7 +196,16 @@ fun ClickableText(
                         return@detectTapGestures
                     }
 
-                    val index = wordRanges.indexAt(layout.getOffsetForPosition(position))
+                    val offset = layout.getOffsetForPosition(position)
+                    // A footnote marker shows its note rather than looking up the number
+                    val note = spans.firstOrNull { it.type == SpanType.NOTE && offset in it.start until it.end }?.note
+                    val onNote = currentOnNoteClick
+                    if (note != null && onNote != null) {
+                        onNote(note)
+                        return@detectTapGestures
+                    }
+
+                    val index = wordRanges.indexAt(offset)
                     if (index < 0) return@detectTapGestures
 
                     val start = wordRanges.starts[index]
@@ -216,7 +234,8 @@ private fun buildWordText(
     text: String,
     spans: List<ContentSpan>,
     selectedRange: TextRange?,
-    highlight: SpanStyle
+    highlight: SpanStyle,
+    noteStyle: SpanStyle
 ): AnnotatedString = AnnotatedString.Builder(text).apply {
     for (span in spans) {
         val start = span.start.coerceIn(0, text.length)
@@ -225,6 +244,7 @@ private fun buildWordText(
         val spanStyle = when (span.type) {
             SpanType.BOLD -> SpanStyle(fontWeight = FontWeight.Bold)
             SpanType.ITALIC -> SpanStyle(fontStyle = FontStyle.Italic)
+            SpanType.NOTE -> noteStyle
         }
         addStyle(spanStyle, start, end)
     }
@@ -243,7 +263,8 @@ fun ParagraphContent(
     textId: String,
     selectedRange: TextRange?,
     style: TextStyle,
-    onWordClick: (WordSelection, String) -> Unit
+    onWordClick: (WordSelection, String) -> Unit,
+    onNoteClick: ((String) -> Unit)? = null
 ) {
     ClickableText(
         text = textBlock.text,
@@ -252,6 +273,7 @@ fun ParagraphContent(
         selectedRange = selectedRange,
         onWordClick = onWordClick,
         style = style,
+        onNoteClick = onNoteClick,
         modifier = Modifier.fillMaxWidth()
     )
 }

@@ -4,6 +4,8 @@ import dev.kettu.hyangsang.data.local.dao.BookDao
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookChapter
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
+import dev.kettu.hyangsang.data.local.entity.ChapterInfo
+import dev.kettu.hyangsang.parser.epub.EpubParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -126,6 +128,47 @@ class BookRepositoryTest {
         )
     }
 
+    @Test
+    fun parsesABookAgainForANewerParser() = runBlocking {
+        repository.commit(prepare(epub()) as BookImport.Ready, "")
+        val old = dao.books.value.single()
+        // As if imported by an older parser, reading the second chapter
+        dao.updateBook(old.copy(parserVersion = 1, chapterIndex = 1, blockIndex = 0, totalChars = 1))
+        dao.chapters.replaceAll { it.copy(title = "옛 제목") }
+
+        assertTrue(repository.reparse(dao.books.value.single()))
+        val book = dao.books.value.single()
+        assertEquals(EpubParser.VERSION, book.parserVersion)
+        assertEquals(1, book.chapterIndex)
+        assertEquals(17, book.totalChars)
+        assertEquals(listOf("첫째 장", "둘째 장"), dao.chapters.map { it.title })
+    }
+
+    @Test
+    fun keepsABookThatCanNoLongerBeParsed() = runBlocking {
+        repository.commit(prepare(epub()) as BookImport.Ready, "")
+        val book = dao.books.value.single()
+        dao.updateBook(book.copy(parserVersion = 1))
+        File(booksDir, "${book.folder}/source.epub").writeText("damaged")
+
+        assertFalse(repository.reparse(dao.books.value.single()))
+        assertEquals(2, dao.chapters.size)
+        // Not tried again until the parser changes again
+        assertEquals(EpubParser.VERSION, dao.books.value.single().parserVersion)
+    }
+
+    @Test
+    fun savesTheReadingPosition() = runBlocking {
+        val id = repository.commit(prepare(epub()) as BookImport.Ready, "")!!
+        time += 1_000
+        repository.savePosition(id, chapterIndex = 1, blockIndex = 0, progressChars = 8)
+        val book = dao.books.value.single()
+        assertEquals(1, book.chapterIndex)
+        assertEquals(8, book.progressChars)
+        assertEquals(time, book.lastReadDate)
+        assertEquals(8f / 17, book.progress)
+    }
+
     private fun epub(title: String = "작은 책", extra: Map<String, String> = emptyMap()): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
@@ -164,6 +207,38 @@ private class FakeBookDao : BookDao {
     }
 
     override fun getBook(id: Long): Flow<Book?> = books.map { list -> list.firstOrNull { it.id == id } }
+
+    override suspend fun getChapter(bookId: Long, index: Int): BookChapter? =
+        chapters.firstOrNull { it.bookId == bookId && it.chapterIndex == index }
+
+    override fun getChapterInfos(bookId: Long): Flow<List<ChapterInfo>> = books.map {
+        chapters.filter { it.bookId == bookId }.map { ChapterInfo(it.chapterIndex, it.title, it.charsBefore, it.charCount) }
+    }
+
+    override suspend fun updatePosition(
+        id: Long,
+        chapterIndex: Int,
+        blockIndex: Int,
+        progressChars: Int,
+        lastReadDate: Long
+    ) {
+        books.value = books.value.map {
+            if (it.id == id) it.copy(
+                chapterIndex = chapterIndex,
+                blockIndex = blockIndex,
+                progressChars = progressChars,
+                lastReadDate = lastReadDate
+            ) else it
+        }
+    }
+
+    override suspend fun updateBook(book: Book) {
+        books.value = books.value.map { if (it.id == book.id) book else it }
+    }
+
+    override suspend fun deleteChapters(bookId: Long) {
+        chapters.removeAll { it.bookId == bookId }
+    }
 
     override suspend fun findBySource(sha256: String): Long? =
         books.value.firstOrNull { it.sourceSha256 == sha256 }?.id

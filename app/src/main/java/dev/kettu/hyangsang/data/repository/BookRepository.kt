@@ -5,6 +5,7 @@ import dev.kettu.hyangsang.data.local.dao.BookDao
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookChapter
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
+import dev.kettu.hyangsang.data.local.entity.ChapterInfo
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.parser.epub.EpubBook
 import dev.kettu.hyangsang.parser.epub.EpubFailure
@@ -113,20 +114,7 @@ class BookRepository(
             val dir = File(booksDir, ready.folder)
             if (!File(dir, SOURCE_FILE).exists()) return@withContext null
 
-            var charsBefore = 0
-            val chapters = ready.book.chapters.mapIndexed { index, chapter ->
-                val chars = chapter.blocks.sumOf { it.charCount() }
-                BookChapter(
-                    bookId = 0,
-                    chapterIndex = index,
-                    title = chapter.title,
-                    charsBefore = charsBefore,
-                    charCount = chars,
-                    wordCount = chapter.blocks.sumOf { it.wordCount() },
-                    content = chapter.blocks
-                ).also { charsBefore += chars }
-            }
-            val textBytes = chapters.sumOf { converter.fromContentBlocks(it.content)!!.toByteArray().size.toLong() }
+            val chapters = chapters(ready.book)
             val book = Book(
                 title = ready.book.title?.takeIf { it.isNotBlank() } ?: fallbackTitle,
                 author = ready.book.author?.takeIf { it.isNotBlank() },
@@ -137,13 +125,57 @@ class BookRepository(
                 sourceSha256 = ready.sha256,
                 addedDate = now(),
                 chapterCount = chapters.size,
-                totalChars = charsBefore,
+                totalChars = chapters.sumOf { it.charCount },
                 wordCount = chapters.sumOf { it.wordCount },
-                sizeBytes = dir.walkBottomUp().filter { it.isFile }.sumOf { it.length() } + textBytes,
+                sizeBytes = sizeOf(dir, chapters),
                 parserVersion = EpubParser.VERSION
             )
             bookDao.insertBookWithChapters(book, chapters)
         }
+
+    suspend fun getChapter(bookId: Long, index: Int): BookChapter? = bookDao.getChapter(bookId, index)
+
+    fun getChapterInfos(bookId: Long): Flow<List<ChapterInfo>> = bookDao.getChapterInfos(bookId)
+
+    /** Stores where the reader is: a block of a chapter, [progressChars] into the book. */
+    suspend fun savePosition(bookId: Long, chapterIndex: Int, blockIndex: Int, progressChars: Int) =
+        bookDao.updatePosition(bookId, chapterIndex, blockIndex, progressChars, now())
+
+    /**
+     * Parses a book again from its original file, for a newer [EpubParser.VERSION]. The reader
+     * stays at the same chapter, as far as the book still has it. Returns false if the book
+     * can't be parsed any more, and keeps its content as it was.
+     */
+    suspend fun reparse(book: Book): Boolean = withContext(Dispatchers.IO) {
+        val dir = File(booksDir, book.folder)
+        val source = File(dir, SOURCE_FILE)
+        val newImages = File(dir, "$IMAGE_DIR-new")
+        newImages.deleteRecursively()
+        val parsed = (parser.parse(source, newImages) as? EpubResult.Success)?.book
+        if (!source.exists() || parsed == null) {
+            newImages.deleteRecursively()
+            // Not tried again until the parser changes again
+            bookDao.updateBook(book.copy(parserVersion = EpubParser.VERSION))
+            return@withContext false
+        }
+        val chapters = chapters(parsed)
+        val chapterIndex = book.chapterIndex.coerceAtMost(chapters.lastIndex)
+        val updated = book.copy(
+            coverFile = parsed.cover,
+            chapterIndex = chapterIndex,
+            blockIndex = if (chapterIndex == book.chapterIndex) book.blockIndex else 0,
+            progressChars = book.progressChars.coerceAtMost(chapters.sumOf { it.charCount }),
+            chapterCount = chapters.size,
+            totalChars = chapters.sumOf { it.charCount },
+            wordCount = chapters.sumOf { it.wordCount },
+            parserVersion = EpubParser.VERSION
+        )
+        val images = File(dir, IMAGE_DIR)
+        images.deleteRecursively()
+        newImages.renameTo(images)
+        bookDao.replaceChapters(updated.copy(sizeBytes = sizeOf(dir, chapters)), chapters)
+        true
+    }
 
     suspend fun discard(ready: BookImport.Ready) = withContext(Dispatchers.IO) {
         File(booksDir, ready.folder).deleteRecursively()
@@ -171,6 +203,27 @@ class BookRepository(
             ?.forEach { it.deleteRecursively() }
         Unit
     }
+
+    private fun chapters(book: EpubBook): List<BookChapter> {
+        var charsBefore = 0
+        return book.chapters.mapIndexed { index, chapter ->
+            val chars = chapter.blocks.sumOf { it.charCount() }
+            BookChapter(
+                bookId = 0,
+                chapterIndex = index,
+                title = chapter.title,
+                charsBefore = charsBefore,
+                charCount = chars,
+                wordCount = chapter.blocks.sumOf { it.wordCount() },
+                content = chapter.blocks
+            ).also { charsBefore += chars }
+        }
+    }
+
+    // The book's files and its text in the database
+    private fun sizeOf(dir: File, chapters: List<BookChapter>): Long =
+        dir.walkBottomUp().filter { it.isFile }.sumOf { it.length() } +
+            chapters.sumOf { converter.fromContentBlocks(it.content)!!.toByteArray().size.toLong() }
 
     // Returns the file's SHA-256 and size, or null if it's bigger than maxFileBytes
     private fun copy(input: InputStream, target: File): Pair<String, Long>? {
@@ -208,8 +261,8 @@ private fun EpubFailure.toImportFailure(): BookImportFailure = when (this) {
 
 private val WHITESPACE = Regex("\\s+")
 
-// The text a chapter's progress is counted in
-private fun ContentBlock.charCount(): Int = when (this) {
+/** The characters of a block that count towards reading progress. */
+fun ContentBlock.charCount(): Int = when (this) {
     is ContentBlock.Text -> text.length
     is ContentBlock.Heading -> text.length
     is ContentBlock.Footer -> text.length

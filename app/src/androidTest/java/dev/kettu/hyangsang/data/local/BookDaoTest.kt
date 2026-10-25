@@ -78,6 +78,28 @@ class BookDaoTest {
         assertNull(book.author)
     }
 
+    @Test
+    fun readsChaptersAndStoresThePosition() = runBlocking {
+        val id = dao.insertBookWithChapters(book("abc"), listOf(chapter(0, "첫째"), chapter(1, "둘째")))
+        assertEquals(listOf("첫째", "둘째"), dao.getChapterInfos(id).first().map { it.title })
+        assertEquals("둘째", dao.getChapter(id, 1)?.title)
+        assertNull(dao.getChapter(id, 2))
+
+        dao.updatePosition(id, chapterIndex = 1, blockIndex = 3, progressChars = 2, lastReadDate = 42)
+        val book = dao.getBook(id).first()!!
+        assertEquals(listOf(1, 3, 2), listOf(book.chapterIndex, book.blockIndex, book.progressChars))
+        assertEquals(42L, book.lastReadDate)
+    }
+
+    @Test
+    fun replacesChapters() = runBlocking {
+        val id = dao.insertBookWithChapters(book("abc"), listOf(chapter(0, "옛"), chapter(1, "옛")))
+        val book = dao.getBook(id).first()!!
+        dao.replaceChapters(book.copy(chapterCount = 1, parserVersion = 2), listOf(chapter(0, "새")))
+        assertEquals(listOf("새"), dao.getChapterInfos(id).first().map { it.title })
+        assertEquals(2, dao.getBook(id).first()!!.parserVersion)
+    }
+
     private fun book(sha256: String) = Book(
         title = "책",
         author = "작가",

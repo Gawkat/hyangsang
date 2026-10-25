@@ -11,8 +11,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +55,7 @@ fun BookDetailsScreen(
     book: Book,
     coverFile: File?,
     onTitleAndAuthorChange: (title: String, author: String) -> Unit,
+    onReadClick: () -> Unit,
     onDelete: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -94,17 +97,32 @@ fun BookDetailsScreen(
                     coverFile = coverFile,
                     modifier = Modifier.width(112.dp)
                 )
-                if (book.lastReadDate != null) {
-                    Text(
-                        text = stringResource(
-                            R.string.chapter_of_chapters_and_percent,
-                            book.chapterIndex + 1,
-                            book.chapterCount,
-                            percentText(book.progress)
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (book.lastReadDate != null) {
+                        Text(
+                            text = stringResource(
+                                R.string.chapter_of_chapters_and_percent,
+                                book.chapterIndex + 1,
+                                book.chapterCount,
+                                percentText(book.progress)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Button(onClick = onReadClick) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.MenuBook,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = stringResource(
+                                if (book.lastReadDate != null) R.string.continue_reading else R.string.start_reading
+                            ),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                 }
             }
             OutlinedTextField(

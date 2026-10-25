@@ -79,12 +79,16 @@ class BooksViewModel(private val bookRepository: BookRepository) : ViewModel() {
         }
     }
 
-    fun confirmImport(fallbackTitle: String) {
+    /** Adds the book shown for confirmation, and passes its id to [onImported]. */
+    fun confirmImport(fallbackTitle: String, onImported: (Long) -> Unit) {
         val ready = (_importState.value as? BookImportState.Ready)?.import ?: return
         _importState.value = null
         viewModelScope.launch {
-            if (bookRepository.commit(ready, fallbackTitle) == null) {
+            val id = bookRepository.commit(ready, fallbackTitle)
+            if (id == null) {
                 _importState.value = BookImportState.Failed(BookImportFailure.UNREADABLE)
+            } else {
+                onImported(id)
             }
         }
     }

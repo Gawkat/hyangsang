@@ -66,6 +66,14 @@ data class BookChapter(
     val content: List<ContentBlock>
 )
 
+/** A chapter without its content, for the table of contents. */
+data class ChapterInfo(
+    val chapterIndex: Int,
+    val title: String?,
+    val charsBefore: Int,
+    val charCount: Int
+)
+
 /** A book with the title of the chapter it's open at, for the Library. */
 data class BookWithChapter(
     @Embedded val book: Book,

@@ -68,16 +68,17 @@ import dev.kettu.hyangsang.data.prefs.LibraryTab
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
-import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.parser.PlainText
+import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.importing.AddTextScreen
 import dev.kettu.hyangsang.ui.library.BookDetailsScreen
 import dev.kettu.hyangsang.ui.library.ImportBookSheet
-import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
-import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.library.LibraryScreen
 import dev.kettu.hyangsang.ui.library.displayName
+import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
+import dev.kettu.hyangsang.ui.reader.BookReaderScreen
+import dev.kettu.hyangsang.ui.reader.ReaderScreen
 import dev.kettu.hyangsang.ui.settings.LicensesScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
@@ -86,6 +87,7 @@ import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.theme.ThemePalette
 import dev.kettu.hyangsang.ui.viewmodel.ArticleUiState
 import dev.kettu.hyangsang.ui.viewmodel.ArticleViewModel
+import dev.kettu.hyangsang.ui.viewmodel.BookReaderViewModel
 import dev.kettu.hyangsang.ui.viewmodel.BooksViewModel
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
 import dev.kettu.hyangsang.ui.viewmodel.RssFeedViewModel
@@ -244,6 +246,9 @@ private object Routes {
     const val ADD_TEXT = "add_text"
     const val READER = "reader/{articleId}"
     const val BOOK = "book/{bookId}"
+    const val BOOK_READER = "book-reader/{bookId}"
+
+    fun bookReader(bookId: Long) = "book-reader/$bookId"
 
     fun book(bookId: Long) = "book/$bookId"
 
@@ -387,7 +392,11 @@ fun MainApp(
         ImportBookSheet(
             state = state,
             coverFile = booksViewModel::coverFile,
-            onImport = { booksViewModel.confirmImport(untitledBook) },
+            onImport = {
+                booksViewModel.confirmImport(untitledBook) { bookId ->
+                    navController.navigate(Routes.bookReader(bookId))
+                }
+            },
             onOpenExisting = { bookId ->
                 booksViewModel.cancelImport()
                 navController.navigate(Routes.book(bookId))
@@ -527,11 +536,31 @@ fun MainApp(
                         onBookSortChange = booksViewModel::setSort,
                         coverFile = booksViewModel::coverFile,
                         onBookClick = { bookId ->
+                            entry.ifResumed { navController.navigate(Routes.bookReader(bookId)) }
+                        },
+                        onBookOptionsClick = { bookId ->
                             entry.ifResumed { navController.navigate(Routes.book(bookId)) }
                         },
                         onAddBookClick = {
                             pickBook.launch(arrayOf("application/epub+zip", "application/octet-stream"))
                         }
+                    )
+                }
+                composable(Routes.BOOK_READER) { entry ->
+                    val bookId = entry.arguments?.getString("bookId")?.toLongOrNull() ?: return@composable
+                    BookReaderScreen(
+                        viewModel = viewModel(key = "book-$bookId", factory = BookReaderViewModel.factory(bookId)),
+                        dictionaryViewModel = dictionaryViewModel,
+                        readerSettings = readerSettings,
+                        onReaderSettingsChange = { scope.launch { prefsRepository.setReaderSettings(it) } },
+                        currentTheme = currentTheme,
+                        onThemeChange = { scope.launch { prefsRepository.setTheme(it) } },
+                        onMoreTextSettingsClick = {
+                            entry.ifResumed { navController.navigate(Routes.TEXT_LAYOUT) }
+                        },
+                        onDetailsClick = { entry.ifResumed { navController.navigate(Routes.book(bookId)) } },
+                        onBackClick = { entry.ifResumed { navController.popBackStack() } },
+                        collectLookupReports = collectLookupReports
                     )
                 }
                 composable(Routes.BOOK) { entry ->
@@ -543,6 +572,14 @@ fun MainApp(
                             coverFile = booksViewModel.coverFile(current),
                             onTitleAndAuthorChange = { title, author ->
                                 booksViewModel.updateTitleAndAuthor(current.id, title, author)
+                            },
+                            onReadClick = {
+                                entry.ifResumed {
+                                    navController.navigate(Routes.bookReader(current.id)) {
+                                        // From the reader's menu, go back to it rather than open another
+                                        popUpTo(Routes.BOOK_READER) { inclusive = true }
+                                    }
+                                }
                             },
                             onDelete = {
                                 entry.ifResumed {
