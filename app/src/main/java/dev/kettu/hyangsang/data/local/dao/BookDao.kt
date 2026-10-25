@@ -62,7 +62,7 @@ interface BookDao {
         WHERE id = :id
         """
     )
-    suspend fun updatePosition(id: Long, chapterIndex: Int, blockIndex: Int, progressChars: Int, lastReadDate: Long)
+    suspend fun updatePosition(id: Long, chapterIndex: Int, blockIndex: Int, progressChars: Int, lastReadDate: Long?)
 
     @Update
     suspend fun updateBook(book: Book)

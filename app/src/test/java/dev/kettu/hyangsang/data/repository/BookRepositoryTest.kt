@@ -185,6 +185,29 @@ class BookRepositoryTest {
         assertEquals(8f / 17, book.progress)
     }
 
+    @Test
+    fun marksABookAsReadAndUnread() = runBlocking {
+        val id = repository.commit(prepare(epub()) as BookImport.Ready, "")!!
+        time += 1_000
+        repository.setRead(dao.books.value.single(), read = true)
+        val read = dao.books.value.single()
+        assertEquals(1, read.chapterIndex)
+        assertEquals(dao.chapters.last().content.size, read.blockIndex)
+        assertEquals(1f, read.progress)
+        assertEquals(time, read.lastReadDate)
+
+        repository.setRead(read, read = false)
+        val unread = dao.books.value.single()
+        assertEquals(id, unread.id)
+        assertEquals(0, unread.chapterIndex)
+        assertEquals(0, unread.blockIndex)
+        assertEquals(0f, unread.progress)
+        assertNull(unread.lastReadDate)
+
+        repository.restorePosition(read)
+        assertEquals(read, dao.books.value.single())
+    }
+
     private fun epub(title: String = "작은 책", extra: Map<String, String> = emptyMap()): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
@@ -236,7 +259,7 @@ private class FakeBookDao : BookDao {
         chapterIndex: Int,
         blockIndex: Int,
         progressChars: Int,
-        lastReadDate: Long
+        lastReadDate: Long?
     ) {
         books.value = books.value.map {
             if (it.id == id) it.copy(

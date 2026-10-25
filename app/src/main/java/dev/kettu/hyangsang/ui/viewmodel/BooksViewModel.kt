@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.kettu.hyangsang.appContainer
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
+import dev.kettu.hyangsang.data.local.entity.ChapterInfo
 import dev.kettu.hyangsang.data.repository.BookImport
 import dev.kettu.hyangsang.data.repository.BookImportFailure
 import dev.kettu.hyangsang.data.repository.BookRepository
@@ -56,6 +57,16 @@ class BooksViewModel(private val bookRepository: BookRepository) : ViewModel() {
     }
 
     fun getBook(id: Long): Flow<Book?> = bookRepository.getBook(id)
+
+    fun getChapterInfos(bookId: Long): Flow<List<ChapterInfo>> = bookRepository.getChapterInfos(bookId)
+
+    fun setRead(book: Book, read: Boolean) {
+        viewModelScope.launch { bookRepository.setRead(book, read) }
+    }
+
+    fun restorePosition(book: Book) {
+        viewModelScope.launch { bookRepository.restorePosition(book) }
+    }
 
     fun coverFile(book: Book): File? =
         book.coverFile?.let { File(bookRepository.imageDir(book.folder), it) }

@@ -120,6 +120,10 @@
     <string name="import_unreadable_title">파일을 읽을 수 없습니다</string>
     <string name="import_unreadable_body">EPUB 파일이 아니거나 파일이 손상되었습니다.</string>
     <string name="book_details">책 정보</string>
+    <string name="mark_book_read">읽음으로 표시</string>
+    <string name="mark_book_unread">읽지 않음으로 표시</string>
+    <string name="marked_book_read">읽음으로 표시됨</string>
+    <string name="marked_book_unread">읽지 않음으로 표시됨</string>
     <string name="book_title_label">제목</string>
     <string name="book_author_label">저자</string>
     <string name="book_info_chapters">장 수</string>

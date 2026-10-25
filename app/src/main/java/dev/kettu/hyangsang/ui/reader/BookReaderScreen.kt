@@ -464,9 +464,13 @@ private fun NoteSheet(
     }
 }
 
+/**
+ * The book's chapters, the ones before [currentIndex] marked as read. Also opened from the Library,
+ * where a book not started has none current, and a finished one has all of them read.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContentsSheet(
+fun ContentsSheet(
     book: Book,
     chapters: List<ChapterInfo>,
     currentIndex: Int,
