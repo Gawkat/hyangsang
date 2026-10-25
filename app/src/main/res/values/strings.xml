@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">향상</string>
+    <string name="app_name" translatable="false">향상</string>
     <string name="settings_title">Settings</string>
     <string name="back_button">Back</string>
     <string name="general_section">General</string>
@@ -12,8 +12,8 @@
     <string name="theme_system">System default</string>
     <string name="palette_setting">Colour palette</string>
     <string name="palette_hyangsang">Hyangsang</string>
-    <string name="palette_solarized">Solarized</string>
-    <string name="palette_gruvbox">Gruvbox</string>
+    <string name="palette_solarized" translatable="false">Solarized</string>
+    <string name="palette_gruvbox" translatable="false">Gruvbox</string>
     <string name="palette_dynamic">Wallpaper colours</string>
     <string name="version_label">Version %1$s</string>
     <string name="released_label">Released: %1$s</string>
@@ -40,7 +40,7 @@
     <string name="dictionary_attribution_text">This application uses data from the National Institute of Korean Language\'s Korean-English Learners\' Dictionary.\n\nAll dictionary content is owned by its respective copyright holders and is provided under the Creative Commons Attribution-ShareAlike license.</string>
     <string name="view_license_information">View license information</string>
     <string name="about_label">About</string>
-    <string name="app_name_romanized">Hyangsang</string>
+    <string name="app_name_romanized" translatable="false">Hyangsang</string>
     <string name="library_nav">Library</string>
     <string name="library_articles_tab">Articles</string>
     <string name="library_books_tab">Books</string>
@@ -74,7 +74,7 @@
     <string name="chapter_number">Chapter %1$d</string>
     <string name="chapter_number_and_title">Chapter %1$d · %2$s</string>
     <string name="chapter_of_chapters_and_percent">Chapter %1$d of %2$d · %3$s</string>
-    <string name="percent">%1$d%%</string>
+    <string name="percent" translatable="false">%1$d%%</string>
     <string name="all_books_count">All books · %1$d</string>
     <string name="sort_recently_read">Recently read</string>
     <string name="sort_title">Title</string>
@@ -223,7 +223,7 @@
     <string name="built_in_feeds_description">Pick feeds to add. Feeds you already have are checked.</string>
     <string name="new_built_in_feeds_available">New built-in feeds available</string>
     <string name="built_in_feed_new">New</string>
-    <string name="built_in_feeds_checked_count">%1$d/%2$d</string>
+    <string name="built_in_feeds_checked_count" translatable="false">%1$d/%2$d</string>
     <string name="setup_step">%1$d of %2$d</string>
     <string name="setup_welcome_title">Read Korean news, look up any word</string>
     <string name="setup_welcome_description">Tap a word in an article to see it in the built-in dictionary. It works offline.</string>
@@ -323,7 +323,7 @@
     <string name="feeds_turned_off">%1$s turned off · its articles are hidden from Discover</string>
     <string name="text_layout_title">Text &amp; layout</string>
     <string name="text_layout_summary">%1$d sp · %2$s · %3$s spacing</string>
-    <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
+    <string name="text_layout_sample" translatable="false">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
     <string name="more_settings">More settings</string>
     <string name="text_size_label">Text size</string>
     <string name="font_label">Font</string>
@@ -370,7 +370,7 @@
     <string name="report_lookup_note">What\'s wrong? (optional)</string>
     <string name="lookup_report_saved">Lookup saved</string>
     <!-- Built-in feeds -->
-    <string name="default_feed_title">%1$s - %2$s</string>
+    <string name="default_feed_title" translatable="false">%1$s - %2$s</string>
     <string name="source_yonhap_news">Yonhap News</string>
     <string name="source_bbc_korean" translatable="false">BBC News 코리아</string>
     <string name="category_news">News</string>

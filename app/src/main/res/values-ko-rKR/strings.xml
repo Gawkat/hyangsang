@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">향상</string>
     <string name="lookup_title">사전 항목</string>
     <string name="search_placeholder">기사 검색…</string>
     <string name="settings_title">설정</string>
@@ -15,8 +14,6 @@
     <string name="theme_system">시스템 기본값</string>
     <string name="palette_setting">색상 팔레트</string>
     <string name="palette_hyangsang">향상</string>
-    <string name="palette_solarized">Solarized</string>
-    <string name="palette_gruvbox">Gruvbox</string>
     <string name="palette_dynamic">배경화면 색상</string>
     <string name="version_label">버전 %1$s</string>
     <string name="released_label">출시일: %1$s</string>
@@ -40,6 +37,9 @@
     <string name="view_license_information">라이선스 정보 보기</string>
     <string name="about_label">앱 소개</string>
     <string name="dictionary_attribution_label">사전 출처</string>
+    <string name="dictionary_attribution_text">이 앱은 국립국어원 한국어-영어 학습사전의 데이터를 사용합니다.
+
+사전의 모든 내용은 각 저작권자에게 저작권이 있으며, 크리에이티브 커먼즈 저작자표시-동일조건변경허락 라이선스로 제공됩니다.</string>
     <string name="language_data_attribution_label">언어 분석 데이터 출처</string>
     <string name="language_data_attribution_text">
         <![CDATA[이 앱에는 Universal Dependencies의 두 트리뱅크(2.18 릴리스)의 학습 데이터에서 만든 통계가 들어 있습니다.
@@ -53,7 +53,32 @@
         <br><br>
         트리뱅크는 크리에이티브 커먼즈 저작자표시-동일조건변경허락 4.0 라이선스로 배포됩니다. 이 통계도 트리뱅크를 바탕으로 만들었으며, 같은 라이선스로 공유합니다.<br><a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ko">creativecommons.org/licenses/by-sa/4.0</a>]]>
     </string>
-    <string name="app_name_romanized">Hyangsang</string>
+    <string name="palette_attribution_label">색상 팔레트 출처</string>
+    <string name="palette_attribution_text">
+        <![CDATA[Solarized - Copyright (c) 2011 Ethan Schoonover<br><a href="https://ethanschoonover.com/solarized/">ethanschoonover.com/solarized</a>
+        <br><br>
+        Gruvbox - Pavel Pertsev (morhetz)<br><a href="https://github.com/morhetz/gruvbox/">github.com/morhetz/gruvbox</a>
+        <br><br>
+        두 팔레트 모두 MIT 라이선스로 배포됩니다.
+        <br>
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the \"Software\"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        <br><br>
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+        <br><br>
+        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        THE SOFTWARE.]]>
+    </string>
     <string name="library_nav">서재</string>
     <string name="library_articles_tab">기사</string>
     <string name="library_books_tab">책</string>
@@ -86,7 +111,6 @@
     <string name="chapter_number">%1$d장</string>
     <string name="chapter_number_and_title">%1$d장 · %2$s</string>
     <string name="chapter_of_chapters_and_percent">%2$d장 중 %1$d장 · %3$s</string>
-    <string name="percent">%1$d%%</string>
     <string name="all_books_count">전체 책 · %1$d</string>
     <string name="sort_recently_read">최근 읽은 순</string>
     <string name="sort_title">제목순</string>
@@ -228,7 +252,6 @@
     <string name="built_in_feeds_description">추가할 피드를 선택하세요. 이미 있는 피드는 체크되어 있습니다.</string>
     <string name="new_built_in_feeds_available">새 기본 피드가 있습니다</string>
     <string name="built_in_feed_new">새 피드</string>
-    <string name="built_in_feeds_checked_count">%1$d/%2$d</string>
     <string name="setup_step">%1$d/%2$d</string>
     <string name="setup_welcome_title">한국어 뉴스를 읽으며 모르는 단어를 바로 찾아보세요</string>
     <string name="setup_welcome_description">기사에서 단어를 누르면 내장 사전의 뜻이 나옵니다. 인터넷 연결 없이도 됩니다.</string>
@@ -322,7 +345,6 @@
     <string name="feeds_turned_off">%1$s 꺼짐 · 탐색에서 기사가 숨겨집니다</string>
     <string name="text_layout_title">글자 및 레이아웃</string>
     <string name="text_layout_summary">%1$d sp · %2$s · 줄 간격 %3$s</string>
-    <string name="text_layout_sample">이날 코스피는 전장보다 1.2% 오른 채 거래를 마쳤다. 반도체와 자동차 관련 종목이 상승을 이끌었고, 원/달러 환율은 소폭 내렸다.</string>
     <string name="more_settings">설정 더보기</string>
     <string name="text_size_label">글자 크기</string>
     <string name="font_label">글꼴</string>
