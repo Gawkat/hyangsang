@@ -12,12 +12,15 @@ class TestEpub {
     private var metadata = """<dc:title>테스트 책</dc:title><dc:creator>김작가</dc:creator><dc:language>ko</dc:language>"""
     private var spineAttributes = ""
     private var withPackage = true
+    private var guide = ""
 
     fun metadata(xml: String) = apply { metadata = xml }
 
     fun spineAttributes(attributes: String) = apply { spineAttributes = attributes }
 
     fun withoutPackage() = apply { withPackage = false }
+
+    fun guide(references: String) = apply { guide = "<guide>$references</guide>" }
 
     /** Adds a chapter document at OEBPS/[name], in the spine unless [attributes] say otherwise. */
     fun chapter(name: String, body: String, itemref: String = "") = apply {
@@ -81,6 +84,7 @@ class TestEpub {
                     <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">$metadata</metadata>
                     <manifest>${manifest.joinToString("")}</manifest>
                     <spine $spineAttributes>${spine.joinToString("")}</spine>
+                    $guide
                     </package>""".toByteArray()
                 )
             }
