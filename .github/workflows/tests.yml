@@ -23,6 +23,11 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest :parser:test :analyzer:test
 
+      # Also checks parser and analyzer. Issues in app/lint-baseline.xml don't fail it.
+      - name: Run lint
+        if: success() || failure()
+        run: ./gradlew :app:lintDebug
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
@@ -31,3 +36,4 @@ jobs:
           path: |
             app/build/reports/tests/
             parser/build/reports/tests/
+            app/build/reports/lint-results-debug.html
