@@ -69,7 +69,7 @@ class EpubParser(private val limits: EpubLimits = EpubLimits()) {
 
     companion object {
         /** Raise when a change should reach books already imported, which are then parsed again. */
-        const val VERSION = 4
+        const val VERSION = 5
 
         const val IMAGE_PREFIX = "book-image:"
 
@@ -291,7 +291,9 @@ private class ChapterAssembler(
             markers.add(entry)
         }
 
-        val walker = XhtmlWalker(EpubArchive.folderOf(path), images) { href -> linkTarget(path, document, href) }
+        val walker = XhtmlWalker(EpubArchive.folderOf(path), images, styles(path, document)) { href ->
+            linkTarget(path, document, href)
+        }
         val pieces = walker.walk(body)
         val wholeDocumentTitle = entries.firstOrNull { it.fragment == null }?.title
 
@@ -311,6 +313,26 @@ private class ChapterAssembler(
             }
         }
         current!!.blocks.addAll(walker.notes)
+    }
+
+    private val stylesheets = HashMap<String, String?>()
+    private val styles = HashMap<List<String>, Styles>()
+
+    // The document's linked stylesheets and style elements, which books mostly share
+    private fun styles(path: String, document: Document): Styles {
+        val folder = EpubArchive.folderOf(path)
+        val sheets = document.descendants(null).mapNotNull { element ->
+            when {
+                element.localName() == "style" -> element.wholeText()
+                element.localName() == "link" && "stylesheet" in element.attr("rel").lowercase() ->
+                    EpubArchive.resolve(folder, element.attr("href"))
+                        ?.let { sheet -> stylesheets.getOrPut(sheet) { archive.readText(sheet) } }
+
+                else -> null
+            }
+        }
+        if (sheets.isEmpty()) return Styles.EMPTY
+        return styles.getOrPut(sheets) { Styles.parse(sheets.joinToString("\n")) }
     }
 
     private val documents = HashMap<String, Document?>()

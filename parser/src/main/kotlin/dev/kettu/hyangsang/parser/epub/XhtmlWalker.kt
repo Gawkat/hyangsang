@@ -56,11 +56,15 @@ private const val MIN_IMAGE_SIZE = 32
 internal class XhtmlWalker(
     private val folder: String,
     private val images: ImageStore,
+    private val styles: Styles = Styles.EMPTY,
     // Finds the element a link points to, in this document or another one of the book
     private val linkTarget: (href: String) -> Element? = { null }
 ) {
     private val pieces = mutableListOf<Piece>()
     private val pending = mutableListOf<Node>()
+
+    // Notes found by a raised number, to take out of the text with the marked ones
+    private val numberedNotes = mutableSetOf<Element>()
 
     /** The document's footnotes and endnotes, to show after its text */
     val notes = mutableListOf<ContentBlock>()
@@ -77,6 +81,7 @@ internal class XhtmlWalker(
         body.descendants("ruby").forEach { it.replaceWith(TextNode(rubyText(it))) }
         // Before the notes are taken out of the text, so markers can still find them
         markNoteReferences(body)
+        markRaisedNumbers(body)
         extractNotes(body)
     }
 
@@ -104,6 +109,69 @@ internal class XhtmlWalker(
                 ref.replaceWith(Element(NOTE_MARKER_TAG).attr("data-note", note).appendText(label))
             }
         }
+    }
+
+    /**
+     * Turns raised numbers, in sup elements or styled as superscript, into markers of the note
+     * that starts with the same number further on, set in smaller type than the text the number
+     * is in. Some books mark their notes only this way, without links. A raised number without
+     * such a note, such as the 2 of m², stays as it is.
+     */
+    private fun markRaisedNumbers(body: Element) {
+        fun isRaisedNumber(element: Element) =
+            element.localName() !in BLOCK_TAGS && NOTE_MARKER.matches(element.text().trim()) &&
+                styles.isSuperscript(element) && element.descendants(NOTE_MARKER_TAG).isEmpty()
+
+        // A number split into raised elements next to each other, as in <sup>1</sup><sup>7</sup>
+        for (element in body.descendants(null).filter { isRaisedNumber(it) }) {
+            while (true) {
+                val next = element.nextSibling() as? Element ?: break
+                val joined = element.text() + next.text()
+                if (next.localName() != element.localName() || next.className() != element.className() ||
+                    !isRaisedNumber(next) || !NOTE_MARKER.matches(joined.trim())
+                ) {
+                    break
+                }
+                element.text(joined)
+                next.remove()
+            }
+        }
+
+        val elements = body.descendants(null)
+        val raised = elements.filter { element ->
+            isRaisedNumber(element) &&
+                element.parents().none { parent -> parent.types().any { it in NOTE_TYPES || it in NOTE_LIST_TYPES } }
+        }
+        val replaced = mutableSetOf<Element>()
+        for (number in raised) {
+            // A number inside another one, or at the start of a note already found
+            if (number.parents().any { it in replaced || it in numberedNotes }) continue
+            val core = number.text().trim().trim('[', ']', '(', ')')
+            val note = elements.drop(elements.indexOf(number) + 1)
+                .firstOrNull { isNumberedNote(it, core, number) }
+                ?: continue
+            val text = noteText(note) ?: continue
+            numberedNotes.add(note)
+            replaced.add(number)
+            number.replaceWith(Element(NOTE_MARKER_TAG).attr("data-note", text).appendText("[$core]"))
+        }
+    }
+
+    // Whether element is a block that starts with the number and is smaller than the text at marker
+    private fun isNumberedNote(element: Element, number: String, marker: Element): Boolean {
+        if (element.localName() !in NOTE_CONTAINERS || element.hasBlocks() || element in numberedNotes) return false
+        val text = element.text().trim().trimStart('[', '(')
+        // Not the 2 of 2016
+        if (!text.startsWith(number) || text.getOrNull(number.length)?.isDigit() == true) return false
+        val rest = text.substring(number.length).trimStart(')', ']', '.').trim()
+        if (rest.isEmpty()) return false
+        // Sizes set on the blocks around both apply to both, so only the ones below those count
+        val shared = marker.parents().toSet()
+        val size = (listOf(element) + element.parents())
+            .takeWhile { it !in shared }
+            .firstNotNullOfOrNull { styles.value(it, "font-size") }
+            ?.let { relativeSize(it) }
+        return size != null && size < 1f
     }
 
     // The text of the note at target: the element itself, or the block around an anchor
@@ -144,7 +212,7 @@ internal class XhtmlWalker(
                         .forEach { addNote(it) }
                 }
 
-                types.any { it in NOTE_TYPES } -> addNote(element)
+                types.any { it in NOTE_TYPES } || element in numberedNotes -> addNote(element)
                 else -> continue
             }
             removed.add(element)

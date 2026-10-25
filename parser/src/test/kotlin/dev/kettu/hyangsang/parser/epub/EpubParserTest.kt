@@ -199,6 +199,51 @@ class EpubParserTest {
     }
 
     @Test
+    fun pairsRaisedNumbersWithNotesInSmallerType() {
+        val chapter = book(
+            TestEpub()
+                .file(
+                    "OEBPS/style.css",
+                    """/* 주석 */ .chapter .raised { vertical-align: super; font-size: 0.65em }
+                    @media screen { .note { font-size: 0.75em !important; } } .gray { color: #737373 }"""
+                )
+                .chapter(
+                    "one.xhtml",
+                    """<div class="chapter"><p>1.</p>
+                    <p>본문이다.<span class="raised">1</span> 다음 문장.<sup>2</sup> 끝.<sup>1</sup><sup>2</sup></p>
+                    <p class="note gray"><span>1 </span>첫 주석이다.</p>
+                    <p>2 문단은 주석이 아니다.</p>
+                    <p style="font-size: 80%">2) 둘째 주석이다.</p>
+                    <p class="note">12 열둘째 주석이다.</p>
+                    <p>넓이는 3m<sup>2</sup>이다.</p></div>""",
+                    head = """<link rel="stylesheet" type="text/css" href="style.css"/>"""
+                )
+        ).chapters.single()
+        assertEquals(
+            listOf(
+                ContentBlock.Text("1."),
+                ContentBlock.Text(
+                    "본문이다.[1] 다음 문장.[2] 끝.[12]",
+                    listOf(
+                        ContentSpan(5, 8, SpanType.NOTE, "1 첫 주석이다."),
+                        ContentSpan(15, 18, SpanType.NOTE, "2) 둘째 주석이다."),
+                        // Split into two raised elements
+                        ContentSpan(21, 25, SpanType.NOTE, "12 열둘째 주석이다.")
+                    )
+                ),
+                // Not in smaller type, so not a note
+                ContentBlock.Text("2 문단은 주석이 아니다."),
+                // Without a note after it
+                ContentBlock.Text("넓이는 3m2이다."),
+                ContentBlock.Footer("1 첫 주석이다."),
+                ContentBlock.Footer("2) 둘째 주석이다."),
+                ContentBlock.Footer("12 열둘째 주석이다.")
+            ),
+            chapter.blocks
+        )
+    }
+
+    @Test
     fun turnsTableRowsIntoLines() {
         val chapter = book(
             TestEpub().chapter(
