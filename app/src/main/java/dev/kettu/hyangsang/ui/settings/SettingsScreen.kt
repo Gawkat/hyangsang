@@ -144,7 +144,9 @@ fun SettingsScreen(
         ReadingSpeed.ADVANCED to R.string.reading_speed_advanced,
         ReadingSpeed.FLUENT to R.string.reading_speed_fluent
     ).map { (speed, label) ->
-        speed to stringResource(R.string.reading_speed_option, stringResource(label), speed.wordsPerMinute)
+        speed to pluralStringResource(
+            R.plurals.reading_speed_option, speed.wordsPerMinute, stringResource(label), speed.wordsPerMinute
+        )
     }
     val feedSyncOptions = listOf(
         FeedSyncInterval.OFF to stringResource(R.string.background_refresh_off),

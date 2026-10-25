@@ -79,6 +79,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -116,7 +117,7 @@ fun FeedsScreen(
     val newDefaultFeeds by viewModel.newDefaultFeeds.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val refreshingFeedIds by viewModel.refreshingFeedIds.collectAsState()
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val categoryIcon = rememberCategoryIcons()
@@ -167,8 +168,8 @@ fun FeedsScreen(
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             val result = snackbarHostState.showSnackbar(
-                message = context.getString(R.string.feeds_turned_off, name),
-                actionLabel = context.getString(R.string.undo),
+                message = resources.getString(R.string.feeds_turned_off, name),
+                actionLabel = resources.getString(R.string.undo),
                 duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -450,11 +451,11 @@ fun FeedsScreen(
             onAdd = { picked ->
                 viewModel.addDefaultFeeds(picked)
                 builtInFeedsList = null
-                picked.forEach { expandGroupsOf(it.url, context.getString(it.category.label)) }
+                picked.forEach { expandGroupsOf(it.url, resources.getString(it.category.label)) }
                 scope.launch {
                     snackbarHostState.currentSnackbarData?.dismiss()
                     snackbarHostState.showSnackbar(
-                        context.resources.getQuantityString(R.plurals.added_feeds, picked.size, picked.size)
+                        resources.getQuantityString(R.plurals.added_feeds, picked.size, picked.size)
                     )
                 }
             },

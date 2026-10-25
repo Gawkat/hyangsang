@@ -2,8 +2,6 @@
     <string name="app_name" translatable="false">향상</string>
     <string name="settings_title">Settings</string>
     <string name="back_button">Back</string>
-    <string name="general_section">General</string>
-    <string name="language_setting">Language</string>
     <string name="appearance_section">Appearance</string>
     <string name="theme_setting">Theme</string>
     <string name="reader_preferences_section">Reading</string>
@@ -18,9 +16,6 @@
     <string name="version_label">Version %1$s</string>
     <string name="released_label">Released: %1$s</string>
     <string name="discover_nav">Discover</string>
-    <string name="settings_nav">Settings</string>
-    <string name="reader_title">Reader</string>
-    <string name="lookup_title">Dictionary Entry</string>
     <string name="search_placeholder">Search articles…</string>
     <string name="oss_licenses_nav">Open source licenses</string>
     <string name="feeds_title">Feeds</string>
@@ -164,7 +159,10 @@
     <string name="delete">Delete</string>
     <string name="lookup_reports_share_subject">Hyangsang lookup reports</string>
     <string name="reading_speed_setting">Reading speed</string>
-    <string name="reading_speed_option">%1$s · %2$d words a minute</string>
+    <plurals name="reading_speed_option">
+        <item quantity="one">%1$s · %2$d word a minute</item>
+        <item quantity="other">%1$s · %2$d words a minute</item>
+    </plurals>
     <string name="reading_speed_beginner">Beginner</string>
     <string name="reading_speed_intermediate">Intermediate</string>
     <string name="reading_speed_advanced">Advanced</string>

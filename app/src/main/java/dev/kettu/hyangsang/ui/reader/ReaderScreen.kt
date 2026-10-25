@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -174,6 +175,7 @@ fun ReaderContent(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     // A reload with new content drops the selection
     val lookup = rememberWordLookup(listState, onLookupWord, resetKey = contentBlocks)
     var showTextSheet by rememberSaveable { mutableStateOf(false) }
@@ -196,7 +198,7 @@ fun ReaderContent(
             null -> return@LaunchedEffect
         }
         // Launched outside this effect, which clearing the result below restarts
-        scope.launch { snackbarHostState.showSnackbar(context.getString(message)) }
+        scope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
         onRefreshResultShown()
     }
 

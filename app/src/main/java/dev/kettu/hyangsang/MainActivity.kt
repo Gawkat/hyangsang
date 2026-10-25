@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
@@ -308,6 +309,7 @@ fun MainApp(
     val bookSort by booksViewModel.sort.collectAsState()
     val bookImportState by booksViewModel.importState.collectAsState()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val importBook: (Uri) -> Unit = { uri ->
         val resolver = context.contentResolver
         booksViewModel.startImport(
@@ -359,7 +361,7 @@ fun MainApp(
     LaunchedEffect(filterCriteria.selectedCategory, configuration) {
         val selected = filterCriteria.selectedCategory ?: return@LaunchedEffect
         val renamed =
-            DefaultCategory.byLabel(context)[selected]?.let { context.getString(it.label) }
+            DefaultCategory.byLabel(context)[selected]?.let { resources.getString(it.label) }
         if (renamed != null && renamed != selected) articleViewModel.setCategory(renamed)
     }
 
@@ -686,6 +688,7 @@ fun MainApp(
                 }
                 composable(Routes.SETTINGS) { entry ->
                     val context = LocalContext.current
+                    val resources = LocalResources.current
                     val lookupReportCount by lookupReportRepository.reportCount.collectAsState(initial = 0)
                     SettingsScreen(
                         currentTheme = currentTheme,
@@ -724,7 +727,7 @@ fun MainApp(
                                 val reports = lookupReportRepository.export() ?: return@launch
                                 val send = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.lookup_reports_share_subject))
+                                    putExtra(Intent.EXTRA_SUBJECT, resources.getString(R.string.lookup_reports_share_subject))
                                     putExtra(Intent.EXTRA_TEXT, reports)
                                 }
                                 context.startActivity(Intent.createChooser(send, null))
