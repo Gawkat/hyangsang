@@ -29,6 +29,7 @@ class UserPreferencesRepository(private val context: Context) {
         val READER_FONT_WEIGHT = stringPreferencesKey("reader_font_weight")
         val READER_LINE_SPACING = floatPreferencesKey("reader_line_spacing")
         val READER_MARGIN = stringPreferencesKey("reader_margin")
+        val READING_SPEED = stringPreferencesKey("reading_speed")
         val SHOW_UNREAD_COUNTS = booleanPreferencesKey("show_unread_counts")
         val CONTENT_RETENTION = stringPreferencesKey("content_retention")
         val FEED_SYNC_INTERVAL = stringPreferencesKey("feed_sync_interval")
@@ -59,6 +60,14 @@ class UserPreferencesRepository(private val context: Context) {
             margin = enumOrDefault(preferences[Keys.READER_MARGIN], ReaderMargin.NORMAL)
         )
     }.distinctUntilChanged()
+
+    val readingSpeedFlow: Flow<ReadingSpeed> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.READING_SPEED], ReadingSpeed.DEFAULT)
+    }.distinctUntilChanged()
+
+    suspend fun setReadingSpeed(speed: ReadingSpeed) {
+        context.dataStore.edit { it[Keys.READING_SPEED] = speed.name }
+    }
 
     // Off by default: large feeds produce far more articles than anyone reads
     val showUnreadCountsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

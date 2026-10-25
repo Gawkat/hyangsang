@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Book
+import dev.kettu.hyangsang.ui.components.readingTimeText
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlinx.coroutines.delay
 import java.io.File

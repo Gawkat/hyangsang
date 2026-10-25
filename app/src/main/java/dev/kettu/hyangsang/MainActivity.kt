@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,9 +69,11 @@ import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
 import dev.kettu.hyangsang.data.prefs.LibraryTab
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.data.prefs.ReadingSpeed
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.parser.PlainText
+import dev.kettu.hyangsang.ui.components.LocalReadingSpeed
 import dev.kettu.hyangsang.ui.discover.DiscoverScreen
 import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.importing.AddTextScreen
@@ -118,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             val paletteKey by prefsRepository.paletteFlow.collectAsState(initial = "hyangsang")
             val palette = ThemePalette.fromKey(paletteKey)
             val readerSettings by prefsRepository.readerSettingsFlow.collectAsState(initial = ReaderSettings())
+            val readingSpeed by prefsRepository.readingSpeedFlow.collectAsState(initial = ReadingSpeed.DEFAULT)
             val showUnreadCounts by prefsRepository.showUnreadCountsFlow.collectAsState(initial = false)
             val feedSyncInterval by prefsRepository.feedSyncIntervalFlow
                 .collectAsState(initial = FeedSyncInterval.DEFAULT)
@@ -168,36 +172,39 @@ class MainActivity : AppCompatActivity() {
             }
 
             HyangsangTheme(darkTheme = darkTheme, palette = palette) {
-                when {
-                    inSetup || setupPending == true -> SetupScreen(
-                        dictionaryViewModel = dictionaryViewModel,
-                        onAddFeeds = feedViewModel::finishSetup,
-                        onFinish = { inSetup = false }
-                    )
+                CompositionLocalProvider(LocalReadingSpeed provides readingSpeed) {
+                    when {
+                        inSetup || setupPending == true -> SetupScreen(
+                            dictionaryViewModel = dictionaryViewModel,
+                            onAddFeeds = feedViewModel::finishSetup,
+                            onFinish = { inSetup = false }
+                        )
 
-                    setupPending == null -> Surface(modifier = Modifier.fillMaxSize()) {}
+                        setupPending == null -> Surface(modifier = Modifier.fillMaxSize()) {}
 
-                    else -> MainApp(
-                        sharedText = sharedText.collectAsState().value,
-                        onSharedTextHandled = { sharedText.value = null },
-                        sharedBook = sharedBook.collectAsState().value,
-                        onSharedBookHandled = { sharedBook.value = null },
-                        booksViewModel = booksViewModel,
-                        prefsRepository = prefsRepository,
-                        lookupReportRepository = app.container.lookupReportRepository,
-                        articleViewModel = articleViewModel,
-                        dictionaryViewModel = dictionaryViewModel,
-                        vocabularyViewModel = vocabularyViewModel,
-                        rssFeedViewModel = feedViewModel,
-                        currentTheme = theme,
-                        currentPalette = palette,
-                        readerSettings = readerSettings,
-                        showUnreadCounts = showUnreadCounts,
-                        feedSyncInterval = feedSyncInterval,
-                        articleRetention = articleRetention,
-                        contentRetention = contentRetention,
-                        feedGrouping = feedGrouping
-                    )
+                        else -> MainApp(
+                            sharedText = sharedText.collectAsState().value,
+                            onSharedTextHandled = { sharedText.value = null },
+                            sharedBook = sharedBook.collectAsState().value,
+                            onSharedBookHandled = { sharedBook.value = null },
+                            booksViewModel = booksViewModel,
+                            prefsRepository = prefsRepository,
+                            lookupReportRepository = app.container.lookupReportRepository,
+                            articleViewModel = articleViewModel,
+                            dictionaryViewModel = dictionaryViewModel,
+                            vocabularyViewModel = vocabularyViewModel,
+                            rssFeedViewModel = feedViewModel,
+                            currentTheme = theme,
+                            currentPalette = palette,
+                            readerSettings = readerSettings,
+                            readingSpeed = readingSpeed,
+                            showUnreadCounts = showUnreadCounts,
+                            feedSyncInterval = feedSyncInterval,
+                            articleRetention = articleRetention,
+                            contentRetention = contentRetention,
+                            feedGrouping = feedGrouping
+                        )
+                    }
                 }
             }
         }
@@ -281,6 +288,7 @@ fun MainApp(
     currentTheme: String,
     currentPalette: ThemePalette,
     readerSettings: ReaderSettings,
+    readingSpeed: ReadingSpeed,
     showUnreadCounts: Boolean,
     feedSyncInterval: FeedSyncInterval,
     articleRetention: ArticleRetention,
@@ -688,6 +696,8 @@ fun MainApp(
                         onTextLayoutClick = {
                             entry.ifResumed { navController.navigate(Routes.TEXT_LAYOUT) }
                         },
+                        readingSpeed = readingSpeed,
+                        onReadingSpeedChange = { scope.launch { prefsRepository.setReadingSpeed(it) } },
                         showUnreadCounts = showUnreadCounts,
                         onShowUnreadCountsChange = {
                             scope.launch { prefsRepository.setShowUnreadCounts(it) }

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.repository.BookImport
 import dev.kettu.hyangsang.data.repository.BookImportFailure
+import dev.kettu.hyangsang.ui.components.readingTimeText
 import dev.kettu.hyangsang.ui.viewmodel.BookImportState
 import java.io.File
 

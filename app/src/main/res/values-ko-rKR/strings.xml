@@ -171,6 +171,12 @@
     </plurals>
     <string name="delete">삭제</string>
     <string name="lookup_reports_share_subject">향상 사전 결과 신고</string>
+    <string name="reading_speed_setting">읽기 속도</string>
+    <string name="reading_speed_option">%1$s · 분당 %2$d단어</string>
+    <string name="reading_speed_beginner">초급</string>
+    <string name="reading_speed_intermediate">중급</string>
+    <string name="reading_speed_advanced">고급</string>
+    <string name="reading_speed_fluent">유창</string>
     <string name="background_refresh_setting">백그라운드 새로고침</string>
     <string name="background_refresh_off">사용 안 함</string>
     <string name="background_refresh_6_hours">6시간마다</string>
