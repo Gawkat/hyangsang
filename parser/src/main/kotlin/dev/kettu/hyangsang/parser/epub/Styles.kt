@@ -3,7 +3,7 @@ package dev.kettu.hyangsang.parser.epub
 import org.jsoup.nodes.Element
 
 // The only properties the parser reads
-private val PROPERTIES = setOf("font-size", "vertical-align")
+private val PROPERTIES = setOf("font-size", "font-style", "font-weight", "vertical-align")
 
 private val COMBINATOR = Regex("[\\s>+~]+")
 private val CLASS = Regex("\\.([\\w-]+)")
@@ -21,8 +21,8 @@ private val SIZE_KEYWORDS = mapOf(
 )
 
 /**
- * The little of a book's CSS the parser uses, since some books mark their footnotes only with
- * styles: raised numbers and notes in smaller type. A rule applies to the elements with all the
+ * The little of a book's CSS the parser uses, since some books mark italics, bold and footnotes
+ * only with styles, such as raised numbers and notes in smaller type. A rule applies to the elements with all the
  * classes in the last part of its selector, whatever comes before that part.
  */
 internal class Styles private constructor(private val rules: Map<String, List<Rule>>) {
@@ -31,6 +31,14 @@ internal class Styles private constructor(private val rules: Map<String, List<Ru
     /** Whether [element] is set above the line, as footnote markers are */
     fun isSuperscript(element: Element): Boolean =
         element.localName() == "sup" || value(element, "vertical-align") == "super"
+
+    /** Whether [element]'s own styles set it in italics */
+    fun isItalic(element: Element): Boolean = value(element, "font-style").let { it == "italic" || it == "oblique" }
+
+    /** Whether [element]'s own styles set it in bold */
+    fun isBold(element: Element): Boolean = value(element, "font-weight").let { weight ->
+        weight == "bold" || weight == "bolder" || (weight?.toIntOrNull() ?: 0) >= 600
+    }
 
     /** The value [element]'s own style or classes give [property], with the last rule winning */
     fun value(element: Element, property: String): String? {
