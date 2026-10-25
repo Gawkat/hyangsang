@@ -69,7 +69,7 @@ class EpubParser(private val limits: EpubLimits = EpubLimits()) {
 
     companion object {
         /** Raise when a change should reach books already imported, which are then parsed again. */
-        const val VERSION = 3
+        const val VERSION = 4
 
         const val IMAGE_PREFIX = "book-image:"
 
@@ -464,4 +464,5 @@ private fun ContentBlock.length(): Int = when (this) {
     is ContentBlock.Image -> caption?.length ?: 0
     is ContentBlock.Dateline -> text.length
     is ContentBlock.Footer -> text.length
+    ContentBlock.Divider -> 0
 }

@@ -302,6 +302,7 @@ fun ContentBlock.charCount(): Int = when (this) {
     is ContentBlock.Footer -> text.length
     is ContentBlock.Dateline -> text.length
     is ContentBlock.Image -> 0
+    ContentBlock.Divider -> 0
 }
 
 private fun ContentBlock.wordCount(): Int {

@@ -36,6 +36,10 @@ sealed class ContentBlock {
     data class Footer(
         val text: String
     ) : ContentBlock()
+
+    // A break between sections, from <hr>, shown as a line
+    @Serializable
+    data object Divider : ContentBlock()
 }
 
 @Serializable
