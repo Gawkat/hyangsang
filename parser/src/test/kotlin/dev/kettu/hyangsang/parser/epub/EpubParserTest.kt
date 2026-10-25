@@ -1,6 +1,8 @@
 package dev.kettu.hyangsang.parser.epub
 
 import dev.kettu.hyangsang.parser.ContentBlock
+import dev.kettu.hyangsang.parser.ContentSpan
+import dev.kettu.hyangsang.parser.SpanType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -145,7 +147,7 @@ class EpubParserTest {
         ).chapters.single()
         assertEquals(
             listOf(
-                ContentBlock.Text("본문[1] 계속."),
+                ContentBlock.Text("본문[1] 계속.", listOf(ContentSpan(2, 5, SpanType.NOTE, "1. 주석 내용."))),
                 ContentBlock.Text("다음 문단."),
                 ContentBlock.Footer("1. 주석 내용."),
                 ContentBlock.Footer("첫 미주."),
@@ -153,6 +155,20 @@ class EpubParserTest {
             ),
             chapter.blocks
         )
+    }
+
+    @Test
+    fun findsNotesInOtherDocuments() {
+        val chapter = book(
+            TestEpub()
+                .nav("one.xhtml" to "본문", "notes.xhtml" to "주석")
+                .chapter("one.xhtml", """<p>옛말<sup><a href="notes.xhtml#fn1">1)</a></sup>이 나온다. 2024년<a href="#x">3</a>.</p>""")
+                .chapter("notes.xhtml", """<p><a id="fn1"></a>1) 옛날에 쓰던 말.</p>""")
+        ).chapters.first()
+        val text = chapter.blocks.single() as ContentBlock.Text
+        assertEquals("옛말[1]이 나온다. 2024년[3].", text.text)
+        // A marker whose target can't be found stays plain text
+        assertEquals(listOf(ContentSpan(2, 5, SpanType.NOTE, "1) 옛날에 쓰던 말.")), text.spans)
     }
 
     @Test

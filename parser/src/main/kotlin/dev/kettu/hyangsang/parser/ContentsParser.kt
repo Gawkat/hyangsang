@@ -80,7 +80,11 @@ private fun Element.dimensionAttr(name: String): Int? =
 private fun Element.isTrackingPixel(): Boolean =
     attr("width").trim() in setOf("0", "1") || attr("height").trim() in setOf("0", "1")
 
-fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
+/**
+ * The element's text with its bold and italic spans. [noteFor] gives the note an element marks,
+ * if it's a footnote marker, which then becomes a NOTE span.
+ */
+fun Element.extractTextAndSpans(noteFor: (Element) -> String? = { null }): Pair<String, List<ContentSpan>> {
     val sb = StringBuilder()
     val spans = mutableListOf<ContentSpan>()
 
@@ -100,9 +104,11 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
 
             is Element -> {
                 val start = sb.length
-                val type = when (node.tagName()) {
-                    "b", "strong" -> SpanType.BOLD
-                    "i", "em" -> SpanType.ITALIC
+                val note = noteFor(node)
+                val type = when {
+                    note != null -> SpanType.NOTE
+                    node.tagName() == "b" || node.tagName() == "strong" -> SpanType.BOLD
+                    node.tagName() == "i" || node.tagName() == "em" -> SpanType.ITALIC
                     else -> null
                 }
                 for (child in node.childNodes()) {
@@ -111,7 +117,7 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
                 if (type != null) {
                     val end = sb.length
                     if (end > start) {
-                        spans.add(ContentSpan(start, end, type))
+                        spans.add(ContentSpan(start, end, type, note))
                     }
                 }
             }
@@ -129,4 +135,4 @@ fun Element.extractTextAndSpans(): Pair<String, List<ContentSpan>> {
         val end = (it.end - leading).coerceIn(0, text.length)
         if (end > start) it.copy(start = start, end = end) else null
     }
-}
+}

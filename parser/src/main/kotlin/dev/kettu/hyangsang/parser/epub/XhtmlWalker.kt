@@ -33,6 +33,19 @@ private val NOTEREF_TYPES = setOf("noteref", "doc-noteref")
 
 private val HANGUL = Regex("[가-힣ㄱ-ㅎㅏ-ㅣ]")
 
+// A link's text that looks like a footnote marker, such as 1, [2], 3), * or †
+private val NOTE_MARKER = Regex("""^[\[(]?[0-9*†‡]{1,3}[)\]]?$""")
+
+// Note text beyond this is cut, since the sheet that shows it isn't meant for whole pages
+private const val MAX_NOTE_LENGTH = 2_000
+
+// An element with less text than this, such as an empty anchor, is only where its note starts
+private const val MIN_NOTE_ELEMENT_TEXT = 8
+
+private val NOTE_CONTAINERS = setOf("aside", "dd", "div", "li", "p", "section", "td")
+
+internal const val NOTE_MARKER_TAG = "hyangsang-noteref"
+
 // Images this small are usually characters missing from the font, drawn inline in the text
 private const val MIN_IMAGE_SIZE = 32
 
@@ -40,7 +53,12 @@ private const val MIN_IMAGE_SIZE = 32
  * Turns the body of one XHTML document of a book into content blocks. Text that sits directly
  * in containers, as it often does in books, becomes paragraphs of its own.
  */
-internal class XhtmlWalker(private val folder: String, private val images: ImageStore) {
+internal class XhtmlWalker(
+    private val folder: String,
+    private val images: ImageStore,
+    // Finds the element a link points to, in this document or another one of the book
+    private val linkTarget: (href: String) -> Element? = { null }
+) {
     private val pieces = mutableListOf<Piece>()
     private val pending = mutableListOf<Node>()
 
@@ -57,11 +75,45 @@ internal class XhtmlWalker(private val folder: String, private val images: Image
     private fun prepare(body: Element) {
         body.descendants(null).filter { it.localName() in SKIPPED_TAGS }.forEach { it.remove() }
         body.descendants("ruby").forEach { it.replaceWith(TextNode(rubyText(it))) }
+        // Before the notes are taken out of the text, so markers can still find them
+        markNoteReferences(body)
         extractNotes(body)
-        body.descendants(null).filter { it.types().any { type -> type in NOTEREF_TYPES } }.forEach { ref ->
-            val text = ref.text().trim()
-            ref.replaceWith(TextNode(if (text.isEmpty() || text.startsWith("[")) text else "[$text]"))
+    }
+
+    /**
+     * Replaces footnote markers with marker elements that carry their note's text, which become
+     * NOTE spans. Markers are links marked as note references, or short numbered links.
+     */
+    private fun markNoteReferences(body: Element) {
+        val refs = body.descendants(null).filter { element ->
+            val text = element.text().trim()
+            val isRef = element.types().any { it in NOTEREF_TYPES } ||
+                (element.localName() == "a" && '#' in element.attr("href") && NOTE_MARKER.matches(text))
+            // Links back from a note to its marker aren't markers themselves
+            isRef && element.parents().none { parent -> parent.types().any { it in NOTE_TYPES || it in NOTE_LIST_TYPES } }
         }
+        for (ref in refs) {
+            // One style of marker, in brackets that keep it apart from the word it follows
+            val core = ref.text().trim().trim('[', ']', '(', ')')
+            val label = if (core.isEmpty()) "" else "[$core]"
+            val href = ref.attr("href").ifEmpty { ref.descendants("a").firstOrNull()?.attr("href").orEmpty() }
+            val note = linkTarget(href)?.let { noteText(it) }
+            if (note == null || label.isEmpty()) {
+                ref.replaceWith(TextNode(label))
+            } else {
+                ref.replaceWith(Element(NOTE_MARKER_TAG).attr("data-note", note).appendText(label))
+            }
+        }
+    }
+
+    // The text of the note at target: the element itself, or the block around an anchor
+    private fun noteText(target: Element): String? {
+        var element = target
+        while (element.text().trim().length < MIN_NOTE_ELEMENT_TEXT) {
+            element = element.parents().firstOrNull { it.localName() in NOTE_CONTAINERS } ?: break
+        }
+        val text = element.text().replace("↩", "").trim()
+        return text.takeIf { it.isNotEmpty() }?.take(MAX_NOTE_LENGTH)
     }
 
     /**
@@ -151,7 +203,7 @@ internal class XhtmlWalker(private val folder: String, private val images: Image
     }
 
     private fun paragraph(element: Element) {
-        val (text, spans) = element.extractTextAndSpans()
+        val (text, spans) = element.extractTextAndSpans(noteFor = ::markedNote)
         if (text.isNotBlank()) add(ContentBlock.Text(text, spans))
     }
 
@@ -208,6 +260,9 @@ internal class XhtmlWalker(private val folder: String, private val images: Image
     private fun add(block: ContentBlock) {
         pieces.add(Piece.Block(block))
     }
+
+    private fun markedNote(element: Element): String? =
+        if (element.tagName() == NOTE_MARKER_TAG) element.attr("data-note") else null
 
     private fun Element.hasBlocks(): Boolean = descendants(null).any { it.localName() in BLOCK_TAGS }
 
