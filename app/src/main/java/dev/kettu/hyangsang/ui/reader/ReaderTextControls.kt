@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import dev.kettu.hyangsang.R
+import dev.kettu.hyangsang.data.prefs.BookParagraphs
 import dev.kettu.hyangsang.data.prefs.ReaderFont
 import dev.kettu.hyangsang.data.prefs.ReaderFontWeight
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
@@ -118,6 +119,21 @@ fun FontControl(font: ReaderFont, onFontChange: (ReaderFont) -> Unit) {
             selected = font,
             onSelect = onFontChange,
             labelStyle = { MaterialTheme.typography.labelLarge.copy(fontFamily = it.fontFamily()) }
+        )
+    }
+}
+
+@Composable
+fun BookParagraphsControl(paragraphs: BookParagraphs, onParagraphsChange: (BookParagraphs) -> Unit) {
+    Column {
+        ControlLabel(stringResource(R.string.book_paragraphs_label))
+        ChoiceRow(
+            options = listOf(
+                BookParagraphs.INDENTED to stringResource(R.string.paragraphs_indented),
+                BookParagraphs.SPACED to stringResource(R.string.paragraphs_spaced)
+            ),
+            selected = paragraphs,
+            onSelect = onParagraphsChange
         )
     }
 }

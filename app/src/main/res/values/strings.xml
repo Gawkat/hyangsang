@@ -340,6 +340,9 @@
     <string name="margin_narrow">Narrow</string>
     <string name="margin_normal">Normal</string>
     <string name="margin_wide">Wide</string>
+    <string name="book_paragraphs_label">Book paragraphs</string>
+    <string name="paragraphs_indented">Indented</string>
+    <string name="paragraphs_spaced">Spaced</string>
     <string name="theme_auto">Auto</string>
     <string name="reset_defaults">Reset to defaults</string>
     <string name="reading_time_and_words">~%1$s · %2$s</string>

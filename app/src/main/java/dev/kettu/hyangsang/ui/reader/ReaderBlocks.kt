@@ -33,10 +33,13 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import dev.kettu.hyangsang.Constants
 import dev.kettu.hyangsang.data.local.dao.DictionaryWithSenses
+import dev.kettu.hyangsang.data.prefs.BookParagraphs
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.ui.settings.openInBrowser
@@ -53,15 +56,27 @@ data class ReaderLayout(
     val bodyStyle: TextStyle,
     val fontFamily: FontFamily,
     val margin: Dp,
-    val paragraphSpacing: Dp
-)
+    val paragraphSpacing: Dp,
+    // Paragraphs are indented with no space between them, as in print, or spaced apart
+    val indented: Boolean = false
+) {
+    val paragraphStyle: TextStyle =
+        if (indented) bodyStyle.copy(textIndent = TextIndent(firstLine = 1.em)) else bodyStyle
 
+    val paragraphGap: Dp = if (indented) 0.dp else paragraphSpacing
+
+    // A blank line, with the gap after the paragraph before it
+    val breakHeight: Dp = paragraphSpacing * 2 - paragraphGap
+}
+
+/** The layout for articles, or for books, whose paragraphs can be indented. */
 @Composable
-fun readerLayout(settings: ReaderSettings): ReaderLayout = ReaderLayout(
+fun readerLayout(settings: ReaderSettings, isBook: Boolean = false): ReaderLayout = ReaderLayout(
     bodyStyle = readerBodyStyle(settings),
     fontFamily = settings.font.fontFamily(),
     margin = settings.margin.dp.dp,
-    paragraphSpacing = (settings.textSize * settings.lineSpacing * 0.5f).dp
+    paragraphSpacing = (settings.textSize * settings.lineSpacing * 0.5f).dp,
+    indented = isBook && settings.bookParagraphs == BookParagraphs.INDENTED
 )
 
 /**
@@ -194,12 +209,14 @@ fun LazyListScope.contentBlocks(
                     textBlock = block,
                     textId = textId,
                     selectedRange = selectedRange,
-                    style = layout.bodyStyle,
+                    style = layout.paragraphStyle,
                     onWordClick = onWordClick,
                     onNoteClick = onNoteClick
                 )
-                Spacer(modifier = Modifier.height(layout.paragraphSpacing))
+                Spacer(modifier = Modifier.height(layout.paragraphGap))
             }
+
+            ContentBlock.Break -> Spacer(modifier = Modifier.height(layout.breakHeight))
 
             is ContentBlock.Image -> {
                 ArticleImage(

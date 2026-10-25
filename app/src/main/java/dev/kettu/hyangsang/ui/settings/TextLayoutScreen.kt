@@ -33,6 +33,7 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.prefs.ReaderFontWeight
 import dev.kettu.hyangsang.data.prefs.ReaderMargin
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
+import dev.kettu.hyangsang.ui.reader.BookParagraphsControl
 import dev.kettu.hyangsang.ui.reader.ChoiceRow
 import dev.kettu.hyangsang.ui.reader.ControlLabel
 import dev.kettu.hyangsang.ui.reader.FontControl
@@ -114,6 +115,9 @@ fun TextLayoutScreen(
                     selected = settings.margin,
                     onSelect = { onSettingsChange(settings.copy(margin = it)) }
                 )
+            }
+            BookParagraphsControl(settings.bookParagraphs) {
+                onSettingsChange(settings.copy(bookParagraphs = it))
             }
             TextButton(onClick = { onSettingsChange(ReaderSettings()) }) {
                 Icon(Icons.Outlined.RestartAlt, contentDescription = null)

@@ -360,6 +360,9 @@
     <string name="margin_narrow">좁게</string>
     <string name="margin_normal">보통</string>
     <string name="margin_wide">넓게</string>
+    <string name="book_paragraphs_label">책 문단</string>
+    <string name="paragraphs_indented">들여쓰기</string>
+    <string name="paragraphs_spaced">문단 띄우기</string>
     <string name="theme_auto">자동</string>
     <string name="reset_defaults">기본값으로 재설정</string>
     <string name="reading_time_and_words">약 %1$s · %2$s</string>

@@ -289,7 +289,7 @@ internal class XhtmlWalker(
             "figure" -> figure(element)
             "table" -> table(element)
             "hr" -> add(ContentBlock.Divider)
-            else -> if (element.hasBlocks()) visit(element) else paragraph(element)
+            else -> if (element.hasBlocks()) visit(element) else paragraph(element, emptyIsBreak = name == "p")
         }
         flush()
     }
@@ -302,9 +302,13 @@ internal class XhtmlWalker(
         paragraph(paragraph)
     }
 
-    private fun paragraph(element: Element) {
+    private fun paragraph(element: Element, emptyIsBreak: Boolean = false) {
         val (text, spans) = element.extractTextAndSpans(noteFor = ::markedNote)
-        if (text.isNotBlank()) add(ContentBlock.Text(text, spans))
+        when {
+            text.isNotBlank() -> add(ContentBlock.Text(text, spans))
+            // Books leave empty paragraphs between their parts, as blank lines
+            emptyIsBreak -> add(ContentBlock.Break)
+        }
     }
 
     private fun heading(element: Element, level: Int) {

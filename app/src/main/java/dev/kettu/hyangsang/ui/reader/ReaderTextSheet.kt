@@ -29,6 +29,8 @@ import dev.kettu.hyangsang.data.prefs.ReaderSettings
 fun ReaderTextSheet(
     settings: ReaderSettings,
     onSettingsChange: (ReaderSettings) -> Unit,
+    // Shown in the book reader, the only one that indents paragraphs
+    showBookParagraphs: Boolean = false,
     currentTheme: String,
     onThemeChange: (String) -> Unit,
     onMoreSettingsClick: () -> Unit,
@@ -57,6 +59,11 @@ fun ReaderTextSheet(
             FontControl(settings.font) { onSettingsChange(settings.copy(font = it)) }
             LineSpacingPresetControl(settings.lineSpacing) {
                 onSettingsChange(settings.copy(lineSpacing = it))
+            }
+            if (showBookParagraphs) {
+                BookParagraphsControl(settings.bookParagraphs) {
+                    onSettingsChange(settings.copy(bookParagraphs = it))
+                }
             }
             Column {
                 ControlLabel(stringResource(R.string.theme_setting))

@@ -270,6 +270,40 @@ class EpubParserTest {
     }
 
     @Test
+    fun keepsBlankLinesAndNewPagesAsBreaks() {
+        val chapter = book(
+            TestEpub()
+                .nav("one.xhtml" to "1장")
+                .chapter("one.xhtml", "<p><br/></p><p>제목</p><p><br/></p><p> </p><p>첫 글.</p><p><br/></p>")
+                // Not in the table of contents, so it continues the chapter on a new page
+                .chapter("two.xhtml", "<p>둘째 글.</p><h2>소제목</h2><p><br/></p><p>셋째 글.</p>")
+        ).chapters.single()
+        assertEquals(
+            listOf(
+                ContentBlock.Text("제목"),
+                ContentBlock.Break,
+                ContentBlock.Text("첫 글."),
+                ContentBlock.Break,
+                ContentBlock.Text("둘째 글."),
+                // A heading sets its part apart already
+                ContentBlock.Heading("소제목", 2),
+                ContentBlock.Text("셋째 글.")
+            ),
+            chapter.blocks
+        )
+    }
+
+    @Test
+    fun dropsTitlePagesSplitByBlankLines() {
+        val chapter = book(
+            TestEpub()
+                .nav("one.xhtml" to "1부 ─ 바다")
+                .chapter("one.xhtml", "<p>1부</p><p><br/></p><p>바다</p><p><br/></p><p>본문.</p>")
+        ).chapters.single()
+        assertEquals(listOf(ContentBlock.Text("본문.")), chapter.blocks)
+    }
+
+    @Test
     fun turnsTableRowsIntoLines() {
         val chapter = book(
             TestEpub().chapter(

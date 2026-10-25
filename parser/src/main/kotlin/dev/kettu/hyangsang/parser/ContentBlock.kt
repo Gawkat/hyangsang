@@ -40,6 +40,10 @@ sealed class ContentBlock {
     // A break between sections, from <hr>, shown as a line
     @Serializable
     data object Divider : ContentBlock()
+
+    // A blank line between parts of a book, from empty paragraphs or where a new page starts
+    @Serializable
+    data object Break : ContentBlock()
 }
 
 @Serializable

@@ -7,12 +7,17 @@ enum class ReaderFontWeight { REGULAR, MEDIUM, BOLD }
 // Horizontal padding around the article text, in dp
 enum class ReaderMargin(val dp: Int) { NARROW(12), NORMAL(16), WIDE(28) }
 
+// How a book's paragraphs are set apart: indented as in print, or with space between them as
+// articles are
+enum class BookParagraphs { INDENTED, SPACED }
+
 data class ReaderSettings(
     val textSize: Int = DEFAULT_TEXT_SIZE, // sp
     val font: ReaderFont = ReaderFont.SANS,
     val fontWeight: ReaderFontWeight = ReaderFontWeight.REGULAR,
     val lineSpacing: Float = DEFAULT_LINE_SPACING, // multiple of the text size
-    val margin: ReaderMargin = ReaderMargin.NORMAL
+    val margin: ReaderMargin = ReaderMargin.NORMAL,
+    val bookParagraphs: BookParagraphs = BookParagraphs.INDENTED
 ) {
     companion object {
         const val DEFAULT_TEXT_SIZE = 20
