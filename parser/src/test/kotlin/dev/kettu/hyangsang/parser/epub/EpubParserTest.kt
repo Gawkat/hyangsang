@@ -244,6 +244,32 @@ class EpubParserTest {
     }
 
     @Test
+    fun keepsItalicsAndBoldSetWithStyles() {
+        val chapter = book(
+            TestEpub()
+                .file("OEBPS/style.css", ".chapter .ita { font-style: italic } .b { font-weight: 700 }")
+                .chapter(
+                    "one.xhtml",
+                    """<p>예컨대 <span class="ita">기울인 <span class="ita">글</span></span>과 <span style="font-weight: bold">굵은 글</span>.</p>
+                    <div class="ita b"><p>첫 문단</p><p>둘째 문단</p></div>""",
+                    head = """<link rel="stylesheet" href="style.css"/>"""
+                )
+        ).chapters.single()
+        assertEquals(
+            listOf(
+                ContentBlock.Text(
+                    "예컨대 기울인 글과 굵은 글.",
+                    listOf(ContentSpan(4, 9, SpanType.ITALIC), ContentSpan(11, 15, SpanType.BOLD))
+                ),
+                // Each paragraph of a styled block
+                ContentBlock.Text("첫 문단", listOf(ContentSpan(0, 4, SpanType.ITALIC), ContentSpan(0, 4, SpanType.BOLD))),
+                ContentBlock.Text("둘째 문단", listOf(ContentSpan(0, 5, SpanType.ITALIC), ContentSpan(0, 5, SpanType.BOLD)))
+            ),
+            chapter.blocks
+        )
+    }
+
+    @Test
     fun turnsTableRowsIntoLines() {
         val chapter = book(
             TestEpub().chapter(

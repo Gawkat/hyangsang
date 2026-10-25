@@ -79,6 +79,7 @@ internal class XhtmlWalker(
     private fun prepare(body: Element) {
         body.descendants(null).filter { it.localName() in SKIPPED_TAGS }.forEach { it.remove() }
         body.descendants("ruby").forEach { it.replaceWith(TextNode(rubyText(it))) }
+        applyTextStyles(body)
         // Before the notes are taken out of the text, so markers can still find them
         markNoteReferences(body)
         markRaisedNumbers(body)
@@ -107,6 +108,37 @@ internal class XhtmlWalker(
                 ref.replaceWith(TextNode(label))
             } else {
                 ref.replaceWith(Element(NOTE_MARKER_TAG).attr("data-note", note).appendText(label))
+            }
+        }
+    }
+
+    /**
+     * Wraps the contents of elements styled as italic or bold in i and b elements, which become
+     * spans. Only the element's own styles count. For an element around blocks, each block it
+     * holds is wrapped instead.
+     */
+    private fun applyTextStyles(body: Element) {
+        val wrapped = mapOf("i" to mutableSetOf<Element>(), "b" to mutableSetOf())
+        for (element in body.descendants(null)) {
+            val tags = listOfNotNull(
+                "i".takeIf { styles.isItalic(element) && element.localName() !in setOf("i", "em") },
+                "b".takeIf { styles.isBold(element) && element.localName() !in setOf("b", "strong") }
+            )
+            if (tags.isEmpty()) continue
+            val targets = if (element.hasBlocks()) {
+                element.descendants(null).filter { it.localName() in BLOCK_TAGS && !it.hasBlocks() && it.text().isNotBlank() }
+            } else {
+                listOf(element)
+            }
+            for (tag in tags) {
+                val done = wrapped.getValue(tag)
+                // Inside an element already wrapped, as a span in an italic paragraph
+                for (target in targets.filter { target -> target !in done && target.parents().none { it in done } }) {
+                    val wrapper = Element(tag)
+                    target.childNodes().toList().forEach { wrapper.appendChild(it) }
+                    target.appendChild(wrapper)
+                    done.add(target)
+                }
             }
         }
     }
