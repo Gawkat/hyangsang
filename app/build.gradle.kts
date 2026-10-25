@@ -60,11 +60,15 @@ android {
 
             val currentTime = Clock.System.now().toString()
             buildConfigField("String", "BUILD_TIME", "\"${currentTime}\"")
-            resValue("string", "build_time", currentTime)
         }
         debug {
             buildConfigField("String", "BUILD_TIME", "\"2007-12-03T10:15:30.00Z\"")
-            resValue("string", "build_time", "2007-12-03T10:15:30.00Z")
+        }
+    }
+    bundle {
+        // The app language can be changed in the app, so every install needs every language
+        language {
+            enableSplit = false
         }
     }
     compileOptions {
@@ -92,6 +96,9 @@ android {
         checkDependencies = true
         // Issues from before lint ran in CI. Only new ones fail the build.
         baseline = file("lint-baseline.xml")
+        // These look up the latest versions online, so the same code would start failing as
+        // libraries are released
+        disable += setOf("GradleDependency", "NewerVersionAvailable")
     }
 }
 

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Logo for the Android 12+ splash screen, coloured to match the app theme -->
+<!-- Logo for the Android 12+ splash screen, coloured to match the app theme. 288dp is the size
+     the splash screen gives its icon, and it's only drawn once per start. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="VectorRaster"
     android:width="288dp"
     android:height="288dp"
     android:viewportWidth="108"

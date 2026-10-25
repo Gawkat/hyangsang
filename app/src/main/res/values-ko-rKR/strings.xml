@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="lookup_title">사전 항목</string>
     <string name="search_placeholder">기사 검색…</string>
     <string name="settings_title">설정</string>
     <string name="back_button">뒤로</string>
-    <string name="general_section">일반</string>
-    <string name="language_setting">언어</string>
     <string name="appearance_section">모양</string>
     <string name="theme_setting">테마</string>
     <string name="reader_preferences_section">읽기</string>
@@ -18,8 +15,6 @@
     <string name="version_label">버전 %1$s</string>
     <string name="released_label">출시일: %1$s</string>
     <string name="discover_nav">탐색</string>
-    <string name="settings_nav">설정</string>
-    <string name="reader_title">독서</string>
     <string name="oss_licenses_nav">오픈 소스 라이선스</string>
     <string name="feeds_title">피드</string>
     <string name="open_in_browser_button">브라우저로 열기</string>
@@ -196,7 +191,9 @@
     <string name="delete">삭제</string>
     <string name="lookup_reports_share_subject">향상 사전 결과 신고</string>
     <string name="reading_speed_setting">읽기 속도</string>
-    <string name="reading_speed_option">%1$s · 분당 %2$d단어</string>
+    <plurals name="reading_speed_option">
+        <item quantity="other">%1$s · 분당 %2$d단어</item>
+    </plurals>
     <string name="reading_speed_beginner">초급</string>
     <string name="reading_speed_intermediate">중급</string>
     <string name="reading_speed_advanced">고급</string>
