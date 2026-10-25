@@ -29,6 +29,7 @@ import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.displayTitle
 import dev.kettu.hyangsang.ui.components.sourceLabel
+import dev.kettu.hyangsang.ui.library.percentText
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
 import kotlin.time.Clock
@@ -56,6 +57,12 @@ fun ArticleRow(
     } else {
         DateTimeUtils.formatRelativeTime(article.pubDate ?: article.addedDate)
     }
+    // An article read part of the way says how far
+    val progress = if (article.progress > 0f && article.progress < 1f) {
+        " · " + stringResource(R.string.percent_read, percentText(article.progress))
+    } else {
+        ""
+    }
 
     Column(
         modifier = modifier
@@ -71,7 +78,7 @@ fun ArticleRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "${sourceLabel(articleWithFeed.feed, article.sourceUrl)} · $time",
+                    text = "${sourceLabel(articleWithFeed.feed, article.sourceUrl)} · $time$progress",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

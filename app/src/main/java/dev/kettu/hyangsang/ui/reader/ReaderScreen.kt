@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -49,8 +50,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -78,9 +81,17 @@ import dev.kettu.hyangsang.ui.components.displayTitle
 import dev.kettu.hyangsang.ui.settings.openInBrowser
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.viewmodel.DictionaryViewModel
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+
+// How long the list has to rest before its position is stored
+private const val SAVE_POSITION_DELAY_MILLIS = 500L
 
 @Composable
 fun ReaderScreen(
@@ -99,6 +110,8 @@ fun ReaderScreen(
     onRefreshResultShown: () -> Unit,
     downloadFailure: DownloadFailure?,
     onRetryDownloadClick: () -> Unit,
+    onPositionChange: (blockIndex: Int, progress: Float) -> Unit,
+    onEndOfArticle: (blockIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     collectLookupReports: Boolean = false
 ) {
@@ -140,11 +153,13 @@ fun ReaderScreen(
         onRefreshResultShown = onRefreshResultShown,
         downloadFailure = downloadFailure,
         onRetryDownloadClick = onRetryDownloadClick,
+        onPositionChange = onPositionChange,
+        onEndOfArticle = onEndOfArticle,
         modifier = modifier
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun ReaderContent(
     articleWithFeed: ArticleWithFeed,
@@ -165,6 +180,8 @@ fun ReaderContent(
     onRefreshResultShown: () -> Unit,
     downloadFailure: DownloadFailure?,
     onRetryDownloadClick: () -> Unit,
+    onPositionChange: (blockIndex: Int, progress: Float) -> Unit,
+    onEndOfArticle: (blockIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     onReportLookup: ((shown: DictionaryWithSenses?, picked: DictionaryWithSenses?, note: String) -> Unit)? = null
 ) {
@@ -172,7 +189,10 @@ fun ReaderContent(
     val contentBlocks = article.content.orEmpty()
     val scrollBehavior =
         TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    val listState = rememberLazyListState()
+    // Opened where the reader left it. The header is the first item, so a block is one further
+    val listState = rememberSaveable(article.id, saver = LazyListState.Saver) {
+        LazyListState(firstVisibleItemIndex = if (article.blockIndex > 0) article.blockIndex + 1 else 0)
+    }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -189,6 +209,35 @@ fun ReaderContent(
     var isSaved by rememberSaveable(article.id) { mutableStateOf(article.savedDate != null) }
     val showTitleInBar by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     val layout = readerLayout(readerSettings)
+    val firstVisibleBlock by remember {
+        derivedStateOf { (listState.firstVisibleItemIndex - 1).coerceAtLeast(0) }
+    }
+    val scrollMeasure = remember(contentBlocks) { ScrollMeasure(contentBlocks, firstBlockItem = 1) }
+    // How far through the article the screen is. Null until the list is laid out, and for an
+    // article without content, which has nothing to read through
+    val progress by remember(listState, scrollMeasure) {
+        derivedStateOf {
+            if (contentBlocks.isEmpty()) null else scrollMeasure.progress(listState.layoutInfo)
+        }
+    }
+    val currentOnPositionChange by rememberUpdatedState(onPositionChange)
+
+    // Stored once the list rests, and when the reader closes before it has
+    LaunchedEffect(listState, scrollMeasure) {
+        snapshotFlow { progress?.let { firstVisibleBlock to it } }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .debounce(SAVE_POSITION_DELAY_MILLIS)
+            .collect { (block, fraction) -> currentOnPositionChange(block, fraction) }
+    }
+    DisposableEffect(listState, scrollMeasure) {
+        onDispose { progress?.let { currentOnPositionChange(firstVisibleBlock, it) } }
+    }
+    LaunchedEffect(listState, scrollMeasure) {
+        snapshotFlow { progress == 1f }
+            .filter { it }
+            .collect { onEndOfArticle(firstVisibleBlock) }
+    }
 
     LaunchedEffect(refreshResult) {
         val message = when (refreshResult) {
@@ -204,102 +253,114 @@ fun ReaderContent(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    AnimatedVisibility(
-                        visible = showTitleInBar,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        Text(
-                            text = displayTitle(article.title, article.sourceUrl),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back_button)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        isSaved = !isSaved
-                        onSaveToggle(isSaved)
-                    }) {
-                        Icon(
-                            imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                            contentDescription = stringResource(
-                                if (isSaved) R.string.unsave_article else R.string.save_article
-                            ),
-                            tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = { showTextSheet = true }) {
-                        Icon(
-                            Icons.Outlined.FormatSize,
-                            contentDescription = stringResource(R.string.text_layout_title)
-                        )
-                    }
-                    // Material's top app bar fits three actions; the rest go in the overflow menu.
-                    // Pasted text has nothing to open or reload, and no feed to describe
-                    val sourceUrl = article.sourceUrl
-                    if (sourceUrl != null) Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                Icons.Filled.MoreVert,
-                                contentDescription = stringResource(R.string.more_options)
+            Column {
+                TopAppBar(
+                    title = {
+                        AnimatedVisibility(
+                            visible = showTitleInBar,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Text(
+                                text = displayTitle(article.title, article.sourceUrl),
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.open_in_browser_button)) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.OpenInNew,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    openInBrowser(context, sourceUrl)
-                                }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back_button)
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.reload_article)) },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Refresh, contentDescription = null)
-                                },
-                                enabled = !isRefreshing,
-                                onClick = {
-                                    showMenu = false
-                                    onRefreshClick()
-                                }
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            isSaved = !isSaved
+                            onSaveToggle(isSaved)
+                        }) {
+                            Icon(
+                                imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = stringResource(
+                                    if (isSaved) R.string.unsave_article else R.string.save_article
+                                ),
+                                tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            // The source name in the article header looks up words, so its
-                            // description is here
-                            if (source != null) {
+                        }
+                        IconButton(onClick = { showTextSheet = true }) {
+                            Icon(
+                                Icons.Outlined.FormatSize,
+                                contentDescription = stringResource(R.string.text_layout_title)
+                            )
+                        }
+                        // Material's top app bar fits three actions; the rest go in the overflow menu.
+                        // Pasted text has nothing to open or reload, and no feed to describe
+                        val sourceUrl = article.sourceUrl
+                        if (sourceUrl != null) Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    Icons.Filled.MoreVert,
+                                    contentDescription = stringResource(R.string.more_options)
+                                )
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.about_source)) },
+                                    text = { Text(stringResource(R.string.open_in_browser_button)) },
                                     leadingIcon = {
-                                        Icon(Icons.Outlined.Info, contentDescription = null)
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.OpenInNew,
+                                            contentDescription = null
+                                        )
                                     },
                                     onClick = {
                                         showMenu = false
-                                        showSourceInfo = true
+                                        openInBrowser(context, sourceUrl)
                                     }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.reload_article)) },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                                    },
+                                    enabled = !isRefreshing,
+                                    onClick = {
+                                        showMenu = false
+                                        onRefreshClick()
+                                    }
+                                )
+                                // The source name in the article header looks up words, so its
+                                // description is here
+                                if (source != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.about_source)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Outlined.Info, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            showMenu = false
+                                            showSourceInfo = true
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+                if (contentBlocks.isNotEmpty()) {
+                    LinearProgressIndicator(
+                        progress = { progress ?: 0f },
+                        drawStopIndicator = {},
+                        gapSize = 0.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                    )
+                }
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
@@ -424,7 +485,9 @@ fun ReaderScreenPreview() {
             onRefreshClick = {},
             onRefreshResultShown = {},
             downloadFailure = null,
-            onRetryDownloadClick = {}
+            onRetryDownloadClick = {},
+            onPositionChange = { _, _ -> },
+            onEndOfArticle = {}
         )
     }
 }

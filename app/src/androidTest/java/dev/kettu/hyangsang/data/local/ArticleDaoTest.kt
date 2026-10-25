@@ -123,8 +123,8 @@ class ArticleDaoTest {
     fun clearsContentOfUnsavedArticlesNotOpenedSinceCutoff(): Unit = runBlocking {
         val content = listOf(ContentBlock.Text("본문"))
         (1L..4L).forEach { dao.replaceContent(it, content, maxPosition = 0, parserVersion = 5) }
-        dao.updateProgress(1, position = 0, timestamp = "2026-10-02T00:00:00Z") // opened recently
-        dao.updateProgress(2, position = 0, timestamp = "2026-09-01T00:00:00Z") // opened long ago
+        dao.markOpened(1, timestamp = "2026-10-02T00:00:00Z") // opened recently
+        dao.markOpened(2, timestamp = "2026-09-01T00:00:00Z") // opened long ago
         dao.updateSavedDate(3, "2026-09-01T00:00:00Z") // saved
         // 4 was never opened and was added on 2026-09-30
 
@@ -156,6 +156,19 @@ class ArticleDaoTest {
 
         assertEquals(2, deleted)
         assertEquals(setOf(1L, 2L, 3L, 4L, 6L, 8L), ids().toSet())
+    }
+
+    @Test
+    fun storesPositionAndClampsItToNewContent(): Unit = runBlocking {
+        dao.updatePosition(1, blockIndex = 5, progress = 0.4f, timestamp = "2026-10-04T00:00:00Z")
+
+        val summary = dao.getArticleSummaries(null, null, "", false).first()
+            .single { it.article.id == 1L }.article
+        assertEquals(0.4f, summary.progress)
+        assertEquals("2026-10-04T00:00:00Z", summary.lastReadDate)
+
+        dao.replaceContent(1, listOf(ContentBlock.Text("본문")), maxPosition = 0, parserVersion = 5)
+        assertEquals(0, dao.getArticleById(1)?.blockIndex)
     }
 
     @Test

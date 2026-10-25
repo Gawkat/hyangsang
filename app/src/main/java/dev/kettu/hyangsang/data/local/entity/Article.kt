@@ -40,7 +40,12 @@ data class Article @OptIn(ExperimentalTime::class) constructor(
     val addedDate: String = Clock.System.now().toString(),
     val pubDate: String?,
     val lastReadDate: String? = null,
-    val scrollPosition: Int = 0,
+    // The reading position: the content block at the top of the screen
+    @ColumnInfo(name = "scrollPosition")
+    val blockIndex: Int = 0,
+    // How far the reader has got, from 0 to 1, by the characters before the position
+    @ColumnInfo(defaultValue = "0")
+    val progress: Float = 0f,
     val savedDate: String? = null, // Null when not saved; saved articles must survive pruning
     // ArticleParser.VERSION the content was parsed with
     @ColumnInfo(defaultValue = "0")

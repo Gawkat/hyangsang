@@ -31,7 +31,7 @@ interface ArticleDao {
     @Query(
         """
         SELECT a.id, a.feedId, a.title, a.description, a.sourceUrl, a.addedDate, a.pubDate, a.lastReadDate,
-            a.savedDate
+            a.savedDate, a.progress
         FROM articles a
         INNER JOIN rss_feeds f ON f.id = a.feedId
         WHERE f.isEnabled = 1
@@ -54,7 +54,8 @@ interface ArticleDao {
     @Transaction
     @Query(
         """
-        SELECT id, feedId, title, description, sourceUrl, addedDate, pubDate, lastReadDate, savedDate
+        SELECT id, feedId, title, description, sourceUrl, addedDate, pubDate, lastReadDate, savedDate,
+            progress
         FROM articles
         WHERE savedDate IS NOT NULL AND (:importedOnly = 0 OR feedId IS NULL)
         ORDER BY savedDate DESC
@@ -150,10 +151,18 @@ interface ArticleDao {
     suspend fun saveIfUnsaved(id: Long, savedDate: String)
 
     @OptIn(ExperimentalTime::class)
-    @Query("UPDATE articles SET scrollPosition = :position, lastReadDate = :timestamp WHERE id = :id")
-    suspend fun updateProgress(
+    @Query("UPDATE articles SET lastReadDate = :timestamp WHERE id = :id")
+    suspend fun markOpened(id: Long, timestamp: String = Clock.System.now().toString())
+
+    @OptIn(ExperimentalTime::class)
+    @Query(
+        "UPDATE articles SET scrollPosition = :blockIndex, progress = :progress, " +
+                "lastReadDate = :timestamp WHERE id = :id"
+    )
+    suspend fun updatePosition(
         id: Long,
-        position: Int,
+        blockIndex: Int,
+        progress: Float,
         timestamp: String = Clock.System.now().toString()
     )
 }

@@ -21,7 +21,7 @@ import kotlinx.coroutines.runBlocking
         VocabularyWord::class,
         RssFeed::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(ContentBlockTypeConverter::class)

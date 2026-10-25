@@ -155,4 +155,24 @@ class MigrationTest {
             assertEquals(2, it.getInt(0))
         }
     }
+
+    @Test
+    fun migrate18To19_keepsPositionAndAddsProgress() {
+        helper.createDatabase(TEST_DB, 18).apply {
+            execSQL(
+                "INSERT INTO articles (id, feedId, title, description, content, sourceUrl, addedDate, pubDate, lastReadDate, scrollPosition, savedDate, parserVersion) " +
+                    "VALUES (1, NULL, 'Title', 'Description', '[]', NULL, '2026-09-25T00:00:00Z', NULL, '2026-09-26T00:00:00Z', 4, NULL, 2)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 19, true, MIGRATION_18_19)
+
+        db.query("SELECT scrollPosition, progress, lastReadDate FROM articles WHERE id = 1").use {
+            it.moveToFirst()
+            assertEquals(4, it.getInt(0))
+            assertEquals(0f, it.getFloat(1))
+            assertEquals("2026-09-26T00:00:00Z", it.getString(2))
+        }
+    }
 }
