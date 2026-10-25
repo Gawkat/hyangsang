@@ -49,6 +49,9 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
     val currentArticleState: StateFlow<ArticleUiState> = _currentArticleState.asStateFlow()
     private var refreshJob: Job? = null
 
+    // Once the end of an article shows, it counts as read, wherever the list rests after that
+    private var finishedArticleId: Long? = null
+
     private val _filterCriteria = MutableStateFlow(ArticleFilterCriteria())
     val filterCriteria: StateFlow<ArticleFilterCriteria> = _filterCriteria.asStateFlow()
 
@@ -162,10 +165,8 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 }
             }
 
-            articleRepository.updateProgress(
-                id = articleId,
-                position = articleWithFeed.article.scrollPosition
-            )
+            articleRepository.markOpened(articleId)
+            finishedArticleId = null
 
             _currentArticleState.value =
                 ArticleUiState.Success(articleWithFeed, downloadFailure = downloadFailure)
@@ -175,6 +176,18 @@ class ArticleViewModel(private val articleRepository: ArticleRepository) : ViewM
                 startRefresh(articleId, reportResult = false)
             }
         }
+    }
+
+    /** Stores the reading position of an article: the block at the top, [progress] of the way through. */
+    fun onPositionChange(articleId: Long, blockIndex: Int, progress: Float) {
+        val stored = if (finishedArticleId == articleId) 1f else progress
+        viewModelScope.launch { articleRepository.savePosition(articleId, blockIndex, stored) }
+    }
+
+    /** Marks an article as read to the end, once its end shows. */
+    fun onEndOfArticle(articleId: Long, blockIndex: Int) {
+        finishedArticleId = articleId
+        onPositionChange(articleId, blockIndex, 1f)
     }
 
     // Downloads an article again after the first download failed

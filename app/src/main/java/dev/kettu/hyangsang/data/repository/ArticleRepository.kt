@@ -50,7 +50,11 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
     suspend fun deleteArticle(article: Article) = articleDao.deleteArticle(article)
 
-    suspend fun updateProgress(id: Long, position: Int) = articleDao.updateProgress(id, position)
+    suspend fun markOpened(id: Long) = articleDao.markOpened(id)
+
+    /** Stores where the reader is: a content block, [progress] of the way through the article. */
+    suspend fun savePosition(id: Long, blockIndex: Int, progress: Float) =
+        articleDao.updatePosition(id, blockIndex, progress)
 
     @OptIn(ExperimentalTime::class)
     suspend fun setSaved(id: Long, saved: Boolean) =
@@ -127,7 +131,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
                     title = title,
                     content = content,
                     parserVersion = ArticleParser.VERSION,
-                    scrollPosition = article.scrollPosition.coerceIn(0, maxOf(0, content.lastIndex))
+                    blockIndex = article.blockIndex.coerceIn(0, maxOf(0, content.lastIndex))
                 )
             )
         } catch (e: CancellationException) {

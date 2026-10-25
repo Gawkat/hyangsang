@@ -806,6 +806,10 @@ fun ReaderRoute(
                 onRefreshResultShown = articleViewModel::onRefreshResultShown,
                 downloadFailure = state.downloadFailure,
                 onRetryDownloadClick = articleViewModel::retryDownload,
+                onPositionChange = { block, progress ->
+                    articleViewModel.onPositionChange(article.id, block, progress)
+                },
+                onEndOfArticle = { articleViewModel.onEndOfArticle(article.id, it) },
                 collectLookupReports = collectLookupReports
             )
         }

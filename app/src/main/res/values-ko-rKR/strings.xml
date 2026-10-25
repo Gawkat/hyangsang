@@ -161,6 +161,7 @@
     <string name="book_contents">목차</string>
     <string name="book_and_chapter">%1$s · %2$d장</string>
     <string name="book_and_progress">%1$s · %2$s 읽음</string>
+    <string name="percent_read">%1$s 읽음</string>
     <string name="chapter_read">읽음</string>
     <string name="reading_chapter">읽는 중 · %1$s</string>
     <string name="end_of_chapter">%1$d장 끝</string>

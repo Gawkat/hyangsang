@@ -14,7 +14,8 @@ data class ArticleSummary(
     val addedDate: String,
     val pubDate: String?,
     val lastReadDate: String?,
-    val savedDate: String?
+    val savedDate: String?,
+    val progress: Float = 0f
 )
 
 data class ArticleSummaryWithFeed(
