@@ -37,6 +37,7 @@ class UserPreferencesRepository(private val context: Context) {
         val DEFAULT_FEEDS_SEEN = intPreferencesKey("default_feeds_seen")
         val FIRST_RUN_SETUP_PENDING = booleanPreferencesKey("first_run_setup_pending")
         val COLLECT_LOOKUP_REPORTS = booleanPreferencesKey("collect_lookup_reports")
+        val LIBRARY_TAB = stringPreferencesKey("library_tab")
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -107,6 +108,14 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setFeedGrouping(grouping: FeedGrouping) {
         context.dataStore.edit { it[Keys.FEED_GROUPING] = grouping.name }
+    }
+
+    val libraryTabFlow: Flow<LibraryTab> = context.dataStore.data.map { preferences ->
+        enumOrDefault(preferences[Keys.LIBRARY_TAB], LibraryTab.ARTICLES)
+    }.distinctUntilChanged()
+
+    suspend fun setLibraryTab(tab: LibraryTab) {
+        context.dataStore.edit { it[Keys.LIBRARY_TAB] = tab.name }
     }
 
     // The DefaultData.VERSION whose built-in feeds the user has been offered. Unset for users who

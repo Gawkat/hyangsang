@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.filled.Newspaper
-import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.LocalLibrary
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -60,6 +60,7 @@ import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
 import dev.kettu.hyangsang.data.prefs.FeedGrouping
 import dev.kettu.hyangsang.data.prefs.FeedSyncInterval
+import dev.kettu.hyangsang.data.prefs.LibraryTab
 import dev.kettu.hyangsang.data.prefs.ReaderSettings
 import dev.kettu.hyangsang.data.prefs.UserPreferencesRepository
 import dev.kettu.hyangsang.data.repository.LookupReportRepository
@@ -69,7 +70,7 @@ import dev.kettu.hyangsang.ui.feeds.FeedsScreen
 import dev.kettu.hyangsang.ui.importing.AddTextScreen
 import dev.kettu.hyangsang.ui.navigation.FeedDrawerContent
 import dev.kettu.hyangsang.ui.reader.ReaderScreen
-import dev.kettu.hyangsang.ui.saved.SavedScreen
+import dev.kettu.hyangsang.ui.library.LibraryScreen
 import dev.kettu.hyangsang.ui.settings.LicensesScreen
 import dev.kettu.hyangsang.ui.settings.SettingsScreen
 import dev.kettu.hyangsang.ui.settings.TextLayoutScreen
@@ -203,7 +204,7 @@ class MainActivity : AppCompatActivity() {
 
 private object Routes {
     const val DISCOVER = "discover"
-    const val SAVED = "saved"
+    const val LIBRARY = "library"
     const val FEEDS = "manage_feeds"
     const val SETTINGS = "settings"
     const val TEXT_LAYOUT = "text_layout"
@@ -248,7 +249,8 @@ fun MainApp(
     val articlesWithFeed by articleViewModel.allArticlesWithFeed.collectAsState()
     val savedArticles by articleViewModel.savedArticlesWithFeed.collectAsState()
     val savedImportedOnly by articleViewModel.savedImportedOnly.collectAsState()
-    // What the Add text screen starts with: empty from Saved, or text shared from another app
+    val libraryTab by prefsRepository.libraryTabFlow.collectAsState(initial = LibraryTab.ARTICLES)
+    // What the Add text screen starts with: empty from the Library, or text shared from another app
     var addTextDraft by remember { mutableStateOf(SharedText.Text("", null)) }
     val unreadCounts by articleViewModel.unreadCounts.collectAsState()
     val filterCriteria by articleViewModel.filterCriteria.collectAsState()
@@ -263,7 +265,12 @@ fun MainApp(
             Icons.Filled.Newspaper,
             R.string.discover_nav
         ),
-        NavItem(Routes.SAVED, Icons.Outlined.Bookmarks, Icons.Filled.Bookmarks, R.string.saved_nav)
+        NavItem(
+            Routes.LIBRARY,
+            Icons.Outlined.LocalLibrary,
+            Icons.Filled.LocalLibrary,
+            R.string.library_nav
+        )
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -417,8 +424,10 @@ fun MainApp(
                         listState = discoverListState
                     )
                 }
-                composable(Routes.SAVED) { entry ->
-                    SavedScreen(
+                composable(Routes.LIBRARY) { entry ->
+                    LibraryScreen(
+                        selectedTab = libraryTab,
+                        onTabSelect = { scope.launch { prefsRepository.setLibraryTab(it) } },
                         savedArticles = savedArticles,
                         importedOnly = savedImportedOnly,
                         onImportedOnlyChange = articleViewModel::setSavedImportedOnly,
