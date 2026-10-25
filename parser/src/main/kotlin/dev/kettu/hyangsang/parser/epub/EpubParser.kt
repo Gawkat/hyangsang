@@ -69,7 +69,7 @@ class EpubParser(private val limits: EpubLimits = EpubLimits()) {
 
     companion object {
         /** Raise when a change should reach books already imported, which are then parsed again. */
-        const val VERSION = 1
+        const val VERSION = 2
 
         const val IMAGE_PREFIX = "book-image:"
 
@@ -267,7 +267,7 @@ private class ChapterAssembler(
             markers.add(entry)
         }
 
-        val walker = XhtmlWalker(EpubArchive.folderOf(path), images)
+        val walker = XhtmlWalker(EpubArchive.folderOf(path), images) { href -> linkTarget(path, document, href) }
         val pieces = walker.walk(body)
         val wholeDocumentTitle = entries.firstOrNull { it.fragment == null }?.title
 
@@ -287,6 +287,20 @@ private class ChapterAssembler(
             }
         }
         current!!.blocks.addAll(walker.notes)
+    }
+
+    private val documents = HashMap<String, Document?>()
+
+    // The element a link in the document at path points to, by its #fragment
+    private fun linkTarget(path: String, document: Document, href: String): Element? {
+        val fragment = href.substringAfter('#', "").ifEmpty { return null }
+        val targetPath = if (href.startsWith("#")) path else EpubArchive.resolve(EpubArchive.folderOf(path), href)
+        val target = when (targetPath) {
+            null -> return null
+            path -> document
+            else -> documents.getOrPut(targetPath) { archive.readText(targetPath)?.let { xml(it) } }
+        } ?: return null
+        return target.descendants(null).firstOrNull { it.attr("id") == fragment }
     }
 
     // Titles chapters without one by their first heading, and drops a heading that repeats it

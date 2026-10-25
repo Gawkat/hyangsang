@@ -42,11 +42,16 @@ sealed class ContentBlock {
 data class ContentSpan(
     val start: Int,
     val end: Int,
-    val type: SpanType
+    val type: SpanType,
+    // For a NOTE span, the text of the note it marks
+    val note: String? = null
 )
 
 @Serializable
 enum class SpanType {
     BOLD,
-    ITALIC
+    ITALIC,
+
+    /** A footnote marker, such as [1], whose note shows when it's tapped */
+    NOTE
 }
