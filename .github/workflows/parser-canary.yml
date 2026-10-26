@@ -1,0 +1,60 @@
+name: Parser canary
+
+# Parses the newest articles of the built-in feeds to catch sites changing their pages in a way
+# that breaks a parser. Kept out of the tests, since its result depends on the day's articles
+# and on the sites being up. Problems go to an issue labelled parser-canary, which is closed
+# again once the canary passes.
+on:
+  schedule:
+    - cron: "17 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run the canary
+        id: canary
+        continue-on-error: true
+        run: ./gradlew :tools:parser-canary:run --args="--report build/parser-canary.md"
+
+      - name: Report to an issue
+        if: hashFiles('build/parser-canary.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.canary.outcome }}
+        run: |
+          report=build/parser-canary.md
+          issue=$(gh issue list --label parser-canary --state open --json number --jq '.[0].number // empty')
+          if [ "$OUTCOME" = failure ]; then
+            if [ -z "$issue" ]; then
+              gh label create parser-canary --color d93f0b --description "Found by the parser canary" --force
+              gh issue create --title "Parser canary found problems" --label parser-canary --body-file "$report"
+            else
+              # Only when different feeds fail, so a site that stays down isn't reported every day
+              last=$(gh issue view "$issue" --json body,comments --jq '(.comments | last | .body) // .body')
+              if [ "$(echo "$last" | head -1)" != "$(head -1 "$report")" ]; then
+                gh issue comment "$issue" --body-file "$report"
+              fi
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "The parser canary passed again."
+          fi
+
+      # A canary that couldn't run at all, such as after a build error, fails the workflow
+      - name: Fail without a report
+        if: hashFiles('build/parser-canary.md') == ''
+        run: exit 1

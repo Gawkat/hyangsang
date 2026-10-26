@@ -28,6 +28,7 @@
 /tools/dictionary-generator/data/
 /tools/analyzer-counts/build/
 /tools/analyzer-counts/data/
+/tools/parser-canary/build/
 .kotlin
 *.jks
 *.keystore
