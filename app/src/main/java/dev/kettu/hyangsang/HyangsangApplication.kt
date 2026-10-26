@@ -4,6 +4,9 @@ import android.app.Application
 import android.app.UiModeManager
 import android.content.res.Configuration
 import android.os.Build
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import dev.kettu.hyangsang.network.withUserAgent
 import dev.kettu.hyangsang.sync.FeedSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,12 +18,18 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import java.util.concurrent.atomic.AtomicBoolean
 
-class HyangsangApplication : Application() {
+class HyangsangApplication : Application(), ImageLoaderFactory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val container = AppContainer(this)
+
+    // Article images come from the same sites as the articles, so they're requested the same way
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .okHttpClient { OkHttpClient.Builder().withUserAgent().build() }
+        .build()
 
     override fun onCreate() {
         super.onCreate()

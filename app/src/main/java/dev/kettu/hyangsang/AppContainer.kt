@@ -20,6 +20,7 @@ import dev.kettu.hyangsang.data.repository.LookupReportRepository
 import dev.kettu.hyangsang.data.repository.RssFeedRepository
 import dev.kettu.hyangsang.data.repository.VocabularyRepository
 import dev.kettu.hyangsang.network.RssFeedService
+import dev.kettu.hyangsang.network.withUserAgent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import java.io.File
@@ -38,6 +39,7 @@ class AppContainer(private val context: Context) {
             level = okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
         }
         val client = OkHttpClient.Builder()
+            .withUserAgent()
             .addInterceptor(logging)
             .build()
 
