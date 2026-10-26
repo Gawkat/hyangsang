@@ -1,6 +1,7 @@
 package dev.kettu.hyangsang.tools.canary
 
 import dev.kettu.hyangsang.parser.ArticleParser
+import dev.kettu.hyangsang.parser.userAgent
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -24,6 +25,9 @@ import kotlin.system.exitProcess
 
 private val FEEDS = File("tools/parser-canary/feeds.tsv")
 private const val TIMEOUT_MILLIS = 20_000
+
+// The app's, but naming the canary in place of the app's version
+private val USER_AGENT = userAgent("canary")
 
 // Between requests to the same site
 private const val DELAY_MILLIS = 1_000L
@@ -85,7 +89,7 @@ private fun check(feed: Feed, articles: Int, save: File?): FeedResult {
     for (item in items.take(articles)) {
         Thread.sleep(DELAY_MILLIS)
         val document = try {
-            retried { Jsoup.connect(item.url).timeout(TIMEOUT_MILLIS).get() }
+            retried { Jsoup.connect(item.url).userAgent(USER_AGENT).timeout(TIMEOUT_MILLIS).get() }
         } catch (e: Exception) {
             unreachable.add("${item.url}: ${e.describe()}")
             continue
@@ -134,6 +138,7 @@ private class Item(val url: String, val title: String?, val description: String?
 // The newest items of an RSS or Atom feed, with the links the app would download
 private fun readItems(feedUrl: String): List<Item> {
     val xml = Jsoup.connect(feedUrl)
+        .userAgent(USER_AGENT)
         .timeout(TIMEOUT_MILLIS)
         .ignoreContentType(true)
         .parser(Parser.xmlParser())

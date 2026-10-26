@@ -6,6 +6,7 @@ import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.ArticleWithFeed
 import dev.kettu.hyangsang.data.prefs.ArticleRetention
 import dev.kettu.hyangsang.data.prefs.ContentRetention
+import dev.kettu.hyangsang.network.USER_AGENT
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.ContentBlock
 import dev.kettu.hyangsang.parser.PlainText
@@ -188,7 +189,7 @@ class ArticleRepository(private val articleDao: ArticleDao) {
     private suspend fun fetchContent(article: Article): FetchedPage? {
         val url = article.sourceUrl ?: return null
         return withContext(Dispatchers.IO) {
-            val document = Jsoup.connect(url).get()
+            val document = Jsoup.connect(url).userAgent(USER_AGENT).get()
             val pageTitle = ArticleParser.pageTitle(document)
             FetchedPage(
                 ArticleParser().parse(url, document, article.title.ifBlank { pageTitle }),
