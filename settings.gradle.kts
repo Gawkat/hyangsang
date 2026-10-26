@@ -26,5 +26,6 @@ rootProject.name = "Hyangsang"
 include(":app")
 include(":tools:dictionary-generator")
 include(":tools:analyzer-counts")
+include(":tools:parser-canary")
 include(":parser")
 include(":analyzer")

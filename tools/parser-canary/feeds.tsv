@@ -1,0 +1,18 @@
+# Feeds the parser canary reads, at least one for each built-in source, with the parser their
+# articles should be read with. ParserCanaryFeedsTest in the app checks every source is here.
+# lead is no for feeds whose descriptions aren't taken from the text, such as BBC's summaries or
+# EasyLaw's, which are empty, so the canary doesn't look for them in it.
+# source	feed	parser	lead
+YONHAP	https://www.yna.co.kr/rss/politics.xml	YonhapNewsParser	yes
+YONHAP	https://www.yna.co.kr/rss/culture.xml	YonhapNewsParser	yes
+BBC_KOREAN	https://feeds.bbci.co.uk/korean/rss.xml	BbcNewsParser	no
+SBS	https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSSREADER	SbsNewsParser	yes
+HANKYOREH	https://www.hani.co.kr/rss/society	HaniNewsParser	yes
+HANKYOREH	https://www.hani.co.kr/rss/opinion	HaniNewsParser	yes
+DONGA	https://rss.donga.com/politics.xml	DongaNewsParser	yes
+DONGA	https://rss.donga.com/travel.xml	DongaNewsParser	yes
+KIDS_DONGA	https://kids.donga.com/rss/allArticle.xml	NdSoftNewsParser	yes
+KIDS_HANKOOK	https://www.kidshankook.kr/rss/allArticle.xml	NdSoftNewsParser	yes
+ECONOI	https://www.econoi.com/rss/allArticle.xml	NdSoftNewsParser	yes
+EASYLAW	https://www.easylaw.go.kr/CSP/RssNewRetrieve.laf?topMenu=serviceUl7	EasyLawParser	no
+SLOWNEWS	https://slownews.kr/feed?cat=-12795	SlowNewsParser	yes

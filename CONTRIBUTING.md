@@ -66,6 +66,7 @@ articles copied from news sites.
   [docs/lookup-analyzer.md](docs/lookup-analyzer.md)).
 * `tools/dictionary-generator` - builds the bundled dictionary from the NIKL dictionary data
 * `tools/analyzer-counts` - builds the analyzer's context counts from the UD Korean treebanks
+* `tools/parser-canary` - checks the parsers against the newest articles of the built-in feeds
 
 ## Tests
 
@@ -96,6 +97,23 @@ ignored by git since the articles belong to the news sites. Without them those t
 and Gradle reports them as skipped. To run them, save an article page from the site under the name
 the test reads, such as `bbc_sample.html`. They check details of specific articles, so expect to
 adjust the assertions for a different article.
+
+Sites change their pages, so the parser canary also checks the parsers against current articles.
+A scheduled workflow, `parser-canary.yml`, runs it daily. It parses the newest articles of the feeds
+in `tools/parser-canary/feeds.tsv` and checks that:
+
+* each article is read by the parser listed for its feed, and that parser recognizes the page's
+  layout
+* a sentence of the description the feed or page gives is in the parsed text, for feeds whose
+  descriptions come from the text
+* the text has no leftover markup, copyright notes or repeated paragraphs
+
+Problems go to an issue labelled `parser-canary`, which is closed once the canary passes again. To
+run it yourself, and save the pages of articles with problems as samples for the parser tests:
+
+```bash
+./gradlew :tools:parser-canary:run --args="--save parser/src/test/resources/canary"
+```
 
 The EPUB parser's tests build small EPUB files in the test, so they need nothing saved. Real books
 are worth trying too, since every tool that makes EPUBs lays them out its own way. Put DRM-free
@@ -153,6 +171,9 @@ version are parsed again in the background the next time they're opened.
 A parser change that only matters for new articles doesn't need a bump. Each bump re-fetches every
 article once, as it's opened.
 
+Keep the parser's `recognizes` checking the parts of the page it reads, which the parser canary
+uses to tell that a site's layout has changed. A new site parser needs one too.
+
 ### The EPUB parser
 
 Raise `EpubParser.VERSION` in
@@ -176,6 +197,9 @@ wouldn't be offered them. Never lower or reuse it, even when removing feeds.
 
 A feed in a new `DefaultCategory` also needs a place in `FeedTopic`, so the first-run setup can pick
 it. `FeedTopicTest` fails until it has one.
+
+A new source also needs a feed in the parser canary's `tools/parser-canary/feeds.tsv`, and a feed
+removed from the built-in ones has to go from it. `ParserCanaryFeedsTest` fails until they match.
 
 ### The user database schema
 
