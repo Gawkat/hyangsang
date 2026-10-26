@@ -8,13 +8,17 @@ class YonhapNewsParser : ContentsParser {
         private val datelineRegex = Regex("""^\(([^)]+연합뉴스)\)\s*(.*?)\s*=\s*""")
         private val emailRegex = Regex("""[\w.+-]+@[\w-]+(\.[\w-]+)+""")
         private val emailSeparatorRegex = Regex("""[\s,/]+""")
+
+        private const val BODY = "div[class=story-news article]"
     }
+
+    override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
 
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         document.select("aside, script, meta, .writer-zone01, .related-zone, #newsWriterCarousel01")
             .remove()
 
-        val main = document.select("div[class=story-news article]").firstOrNull() ?: document.body()
+        val main = document.select(BODY).firstOrNull() ?: document.body()
 
         // Pull the copyright notice out before parsing so it doesn't become body text.
         // .ir-txt01 is a screen-reader copy of the visible send date, so drop it

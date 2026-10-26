@@ -1,6 +1,7 @@
 package dev.kettu.hyangsang.parser
 
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.jsoup.Jsoup
 import org.junit.Test
@@ -239,6 +240,44 @@ class ArticleParserTest {
 
         assertTrue(result[1] is ContentBlock.Text)
         assertEquals("Main content start.", (result[1] as ContentBlock.Text).text)
+    }
+
+    @Test
+    fun `site parsers don't recognize pages in another layout`() {
+        val doc = Jsoup.parse("<html><body><div class='other-layout'><p>본문</p></div></body></html>")
+        listOf(
+            BbcNewsParser(), YonhapNewsParser(), SbsNewsParser(), HaniNewsParser(), EasyLawParser(),
+            NdSoftNewsParser(), SlowNewsParser(), DongaNewsParser()
+        ).forEach { assertFalse(it::class.simpleName, it.recognizes(doc)) }
+    }
+
+    @Test
+    fun `site parsers recognize the saved samples`() {
+        mapOf(
+            "bbc_sample.html" to BbcNewsParser(),
+            "yonhap_sample.htm" to YonhapNewsParser(),
+            "sbs_sample.html" to SbsNewsParser(),
+            "hani_sample.html" to HaniNewsParser(),
+            "easylaw_sample.html" to EasyLawParser(),
+            "easylaw_qna_sample.html" to EasyLawParser(),
+            "kids_donga_sample.html" to NdSoftNewsParser(),
+            "slownews_sample.html" to SlowNewsParser(),
+            "slownews_letter_sample.html" to SlowNewsParser(),
+            "donga_sample.html" to DongaNewsParser(),
+            "donga_wire_sample.html" to DongaNewsParser()
+        ).forEach { (name, parser) ->
+            assertTrue(name, parser.recognizes(Jsoup.parse(readSample(name))))
+        }
+    }
+
+    @Test
+    fun `parserFor picks ND Soft pages by their layout`() {
+        val url = "https://www.mediatoday.co.kr/news/articleView.html?idxno=1"
+        val ndSoft = Jsoup.parse("<div id='article-view-content-div'><p>본문</p></div>")
+        val other = Jsoup.parse("<article><p>본문</p></article>")
+
+        assertTrue(articleParser.parserFor(url, ndSoft) is NdSoftNewsParser)
+        assertTrue(articleParser.parserFor(url, other) is GenericContentsParser)
     }
 
     @Test

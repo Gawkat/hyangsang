@@ -10,10 +10,14 @@ import org.jsoup.nodes.Element
 class SlowNewsParser : ContentsParser {
     companion object {
         const val HOST = "slownews.kr"
+
+        private const val BODY = "article.single-entry .entry-content"
     }
 
+    override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
-        val body = document.select("article.single-entry .entry-content").firstOrNull()
+        val body = document.select(BODY).firstOrNull()
             ?: return GenericContentsParser().extractContents(document, title)
 
         // The share buttons, and boxes asking readers to subscribe, which end with a button

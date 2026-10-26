@@ -13,6 +13,8 @@ class DongaNewsParser : ContentsParser {
     companion object {
         const val HOST = "donga.com"
 
+        private const val BODY = "section.news_view"
+
         private val emailRegex = Regex("""[\w.+-]+@[\w-]+(\.[\w-]+)+""")
 
         // Wire stories end with their source instead of a byline, "[서울=뉴시스]" or "(서울=뉴스1)"
@@ -27,8 +29,10 @@ class DongaNewsParser : ContentsParser {
         )
     }
 
+    override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
-        val body = document.select("section.news_view").firstOrNull()
+        val body = document.select(BODY).firstOrNull()
             ?: return GenericContentsParser().extractContents(document, title)
 
         body.select(

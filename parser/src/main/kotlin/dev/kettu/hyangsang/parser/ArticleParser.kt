@@ -45,13 +45,14 @@ class ArticleParser {
         DongaNewsParser.HOST to DongaNewsParser()
     )
 
-    fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> {
-        val host = hostOf(url)
+    fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> =
+        parserFor(url, document).extractContents(document, title)
 
+    /** The parser that reads the page at [url], or [GenericContentsParser] for other sites. */
+    fun parserFor(url: String, document: Document): ContentsParser {
         // Sites on ND Soft's CMS are recognised by the page rather than listed, as there are many
-        val strategy = parsers[host]
-            ?: ndSoftParser.takeIf { document.getElementById(NdSoftNewsParser.BODY_ID) != null }
+        return parsers[hostOf(url)]
+            ?: ndSoftParser.takeIf { it.recognizes(document) }
             ?: defaultParser
-        return strategy.extractContents(document, title)
     }
 }
