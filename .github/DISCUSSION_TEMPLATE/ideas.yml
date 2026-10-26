@@ -1,0 +1,45 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe it in as much detail as you can.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before suggesting
+      options:
+        - label: I checked the [ideas](https://github.com/Gawkat/hyangsang/discussions/categories/ideas) and this feature hasn't been suggested yet.
+          required: true
+
+  - type: textarea
+    id: feature
+    attributes:
+      label: What's the feature?
+      description: Describe what it does and how you'd use it. Sketches or screenshots from other apps help too.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it useful?
+      description: What would it help you do, such as when reading or learning words, that's hard to do now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: fit
+    attributes:
+      label: How does it fit in with the rest of the app?
+      description: For example, which screen it belongs on, or how it works with features the app already has.
+    validations:
+      required: false
+
+  - type: textarea
+    id: other
+    attributes:
+      label: Anything else?
+      description: Alternatives you've considered, or anything else that might be related.
+    validations:
+      required: false
