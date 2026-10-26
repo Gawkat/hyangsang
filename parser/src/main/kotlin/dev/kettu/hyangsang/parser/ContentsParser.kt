@@ -9,6 +9,13 @@ interface ContentsParser {
     // The title is the one shown above the article, from the feed, for parsers that need to
     // drop a copy of it from the body
     fun extractContents(document: Document, title: String? = null): List<ContentBlock>
+
+    /**
+     * Whether the page has the layout this parser was written for. When it doesn't, the parser
+     * falls back to reading the page like any other, which usually means the site has changed
+     * its layout. Check it before [extractContents], which changes the document.
+     */
+    fun recognizes(document: Document): Boolean = true
 }
 
 fun Element.parseBlocks(): List<ContentBlock> {

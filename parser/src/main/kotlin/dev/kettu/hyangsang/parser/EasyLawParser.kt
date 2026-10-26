@@ -29,6 +29,9 @@ class EasyLawParser : ContentsParser {
         // Icons, such as the arrows marking each depth, and buttons
         private val decorationImageRegex = Regex("""/(CSP/images|common/images)/""")
 
+        private const val GUIDE_ID = "ovDiv"
+        private const val ANSWER = "ul.question li.qa"
+
         /**
          * The page to download for a feed [link], or null when the link doesn't lead to an article.
          * Some links use http, which Android blocks, so they're changed to https.
@@ -44,10 +47,13 @@ class EasyLawParser : ContentsParser {
         }
     }
 
+    override fun recognizes(document: Document): Boolean =
+        document.getElementById(GUIDE_ID) != null || document.selectFirst(ANSWER) != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
-        val guide: Element? = document.getElementById("ovDiv")
+        val guide: Element? = document.getElementById(GUIDE_ID)
         if (guide != null) return guide(document, guide, title)
-        document.select("ul.question li.qa").firstOrNull()?.let { return answer(document, it) }
+        document.select(ANSWER).firstOrNull()?.let { return answer(document, it) }
         return GenericContentsParser().extractContents(document, title)
     }
 

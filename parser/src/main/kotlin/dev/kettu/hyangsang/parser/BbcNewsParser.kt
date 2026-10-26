@@ -3,6 +3,9 @@ package dev.kettu.hyangsang.parser
 import org.jsoup.nodes.Document
 
 class BbcNewsParser : ContentsParser {
+    // The body is read from <main>, which articles start with their headline
+    override fun recognizes(document: Document): Boolean = document.selectFirst("main h1") != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         // 1. Handle Byline specifically
         val byline = document.select("section[data-testid=byline]").firstOrNull()

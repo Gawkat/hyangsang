@@ -18,11 +18,17 @@ class HaniNewsParser : ContentsParser {
 
         // Paragraphs made up only of bold text, used as section headings within the body
         private const val MAX_BOLD_HEADING_LENGTH = 60
+
+        private const val ARTICLE = "article#renewal2023"
+        private const val BODY = "div.article-text"
     }
 
+    override fun recognizes(document: Document): Boolean =
+        document.selectFirst("$ARTICLE $BODY") != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
-        val article = document.select("article#renewal2023").firstOrNull()
-        val body = article?.select("div.article-text")?.firstOrNull()
+        val article = document.select(ARTICLE).firstOrNull()
+        val body = article?.select(BODY)?.firstOrNull()
             ?: return GenericContentsParser().extractContents(document, title)
 
         body.select("[class*=BaseAd_], [class*=adWrap], .embeded-area, button, iframe, script, style")

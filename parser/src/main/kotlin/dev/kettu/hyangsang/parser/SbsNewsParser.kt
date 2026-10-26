@@ -9,7 +9,11 @@ class SbsNewsParser : ContentsParser {
     companion object {
         // Captions written into the body as a grey centred line, e.g. "▲ DMZ 인근에서 이동 중인 수리온 헬기"
         private const val CAPTION_MARKER = "▲"
+
+        private const val BODY = "div.main_text > div.text_area"
     }
+
+    override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
 
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         val blocks = mutableListOf<ContentBlock>()
@@ -29,7 +33,7 @@ class SbsNewsParser : ContentsParser {
             ?.let { blocks.add(it) }
 
         // Main article: plain text nodes separated by <br>s, with images and captions in between
-        val textArea = document.select("div.main_text > div.text_area").firstOrNull()
+        val textArea = document.select(BODY).firstOrNull()
         if (textArea != null) {
             BodyWalker(blocks).walk(textArea)
         }

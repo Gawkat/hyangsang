@@ -26,6 +26,8 @@ class NdSoftNewsParser : ContentsParser {
         private val headingMarkers = charArrayOf('△', '▲', '■', '□', '◆', '◇')
     }
 
+    override fun recognizes(document: Document): Boolean = document.getElementById(BODY_ID) != null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         val body = document.getElementById(BODY_ID)
             ?: return GenericContentsParser().extractContents(document, title)
