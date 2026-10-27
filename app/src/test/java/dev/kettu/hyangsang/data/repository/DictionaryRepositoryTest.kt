@@ -152,6 +152,31 @@ class DictionaryRepositoryTest {
     }
 
     @Test
+    fun `endings come after the predicate, in the order they're in the word`() = runBlocking {
+        val dictionary = listOf(
+            createEntry("공부", "Noun", level = "Beginner"),
+            createEntry("공부하다", "Verb", level = "Beginner"),
+            createEntry("하다", "Verb", level = "Beginner"),
+            createEntry("-면서", "Ending"),
+            createEntry("-였-", "Ending"),
+            createEntry("-겠-", "Ending"),
+            createEntry("-다", "Ending"),
+            createEntry("-습니다", "Ending"),
+            // -고 is also a suffix (-고 as in 최고), which has a higher POS priority
+            createEntry("-고", "Affix", homonymNumber = 2),
+            createEntry("-고", "Ending", homonymNumber = 1),
+            createEntry("가다", "Verb", level = "Beginner")
+        )
+        assertEquals(listOf("공부하다", "공부", "-면서"), lookUpIn("공부하면서", dictionary))
+        assertEquals(listOf("하다", "-겠-", "-습니다"), lookUpIn("하겠습니다", dictionary))
+        // The most basic endings aren't shown
+        assertEquals(listOf("하다"), lookUpIn("했다", dictionary))
+        val going = repository(dictionary).getDefinitionsForWord("가고").first()
+        assertEquals(listOf("가다", "-고"), going.keys.toList())
+        assertEquals("Ending", going.getValue("-고").first().entry.partOfSpeech)
+    }
+
+    @Test
     fun `the word after a number is looked up as written`() = runBlocking {
         // 대 is also the stem of 대다
         val keys = lookUp("60대", listOf("대", "대다"))
@@ -223,7 +248,7 @@ class DictionaryRepositoryTest {
         assertEquals(listOf("지나다"), lookUpIn("지난", predicateDictionary))
         // The adjective, as -게 makes adverbs of adjectives
         val big = repository(predicateDictionary).getDefinitionsForWord("크게").first()
-        assertEquals(listOf("크다"), big.keys.toList())
+        assertEquals(listOf("크다", "-게"), big.keys.toList())
         assertEquals("Adjective", big.getValue("크다").first().entry.partOfSpeech)
     }
 

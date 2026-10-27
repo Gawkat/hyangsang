@@ -178,8 +178,7 @@ class DictionaryRepository(
     private fun getHangulSearchTerms(word: String, neighbors: Neighbors = Neighbors()): SearchTerms {
         // The words around it, for the analyzer's context
         val context = listOfNotNull(neighbors.previous, word, neighbors.next).takeIf { it.size > 1 }?.joinToString(" ")
-        // Endings aren't shown yet
-        val tokens = analyzer.value.tokenize(word, context).filter { it.tag != Tag.ENDING }
+        val (endings, tokens) = analyzer.value.tokenize(word, context).partition { it.tag == Tag.ENDING }
         val terms = LinkedHashMap<String, Tag?>()
         val compounds = mutableListOf<String>()
         val splitParts = mutableSetOf<String>()
@@ -265,6 +264,9 @@ class DictionaryRepository(
                 }
             }
         }
+
+        // Endings as the dictionary writes them (-면서, -겠-), except the most basic ones
+        for (ending in endings) ending.stem?.takeIf { it !in BASIC_ENDINGS }?.let { terms.putIfAbsent(it, Tag.ENDING) }
 
         // The word is read as the content word it starts with, unless it's that word. Without
         // one, as after a number or a prefix, the terms are ranked by the rest of the order.
@@ -471,8 +473,9 @@ class DictionaryRepository(
                         // Sort:
                         // 1. What the word is read as first (the word itself, or its stem),
                         //    then hanja, which are likely why the word was tapped
-                        // 2. Particles and endings last. Many have noun homonyms (과, 이), so
-                        //    the entries' POS alone would put them first.
+                        // 2. Particles and endings last, in the order they're in the word. Many
+                        //    have noun homonyms (과, 이) or affix homonyms (-고), so the entries'
+                        //    POS alone would put them first.
                         // 3. Counters first, as the word after a number is what's being counted
                         // 4. POS priority of the entry shown first (Nouns > Verbs > Adverbs >
                         //    Grammatical markers)
@@ -483,13 +486,16 @@ class DictionaryRepository(
                             }.thenByDescending {
                                 it.first in hanjaTerms
                             }.thenBy {
-                                terms[it.first] == Tag.PARTICLE
+                                terms[it.first] in GRAMMAR_TAGS
                             }.thenByDescending {
                                 it.first in lookup.searchTerms.counters
                             }.thenBy {
-                                getPosPriority(it.second.first())
+                                // Grammar keeps its order in the word (-었- before -다)
+                                if (terms[it.first] in GRAMMAR_TAGS) 0 else getPosPriority(it.second.first())
                             }.thenByDescending {
-                                it.first.length
+                                if (terms[it.first] in GRAMMAR_TAGS) 0 else it.first.length
+                            }.thenBy {
+                                if (terms[it.first] in GRAMMAR_TAGS) terms.keys.indexOf(it.first) else 0
                             }
                         )
                         .toMap()
@@ -523,6 +529,13 @@ class DictionaryRepository(
             "한", "두", "세", "네", "서", "석", "너", "넉", "다섯", "여섯", "일곱", "여덟", "아홉", "열",
             "스무", "몇", "여러", "몇몇", "수십", "수백", "수천", "수만", "십여"
         )
+
+        // Endings too common to be worth a chip: the plain statement, the past tense and the
+        // modifier forms
+        val BASIC_ENDINGS = setOf("-다", "-였-", "-았-", "-었-", "-ㄴ", "-ㄹ")
+
+        // Tags of the terms shown after the words they attach to
+        val GRAMMAR_TAGS = setOf(Tag.PARTICLE, Tag.ENDING)
 
         // Tags of the parts of a compound noun
         val COMPOUND_TAGS = setOf(Tag.NOUN, Tag.UNKNOWN, Tag.SUFFIX)
