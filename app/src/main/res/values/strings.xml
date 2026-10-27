@@ -17,7 +17,7 @@
     <string name="released_label">Released: %1$s</string>
     <string name="discover_nav">Discover</string>
     <string name="search_placeholder">Search articles…</string>
-    <string name="oss_licenses_nav">Open source licenses</string>
+    <string name="oss_licenses_nav">Open source licences</string>
     <string name="feeds_title">Feeds</string>
     <string name="open_in_browser_button">Open in browser</string>
     <string name="reload_article">Reload article</string>
@@ -32,8 +32,8 @@
     <string name="article_not_found_label">Article not found</string>
     <string name="report_issue_nav">Report an issue</string>
     <string name="dictionary_attribution_label">Dictionary attribution</string>
-    <string name="dictionary_attribution_text">This application uses data from the National Institute of Korean Language\'s Korean-English Learners\' Dictionary.\n\nAll dictionary content is owned by its respective copyright holders and is provided under the Creative Commons Attribution-ShareAlike license.</string>
-    <string name="view_license_information">View license information</string>
+    <string name="dictionary_attribution_text">This application uses data from the National Institute of Korean Language\'s Korean-English Learners\' Dictionary.\n\nAll dictionary content is owned by its respective copyright holders and is provided under the Creative Commons Attribution-ShareAlike licence.</string>
+    <string name="view_license_information">View licence information</string>
     <string name="about_label">About</string>
     <string name="app_name_romanized" translatable="false">Hyangsang</string>
     <string name="library_nav">Library</string>
@@ -246,7 +246,7 @@
     <string name="setup_hint_manage_feeds">Turn feeds on or off, and add more built-in feeds from its menu</string>
     <string name="setup_hint_own_feeds_title">Your own feeds</string>
     <string name="setup_hint_own_feeds">Add any site\'s RSS feed with Add feed in Manage feeds</string>
-    <string name="setup_hint_saved">Articles you bookmark are kept here</string>
+    <string name="setup_hint_saved">Bookmarked articles, imported text and EPUB books are kept here</string>
     <string name="setup_start_reading">Start reading</string>
     <string name="topic_politics">Politics</string>
     <string name="topic_economy">Economy</string>
@@ -406,7 +406,7 @@
         Jayeol Chun, Na-Rae Han, Jena D. Hwang and Jinho D. Choi. Building Universal Dependency Treebanks in Korean. LREC 2018.<br>
         Ryan McDonald et al. Universal Dependency Annotation for Multilingual Parsing. ACL 2013.
         <br><br>
-        The treebanks are licensed under the Creative Commons Attribution-ShareAlike 4.0 license. The counts are derived from them and shared under the same license:<br><a href="https://creativecommons.org/licenses/by-sa/4.0/">creativecommons.org/licenses/by-sa/4.0</a>]]>
+        The treebanks are licensed under the Creative Commons Attribution-ShareAlike 4.0 licence. The counts are derived from them and shared under the same licence:<br><a href="https://creativecommons.org/licenses/by-sa/4.0/">creativecommons.org/licenses/by-sa/4.0</a>]]>
     </string>
     <string name="palette_attribution_label">Colour palettes</string>
     <string name="palette_attribution_text">
