@@ -49,9 +49,10 @@ interface RssFeedDao {
     @Query("UPDATE rss_feeds SET category = :newName WHERE category = :oldName")
     suspend fun renameCategory(oldName: String, newName: String)
 
-    @Query("UPDATE rss_feeds SET lastSynced = :timestamp, lastSyncAttempt = :timestamp, lastSyncError = NULL WHERE id = :id")
+    @Query("UPDATE rss_feeds SET lastSynced = :timestamp, lastSyncAttempt = :timestamp, lastSyncError = NULL, failedSyncs = 0 WHERE id = :id")
     suspend fun markSyncSucceeded(id: Long, timestamp: String)
 
-    @Query("UPDATE rss_feeds SET lastSyncAttempt = :timestamp, lastSyncError = :error WHERE id = :id")
-    suspend fun markSyncFailed(id: Long, timestamp: String, error: String)
+    // [counted] is false for failures that say nothing about the site, such as having no connection
+    @Query("UPDATE rss_feeds SET lastSyncAttempt = :timestamp, lastSyncError = :error, failedSyncs = failedSyncs + :counted WHERE id = :id")
+    suspend fun markSyncFailed(id: Long, timestamp: String, error: String, counted: Boolean)
 }
