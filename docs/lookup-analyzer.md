@@ -237,8 +237,10 @@ OKT is replaced in stages, each its own pull request:
    the adapter for this one rather than an interface. The release APK went from 47.5 MB to
    43.9 MB, and the lookup evaluation is unchanged.
 
-Showing endings such as -면서 in the lookup sheet comes after the switch. Tuning the analyzer
-belongs in the `analyzer` module, not in the app's lookup code.
+Since the switch, the lookup sheet also shows the word's endings, such as -면서 and -겠-, after
+its words and particles, in the order they're in the word. The most basic endings (-다, -었-,
+-ㄴ, -ㄹ) are left out. Tuning the analyzer belongs in the
+`analyzer` module, not in the app's lookup code.
 
 ## How it was measured
 
