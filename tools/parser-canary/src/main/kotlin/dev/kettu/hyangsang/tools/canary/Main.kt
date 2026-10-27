@@ -77,6 +77,8 @@ private fun readFeeds(): List<Feed> = FEEDS.readLines()
     }
 
 private fun check(feed: Feed, articles: Int, save: File?): FeedResult {
+    // The previous feed's last article may be from the same site
+    Thread.sleep(DELAY_MILLIS)
     val items = try {
         retried { readItems(feed.url) }
     } catch (e: Exception) {
