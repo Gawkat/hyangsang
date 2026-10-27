@@ -175,4 +175,29 @@ class MigrationTest {
             assertEquals("2026-09-26T00:00:00Z", it.getString(2))
         }
     }
+
+    @Test
+    fun migrate19To20_countsFailingFeedsOnce() {
+        helper.createDatabase(TEST_DB, 19).apply {
+            execSQL(
+                "INSERT INTO rss_feeds (id, title, url, category, isEnabled, lastSynced, lastSyncAttempt, lastSyncError) " +
+                    "VALUES (1, 'Working', 'https://example.com/a', 'News', 1, '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z', NULL)"
+            )
+            execSQL(
+                "INSERT INTO rss_feeds (id, title, url, category, isEnabled, lastSynced, lastSyncAttempt, lastSyncError) " +
+                    "VALUES (2, 'Failing', 'https://example.com/b', 'News', 1, '2026-10-01T00:00:00Z', '2026-10-20T00:00:00Z', 'timeout')"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 20, true, MIGRATION_19_20)
+
+        db.query("SELECT failedSyncs, lastSyncError FROM rss_feeds ORDER BY id").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+            it.moveToNext()
+            assertEquals(1, it.getInt(0))
+            assertEquals("timeout", it.getString(1))
+        }
+    }
 }

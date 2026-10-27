@@ -6,6 +6,7 @@ import dev.kettu.hyangsang.data.local.dao.ArticleDao
 import dev.kettu.hyangsang.data.local.dao.RssFeedDao
 import dev.kettu.hyangsang.data.local.entity.Article
 import dev.kettu.hyangsang.data.local.entity.RssFeed
+import dev.kettu.hyangsang.network.HostLimiter
 import dev.kettu.hyangsang.network.RssFeedService
 import dev.kettu.hyangsang.parser.ArticleParser
 import dev.kettu.hyangsang.parser.RssFeedParser
@@ -26,13 +27,42 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
+import java.net.UnknownHostException
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 private val DEFAULT_FEED_REFRESH_RATE_LIMIT = 5.minutes
+private val MAX_FEED_RETRY_DELAY = 1.days
 private const val MAX_CONCURRENT_FEED_FETCHES = 6
+private const val MAX_CONCURRENT_FETCHES_PER_HOST = 2
+
+// How long after the last attempt a feed is fetched again. Each failure in a row doubles it, so a
+// site that is down or blocking the app isn't asked again on every refresh
+internal fun retryDelay(failedSyncs: Int): Duration =
+    if (failedSyncs <= 0) {
+        DEFAULT_FEED_REFRESH_RATE_LIMIT
+    } else {
+        (DEFAULT_FEED_REFRESH_RATE_LIMIT * (1 shl (failedSyncs - 1).coerceAtMost(16)))
+            .coerceAtMost(MAX_FEED_RETRY_DELAY)
+    }
+
+// Rate limits on attempts rather than successes, so a broken feed isn't retried constantly. A
+// forced refresh skips the wait for feeds that work, but not the backoff for failing ones: those
+// are retried from their own menu
+@OptIn(ExperimentalTime::class)
+internal fun isDue(feed: RssFeed, now: Instant, forceRefresh: Boolean): Boolean {
+    if (forceRefresh && feed.failedSyncs == 0) return true
+    val lastAttempt = try {
+        Instant.parse(feed.lastSyncAttempt ?: feed.lastSynced)
+    } catch (_: Exception) {
+        Instant.DISTANT_PAST
+    }
+    return now - lastAttempt >= retryDelay(feed.failedSyncs)
+}
 
 enum class FeedCheckError { UNREACHABLE, HTTP_ERROR, NOT_A_FEED, ALREADY_ADDED }
 
@@ -113,7 +143,7 @@ class RssFeedRepository(
         val feed = RssFeed(title = title, url = url, category = category)
         val id = rssFeedDao.insertFeed(feed)
         if (id != -1L) {
-            fetchAndSaveRss(feed.copy(id = id))
+            hostLimiter.withPermit(url) { fetchAndSaveRss(feed.copy(id = id)) }
         }
     }
 
@@ -176,28 +206,24 @@ class RssFeedRepository(
         val enabledFeeds = rssFeedDao.getEnabledFeeds().first()
         val now = Clock.System.now()
 
-        val dueFeeds = enabledFeeds.filter { feed ->
-            // Rate limit on attempts rather than successes, so a broken feed isn't retried constantly
-            val lastAttempt = try {
-                Instant.parse(feed.lastSyncAttempt ?: feed.lastSynced)
-            } catch (_: Exception) {
-                Instant.DISTANT_PAST
-            }
-
-            // Skip if forceRefresh is false and the last attempt is within the last 5 minutes
-            forceRefresh || (now - lastAttempt) >= DEFAULT_FEED_REFRESH_RATE_LIMIT
-        }
-
-        fetchConcurrently(dueFeeds)
+        fetchConcurrently(enabledFeeds.filter { isDue(it, now, forceRefresh) })
     }
 
+    // Shared by every refresh, so overlapping refreshes don't add up to a burst on one site
+    private val hostLimiter = HostLimiter(MAX_CONCURRENT_FETCHES_PER_HOST)
+
     // Fetches feeds in parallel; each fetch records its own failure, so one bad feed doesn't
-    // cancel the rest. The cap bounds how many feed bodies are downloaded and parsed at once
+    // cancel the rest. The cap bounds how many feed bodies are downloaded and parsed at once.
+    // The host's permit is taken first, so feeds waiting for a busy site don't hold up the others
     private suspend fun fetchConcurrently(feeds: List<RssFeed>): List<Int?> {
         val semaphore = Semaphore(MAX_CONCURRENT_FEED_FETCHES)
         return coroutineScope {
             feeds.map { feed ->
-                async { semaphore.withPermit { fetchAndSaveRss(feed) } }
+                async {
+                    hostLimiter.withPermit(feed.url) {
+                        semaphore.withPermit { fetchAndSaveRss(feed) }
+                    }
+                }
             }.awaitAll()
         }
     }
@@ -235,7 +261,12 @@ class RssFeedRepository(
                     rssFeedDao.markSyncSucceeded(feed.id, attemptTime)
                     newCount
                 } else {
-                    rssFeedDao.markSyncFailed(feed.id, attemptTime, "HTTP ${response.code()}")
+                    rssFeedDao.markSyncFailed(
+                        feed.id,
+                        attemptTime,
+                        "HTTP ${response.code()}",
+                        counted = true
+                    )
                     null
                 }
             } catch (e: CancellationException) {
@@ -245,7 +276,10 @@ class RssFeedRepository(
                 rssFeedDao.markSyncFailed(
                     feed.id,
                     attemptTime,
-                    e.message ?: e::class.simpleName ?: "Unknown error"
+                    e.message ?: e::class.simpleName ?: "Unknown error",
+                    // Without a connection the name doesn't resolve, and the site never saw the
+                    // request. Backing off for it would leave feeds stale long after reconnecting
+                    counted = e !is UnknownHostException
                 )
                 null
             }

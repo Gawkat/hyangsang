@@ -66,7 +66,16 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
+// Counts failed syncs in a row, so failing feeds are retried less often. Feeds failing now start
+// with one, since how many times they failed before wasn't kept
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `rss_feeds` ADD COLUMN `failedSyncs` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("UPDATE `rss_feeds` SET `failedSyncs` = 1 WHERE `lastSyncError` IS NOT NULL")
+    }
+}
+
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18,
-    MIGRATION_18_19
+    MIGRATION_18_19, MIGRATION_19_20
 )

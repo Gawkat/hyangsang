@@ -18,7 +18,8 @@ data class RssFeed @OptIn(ExperimentalTime::class) constructor(
     val isEnabled: Boolean = true,
     val lastSynced: String = Instant.fromEpochMilliseconds(0).toString(), // Last successful sync
     val lastSyncAttempt: String? = null,
-    val lastSyncError: String? = null // Null when the last attempt succeeded
+    val lastSyncError: String? = null, // Null when the last attempt succeeded
+    val failedSyncs: Int = 0 // Failed attempts since the last success, for backing off
 )
 
 data class RssItem(
