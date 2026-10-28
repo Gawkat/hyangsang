@@ -48,6 +48,14 @@ class ArticleParser {
     fun parse(url: String, document: Document, title: String? = null): List<ContentBlock> =
         parserFor(url, document).extractContents(document, title)
 
+    /**
+     * Whether the page at [url] is an error page for a missing article that was served like the
+     * article, so that it isn't stored as one. Check it before [parse], which changes the document.
+     */
+    fun isErrorPage(url: String, document: Document): Boolean =
+        parserFor(url, document).isErrorPage(url, document) ||
+                ErrorPages.looksLikeErrorPage(url, document)
+
     /** The parser that reads the page at [url], or [GenericContentsParser] for other sites. */
     fun parserFor(url: String, document: Document): ContentsParser {
         // Sites on ND Soft's CMS are recognised by the page rather than listed, as there are many

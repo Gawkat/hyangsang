@@ -16,6 +16,13 @@ interface ContentsParser {
      * its layout. Check it before [extractContents], which changes the document.
      */
     fun recognizes(document: Document): Boolean = true
+
+    /**
+     * Whether the page is the site's error page for a missing article, served as if it were the
+     * article. [url] is the page that was asked for, and the document's location is where it
+     * ended up. Check it before [extractContents], which changes the document.
+     */
+    fun isErrorPage(url: String, document: Document): Boolean = false
 }
 
 fun Element.parseBlocks(): List<ContentBlock> {

@@ -50,6 +50,12 @@ class EasyLawParser : ContentsParser {
     override fun recognizes(document: Document): Boolean =
         document.getElementById(GUIDE_ID) != null || document.selectFirst(ANSWER) != null
 
+    // A guide chapter or answer that doesn't exist redirects to the home page or the list of
+    // answers, which isn't one of the article pages
+    override fun isErrorPage(url: String, document: Document): Boolean =
+        articleUrl(url) != null && document.location().isNotEmpty() &&
+                articleUrl(document.location()) == null
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         val guide: Element? = document.getElementById(GUIDE_ID)
         if (guide != null) return guide(document, guide, title)

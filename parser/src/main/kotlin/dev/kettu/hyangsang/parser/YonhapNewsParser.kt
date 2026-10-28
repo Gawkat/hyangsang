@@ -10,9 +10,15 @@ class YonhapNewsParser : ContentsParser {
         private val emailSeparatorRegex = Regex("""[\s,/]+""")
 
         private const val BODY = "div[class=story-news article]"
+
+        // The "원하시는 페이지를 찾을 수 없습니다." box, which takes the article's place
+        private const val NOT_FOUND = ".article-deleted, .box-deleted"
     }
 
     override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
+
+    override fun isErrorPage(url: String, document: Document): Boolean =
+        document.selectFirst(NOT_FOUND) != null
 
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         document.select("aside, script, meta, .writer-zone01, .related-zone, #newsWriterCarousel01")
