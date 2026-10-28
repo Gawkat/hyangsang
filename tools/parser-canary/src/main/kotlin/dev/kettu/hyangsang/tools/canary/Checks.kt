@@ -13,8 +13,10 @@ private const val MIN_HANGUL = 50
 
 // The lead is matched a sentence at a time, since some feeds join sentences from all over the
 // article, and only by the start of each, since descriptions are cut short or edited, such as
-// "어제" for the text's "어제(26일)"
-private val sentenceEnd = Regex("""(?<=[.!?。…])\s+""")
+// "어제" for the text's "어제(26일)". A sentence can end in a closing quote, as in digests listing quoted headings.
+private val sentenceEnd = Regex("""(?<=[.!?。…]["'”’」』)]?)\s+""")
+// The footer WordPress adds to its feeds' descriptions, which isn't in the text
+private val wordPressFooter = Regex("""\s*The post .* appeared first on .*$""", RegexOption.DOT_MATCHES_ALL)
 private const val MIN_SENTENCE_LETTERS = 15
 private const val SENTENCE_PREFIX_LETTERS = 20
 
@@ -43,7 +45,7 @@ private val boilerplatePatterns = listOf(
  */
 fun leadFound(blocks: List<ContentBlock>, leads: List<String>): Boolean? {
     val body = blocks.joinToString("") { it.plainText() }.lettersOnly()
-    val sentences = leads.flatMap { it.split(sentenceEnd) }
+    val sentences = leads.flatMap { it.replace(wordPressFooter, "").split(sentenceEnd) }
         .map { it.lettersOnly().take(SENTENCE_PREFIX_LETTERS) }
         .filter { it.length >= MIN_SENTENCE_LETTERS }
     if (sentences.isEmpty()) return null
