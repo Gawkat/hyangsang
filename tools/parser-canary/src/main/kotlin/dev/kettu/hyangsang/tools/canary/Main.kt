@@ -118,6 +118,10 @@ private fun checkArticle(feed: Feed, item: Item, document: Document): Result {
     )
 
     val problems = mutableListOf<String>()
+    // A feed's newest articles exist, so this usually means a check misfires on real articles
+    if (parser.isErrorPage(item.url, document)) {
+        problems.add("taken for an error page")
+    }
     val chosen = parser.parserFor(item.url, document)
     val name = chosen::class.simpleName
     if (name != feed.parser) {

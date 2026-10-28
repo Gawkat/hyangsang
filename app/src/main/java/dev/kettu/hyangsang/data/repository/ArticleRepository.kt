@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
+import java.io.IOException
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
@@ -190,9 +191,11 @@ class ArticleRepository(private val articleDao: ArticleDao) {
         val url = article.sourceUrl ?: return null
         return withContext(Dispatchers.IO) {
             val document = Jsoup.connect(url).userAgent(USER_AGENT).get()
+            val parser = ArticleParser()
+            if (parser.isErrorPage(url, document)) throw ErrorPageException(url)
             val pageTitle = ArticleParser.pageTitle(document)
             FetchedPage(
-                ArticleParser().parse(url, document, article.title.ifBlank { pageTitle }),
+                parser.parse(url, document, article.title.ifBlank { pageTitle }),
                 pageTitle
             )
         }
@@ -200,6 +203,10 @@ class ArticleRepository(private val articleDao: ArticleDao) {
 
     private data class FetchedPage(val content: List<ContentBlock>, val title: String?)
 }
+
+// A site's error page for a missing article, served with a success status as if it were the
+// article. It's handled like a 404
+internal class ErrorPageException(url: String) : IOException("Error page served for $url")
 
 // Makes the search text match literally inside a LIKE pattern that uses ESCAPE '\'
 internal fun escapeLike(text: String): String =
@@ -223,11 +230,13 @@ enum class DownloadFailure {
     OTHER;
 
     companion object {
-        fun of(e: Exception): DownloadFailure = when ((e as? HttpStatusException)?.statusCode) {
-            401, 403, 451 -> BLOCKED
-            404, 410 -> NOT_FOUND
-            else -> OTHER
-        }
+        fun of(e: Exception): DownloadFailure =
+            if (e is ErrorPageException) NOT_FOUND
+            else when ((e as? HttpStatusException)?.statusCode) {
+                401, 403, 451 -> BLOCKED
+                404, 410 -> NOT_FOUND
+                else -> OTHER
+            }
     }
 }
 

@@ -15,6 +15,12 @@ class SbsNewsParser : ContentsParser {
 
     override fun recognizes(document: Document): Boolean = document.selectFirst(BODY) != null
 
+    // A missing article gives a "기사 내용이 없습니다." page without a body, which asks not to be
+    // indexed. Articles don't
+    override fun isErrorPage(url: String, document: Document): Boolean =
+        document.selectFirst(BODY) == null &&
+                document.select("meta[name=robots]").any { it.attr("content").contains("noindex") }
+
     override fun extractContents(document: Document, title: String?): List<ContentBlock> {
         val blocks = mutableListOf<ContentBlock>()
 

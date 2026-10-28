@@ -21,6 +21,14 @@ class DownloadFailureTest {
     }
 
     @Test
+    fun `error pages served as articles are not found`() {
+        assertEquals(
+            DownloadFailure.NOT_FOUND,
+            DownloadFailure.of(ErrorPageException("https://example.com/article"))
+        )
+    }
+
+    @Test
     fun `server and connection errors may pass`() {
         assertEquals(DownloadFailure.OTHER, DownloadFailure.of(status(503)))
         assertEquals(DownloadFailure.OTHER, DownloadFailure.of(UnknownHostException("example.com")))
