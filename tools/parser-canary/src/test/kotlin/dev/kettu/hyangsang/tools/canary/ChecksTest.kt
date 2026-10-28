@@ -88,4 +88,12 @@ class ChecksTest {
     fun `there's no lead to check without a long enough sentence`() {
         assertEquals(null, leadFound(article, listOf("", "최근 업데이트")))
     }
+
+    @Test
+    fun `quoted headings and the WordPress footer aren't taken for sentences`() {
+        // A newsletter whose description lists its section headings
+        val lead = "조희대 국정조사. “지뢰는 방어용 무기.” “미군을 믿을 수 있나.” 다르게 읽기...\n" +
+            "The post 앤트로픽이 돈을 벌기 시작했다는 신호: 슬로우레터 10월28일. appeared first on 슬로우뉴스.."
+        assertEquals(null, leadFound(article, listOf(lead)))
+    }
 }
