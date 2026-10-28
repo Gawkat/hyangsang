@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,12 +34,21 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.ArticleSummary
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.ui.discover.ArticleRow
+import dev.kettu.hyangsang.ui.utils.SearchTerms
 import kotlinx.coroutines.launch
 
-/** The Articles tab of the Library: saved and imported articles. */
+/**
+ * The Articles tab of the Library: saved and imported articles.
+ *
+ * @param search the search the articles were filtered by, if any
+ * @param otherTabMatches how many books match the search
+ */
 @Composable
 fun SavedArticles(
     savedArticles: List<ArticleSummaryWithFeed>,
+    search: SearchTerms?,
+    otherTabMatches: Int,
+    onShowOtherTab: () -> Unit,
     importedOnly: Boolean,
     onImportedOnlyChange: (Boolean) -> Unit,
     onArticleClick: (Long) -> Unit,
@@ -50,19 +62,43 @@ fun SavedArticles(
     val undoLabel = stringResource(R.string.undo)
 
     Column(modifier = modifier) {
-        FilterChip(
-            selected = importedOnly,
-            onClick = { onImportedOnlyChange(!importedOnly) },
-            label = { Text(stringResource(R.string.imported_filter)) },
-            leadingIcon = if (importedOnly) {
-                { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            } else {
-                null
-            },
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
+        ) {
+            FilterChip(
+                selected = importedOnly,
+                onClick = { onImportedOnlyChange(!importedOnly) },
+                label = { Text(stringResource(R.string.imported_filter)) },
+                leadingIcon = if (importedOnly) {
+                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                } else {
+                    null
+                }
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            if (search != null && savedArticles.isNotEmpty()) {
+                SearchResultCount(
+                    pluralStringResource(R.plurals.search_result_count, savedArticles.size, savedArticles.size)
+                )
+            }
+        }
+        if (search != null && savedArticles.isEmpty()) {
+            NoSearchResults(
+                message = stringResource(R.string.no_search_results),
+                otherTabLabel = if (otherTabMatches > 0) {
+                    pluralStringResource(R.plurals.show_matching_books, otherTabMatches, otherTabMatches)
+                } else {
+                    null
+                },
+                onOtherTabClick = onShowOtherTab,
+                modifier = Modifier.fillMaxSize()
+            )
+            return@Column
+        }
         SavedList(
             savedArticles = savedArticles,
+            search = search,
             importedOnly = importedOnly,
             onArticleClick = onArticleClick,
             onSaveClick = { article ->
@@ -87,6 +123,7 @@ fun SavedArticles(
 @Composable
 private fun SavedList(
     savedArticles: List<ArticleSummaryWithFeed>,
+    search: SearchTerms?,
     importedOnly: Boolean,
     onArticleClick: (Long) -> Unit,
     onSaveClick: (ArticleSummary) -> Unit
@@ -108,6 +145,7 @@ private fun SavedList(
                     onClick = { onArticleClick(article.id) },
                     onSaveClick = { onSaveClick(article) },
                     showSavedTime = true,
+                    highlight = search,
                     modifier = Modifier.animateItem()
                 )
             }

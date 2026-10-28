@@ -107,6 +107,18 @@
     <string name="chapter_number_and_title">%1$d장 · %2$s</string>
     <string name="chapter_of_chapters_and_percent">%2$d장 중 %1$d장 · %3$s</string>
     <string name="all_books_count">전체 책 · %1$d</string>
+    <string name="search_button">검색</string>
+    <string name="search_books_placeholder">책 검색…</string>
+    <string name="no_book_search_results">검색 결과가 없습니다.</string>
+    <plurals name="book_result_count">
+        <item quantity="other">책 %1$d권</item>
+    </plurals>
+    <plurals name="show_matching_books">
+        <item quantity="other">책 검색 결과 %1$d권 보기</item>
+    </plurals>
+    <plurals name="show_matching_articles">
+        <item quantity="other">기사 검색 결과 %1$d개 보기</item>
+    </plurals>
     <string name="sort_recently_read">최근 읽은 순</string>
     <string name="sort_title">제목순</string>
     <string name="sort_recently_added">최근 추가순</string>

@@ -14,7 +14,7 @@ fun sourceLabel(feed: RssFeed?, sourceUrl: String?): String =
 // An imported link isn't downloaded yet when it's first listed, so it has no title until then
 fun displayTitle(title: String, sourceUrl: String?): String = title.ifBlank { sourceUrl.orEmpty() }
 
-private fun siteOf(url: String): String = try {
+internal fun siteOf(url: String): String = try {
     URI(url).host?.removePrefix("www.") ?: url
 } catch (_: Exception) {
     url

@@ -49,6 +49,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,16 +60,26 @@ import dev.kettu.hyangsang.R
 import dev.kettu.hyangsang.data.local.entity.Book
 import dev.kettu.hyangsang.data.local.entity.BookWithChapter
 import dev.kettu.hyangsang.data.local.entity.ChapterInfo
+import dev.kettu.hyangsang.ui.components.highlighted
 import dev.kettu.hyangsang.ui.reader.ContentsSheet
+import dev.kettu.hyangsang.ui.utils.SearchTerms
 import dev.kettu.hyangsang.ui.viewmodel.BookSort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** The Books tab of the Library: the book being read, then all books in a grid. */
+/**
+ * The Books tab of the Library: the book being read, then all books in a grid.
+ *
+ * @param search the search the books were filtered by, if any
+ * @param otherTabMatches how many articles match the search
+ */
 @Composable
 fun BooksTab(
     books: List<BookWithChapter>,
+    search: SearchTerms?,
+    otherTabMatches: Int,
+    onShowOtherTab: () -> Unit,
     sort: BookSort,
     onSortChange: (BookSort) -> Unit,
     coverFile: (Book) -> File?,
@@ -89,10 +100,24 @@ fun BooksTab(
     val undoLabel = stringResource(R.string.undo)
 
     if (books.isEmpty()) {
-        BooksEmptyState(onAddClick = onAddClick, modifier = modifier)
+        if (search != null) {
+            NoSearchResults(
+                message = stringResource(R.string.no_book_search_results),
+                otherTabLabel = if (otherTabMatches > 0) {
+                    pluralStringResource(R.plurals.show_matching_articles, otherTabMatches, otherTabMatches)
+                } else {
+                    null
+                },
+                onOtherTabClick = onShowOtherTab,
+                modifier = modifier
+            )
+        } else {
+            BooksEmptyState(onAddClick = onAddClick, modifier = modifier)
+        }
         return
     }
-    val current = books.filter { it.book.isStarted }.maxByOrNull { it.book.lastReadDate ?: 0 }
+    // Results are only the grid
+    val current = if (search != null) null else books.filter { it.book.isStarted }.maxByOrNull { it.book.lastReadDate ?: 0 }
     var contentsBookId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     books.firstOrNull { it.book.id == contentsBookId }?.book?.let { book ->
@@ -125,11 +150,12 @@ fun BooksTab(
             }
         }
         item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
-            BooksHeader(count = books.size, sort = sort, onSortChange = onSortChange)
+            BooksHeader(count = books.size, searching = search != null, sort = sort, onSortChange = onSortChange)
         }
         items(books, key = { it.book.id }) { item ->
             BookGridItem(
                 book = item.book,
+                highlight = search,
                 coverFile = coverFile(item.book),
                 onClick = { onBookClick(item.book.id) },
                 onContentsClick = { contentsBookId = item.book.id },
@@ -217,15 +243,22 @@ private fun ProgressRow(progress: Float) {
 }
 
 @Composable
-private fun BooksHeader(count: Int, sort: BookSort, onSortChange: (BookSort) -> Unit) {
+private fun BooksHeader(count: Int, searching: Boolean, sort: BookSort, onSortChange: (BookSort) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = stringResource(R.string.all_books_count, count),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
+        if (searching) {
+            SearchResultCount(
+                text = pluralStringResource(R.plurals.book_result_count, count, count),
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.all_books_count, count),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+        }
         Box {
             FilterChip(
                 selected = false,
@@ -251,6 +284,7 @@ private fun BooksHeader(count: Int, sort: BookSort, onSortChange: (BookSort) -> 
 @Composable
 private fun BookGridItem(
     book: Book,
+    highlight: SearchTerms?,
     coverFile: File?,
     onClick: () -> Unit,
     onContentsClick: () -> Unit,
@@ -271,7 +305,7 @@ private fun BookGridItem(
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
                 Text(
-                    text = book.title,
+                    text = highlighted(book.title, highlight),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
@@ -279,7 +313,7 @@ private fun BookGridItem(
                 )
                 book.author?.let {
                     Text(
-                        text = it,
+                        text = highlighted(it, highlight),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

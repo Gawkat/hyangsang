@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,10 +29,12 @@ import dev.kettu.hyangsang.data.local.entity.ArticleSummary
 import dev.kettu.hyangsang.data.local.entity.ArticleSummaryWithFeed
 import dev.kettu.hyangsang.data.local.entity.RssFeed
 import dev.kettu.hyangsang.ui.components.displayTitle
+import dev.kettu.hyangsang.ui.components.highlighted
 import dev.kettu.hyangsang.ui.components.sourceLabel
 import dev.kettu.hyangsang.ui.library.percentText
 import dev.kettu.hyangsang.ui.theme.HyangsangTheme
 import dev.kettu.hyangsang.ui.utils.DateTimeUtils
+import dev.kettu.hyangsang.ui.utils.SearchTerms
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -40,6 +43,7 @@ import kotlin.time.ExperimentalTime
  * so unread ones stand out without needing a badge.
  *
  * @param showSavedTime show when the article was saved instead of when it was published
+ * @param highlight a search to mark in the source, title and description
  */
 @Composable
 fun ArticleRow(
@@ -47,7 +51,8 @@ fun ArticleRow(
     onClick: () -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showSavedTime: Boolean = false
+    showSavedTime: Boolean = false,
+    highlight: SearchTerms? = null
 ) {
     val article = articleWithFeed.article
     val isRead = article.lastReadDate != null
@@ -78,14 +83,15 @@ fun ArticleRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "${sourceLabel(articleWithFeed.feed, article.sourceUrl)} · $time$progress",
+                    text = highlighted(sourceLabel(articleWithFeed.feed, article.sourceUrl), highlight) +
+                        AnnotatedString(" · $time$progress"),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = displayTitle(article.title, article.sourceUrl),
+                    text = highlighted(displayTitle(article.title, article.sourceUrl), highlight),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
                     color = if (isRead) {
@@ -96,7 +102,7 @@ fun ArticleRow(
                 )
                 if (article.description.isNotBlank()) {
                     Text(
-                        text = article.description,
+                        text = highlighted(article.description, highlight),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
