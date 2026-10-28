@@ -71,6 +71,21 @@
     <string name="chapter_of_chapters_and_percent">Chapter %1$d of %2$d · %3$s</string>
     <string name="percent" translatable="false">%1$d%%</string>
     <string name="all_books_count">All books · %1$d</string>
+    <string name="search_button">Search</string>
+    <string name="search_books_placeholder">Search books…</string>
+    <string name="no_book_search_results">No books match your search.</string>
+    <plurals name="book_result_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <plurals name="show_matching_books">
+        <item quantity="one">Show %1$d matching book</item>
+        <item quantity="other">Show %1$d matching books</item>
+    </plurals>
+    <plurals name="show_matching_articles">
+        <item quantity="one">Show %1$d matching article</item>
+        <item quantity="other">Show %1$d matching articles</item>
+    </plurals>
     <string name="sort_recently_read">Recently read</string>
     <string name="sort_title">Title</string>
     <string name="sort_recently_added">Recently added</string>

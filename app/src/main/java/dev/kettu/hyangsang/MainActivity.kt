@@ -305,6 +305,8 @@ fun MainApp(
     val savedArticles by articleViewModel.savedArticlesWithFeed.collectAsState()
     val savedImportedOnly by articleViewModel.savedImportedOnly.collectAsState()
     val libraryTab by prefsRepository.libraryTabFlow.collectAsState(initial = LibraryTab.ARTICLES)
+    // Kept here, so a search is still there after opening one of its results
+    var librarySearch by rememberSaveable { mutableStateOf<String?>(null) }
     val books by booksViewModel.books.collectAsState()
     val bookSort by booksViewModel.sort.collectAsState()
     val bookImportState by booksViewModel.importState.collectAsState()
@@ -562,7 +564,9 @@ fun MainApp(
                         },
                         onAddBookClick = {
                             pickBook.launch(arrayOf("application/epub+zip", "application/octet-stream"))
-                        }
+                        },
+                        searchQuery = librarySearch,
+                        onSearchQueryChange = { librarySearch = it }
                     )
                 }
                 composable(
