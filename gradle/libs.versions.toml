@@ -1,5 +1,5 @@
 [versions]
-agp = "9.4.1"
+agp = "9.5.0"
 coreKtx = "1.19.1"
 jsoup = "1.23.2"
 junit = "4.13.2"
@@ -21,7 +21,7 @@ room = "2.8.5"
 ksp = "2.3.12"
 logging-interceptor = "5.5.1"
 jetbrainsKotlinJvm = "2.4.21"
-sqliteJdbc = "3.53.4.0"
+sqliteJdbc = "3.54.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
