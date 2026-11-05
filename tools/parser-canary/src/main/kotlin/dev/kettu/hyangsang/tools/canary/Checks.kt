@@ -22,6 +22,9 @@ private const val SENTENCE_PREFIX_LETTERS = 20
 
 private const val MIN_DUPLICATE_LENGTH = 30
 
+// A tag before the title, as in "[속보]청해부대 임무 해역 확대"
+private val titleTag = Regex("""^\s*\[[^\]]+]\s*""")
+
 private val leftoverPatterns = listOf(
     Regex("""</?[a-zA-Z][a-zA-Z0-9]*[\s/>]"""),
     Regex("""&(nbsp|amp|lt|gt|quot|#\d+);"""),
@@ -33,7 +36,7 @@ private val leftoverPatterns = listOf(
 private val boilerplatePatterns = listOf(
     Regex("""무단\s*전재"""),
     Regex("""재배포\s*금지"""),
-    Regex("""저작권자"""),
+    Regex("""저작권자\s*\(c\)""", RegexOption.IGNORE_CASE),
     Regex("""[ⓒ©]"""),
     Regex("""Copyright""", RegexOption.IGNORE_CASE)
 )
@@ -41,13 +44,36 @@ private val boilerplatePatterns = listOf(
 /**
  * Whether a sentence of the [leads], the descriptions the feed and the page give the article, is
  * in the parsed text. They're written from the text, so a parser that lost the body or read the
- * wrong part of the page won't have them. Null when the leads have no sentence long enough.
+ * wrong part of the page won't have them.
+ *
+ * Only sentences in the [pageText], the text of the whole page before parsing, are looked for,
+ * since some descriptions are summaries written for the feed and the page's metadata, and a lead
+ * that only repeats the [title] says nothing about the text. A sentence can start with the
+ * writer, as in "김준일 | 시사평론가 2025년 대선 유세 당시…", whom the parser moves to the dateline.
+ *
+ * Null when the leads have no such sentence long enough.
  */
-fun leadFound(blocks: List<ContentBlock>, leads: List<String>): Boolean? {
+fun leadFound(
+    blocks: List<ContentBlock>,
+    leads: List<String>,
+    title: String? = null,
+    pageText: String? = null
+): Boolean? {
     val body = blocks.joinToString("") { it.plainText() }.lettersOnly()
-    val sentences = leads.flatMap { it.replace(wordPressFooter, "").split(sentenceEnd) }
-        .map { it.lettersOnly().take(SENTENCE_PREFIX_LETTERS) }
-        .filter { it.length >= MIN_SENTENCE_LETTERS }
+    val page = pageText?.lettersOnly()
+    val datelines = blocks.filterIsInstance<ContentBlock.Dateline>()
+        .map { it.text.lettersOnly() }
+        .filter { it.isNotEmpty() }
+    val titleLetters = title?.lettersOnly()
+    val sentences = leads.filter { titleLetters.isNullOrEmpty() || it.lettersOnly() != titleLetters }
+        .flatMap { it.replace(wordPressFooter, "").split(sentenceEnd) }
+        .flatMap { sentence ->
+            val letters = sentence.lettersOnly()
+            val dateline = datelines.firstOrNull { letters.startsWith(it) }
+            listOfNotNull(letters, dateline?.let { letters.removePrefix(it) })
+                .map { it.take(SENTENCE_PREFIX_LETTERS) }
+        }
+        .filter { it.length >= MIN_SENTENCE_LETTERS && (page == null || it in page) }
     if (sentences.isEmpty()) return null
     return sentences.any { it in body }
 }
@@ -55,8 +81,10 @@ fun leadFound(blocks: List<ContentBlock>, leads: List<String>): Boolean? {
 /**
  * Problems with the [blocks] parsed from an article titled [title], as short descriptions. A
  * short body is only a problem when [leadFound] didn't confirm it, as some articles are mostly
- * pictures, and a repeated paragraph only when it's repeated more often than in the [pageText],
- * the text of the whole page before parsing, as some guides repeat steps.
+ * pictures, and when it's not the title without its tag, as breaking news can be only its
+ * headline at first, "[속보]…". A repeated paragraph is only a problem when it's repeated more
+ * often than in the [pageText], the text of the whole page before parsing, as some guides repeat
+ * steps.
  */
 fun contentProblems(
     blocks: List<ContentBlock>,
@@ -68,7 +96,9 @@ fun contentProblems(
     val bodyBlocks = blocks.filter { it is ContentBlock.Text || it is ContentBlock.Heading }
 
     val hangul = bodyBlocks.sumOf { block -> block.plainText().count { it in '가'..'힣' } }
-    if (hangul < MIN_HANGUL && leadFound != true) problems.add("only $hangul Hangul letters in the body")
+    if (hangul < MIN_HANGUL && leadFound != true && !bodyIsTaggedTitle(bodyBlocks, title)) {
+        problems.add("only $hangul Hangul letters in the body")
+    }
 
     for (block in blocks) {
         val text = block.plainText()
@@ -116,6 +146,13 @@ fun contentProblems(
         }
     }
     return problems
+}
+
+// Whether the body is only the title without the tag it starts with, such as "[속보]"
+private fun bodyIsTaggedTitle(bodyBlocks: List<ContentBlock>, title: String?): Boolean {
+    if (title == null || !titleTag.containsMatchIn(title)) return false
+    val headline = title.replace(titleTag, "").lettersOnly()
+    return headline.isNotEmpty() && bodyBlocks.joinToString("") { it.plainText() }.lettersOnly() == headline
 }
 
 private fun List<ContentSpan>.inBounds(text: String): Boolean =

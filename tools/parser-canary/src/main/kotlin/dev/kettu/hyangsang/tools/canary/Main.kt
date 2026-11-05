@@ -131,7 +131,7 @@ private fun checkArticle(feed: Feed, item: Item, document: Document): Result {
     }
 
     val blocks = chosen.extractContents(document, title)
-    val leadFound = if (feed.checksLead) leadFound(blocks, leads) else null
+    val leadFound = if (feed.checksLead) leadFound(blocks, leads, title, pageText) else null
     problems.addAll(contentProblems(blocks, title, leadFound, pageText))
     if (leadFound == false) {
         problems.add("no sentence of the description the feed or page gives is in the text")
