@@ -90,6 +90,29 @@ class DongaNewsParserTest {
     }
 
     @Test
+    fun `keeps the text of boxes laid out like the body`() {
+        // A show's details above its transcript, with the text directly in the box
+        val html = """
+            <section class="news_view"><div class="wpsArticleHtmlComponent">
+              동아일보 정치 라이브 ＜법정모독＞<br>
+              - 일시: 화·목요일 오전 10~11시<br>
+            </div><br><div class="video_area"><center><iframe src="https://www.youtube.com/embed/x"></iframe></center></div>
+            <br>본문이다.<br><br><div class="wpsArticleHtmlComponent">※ 위 내용은 발췌 정리한 것입니다.</div></section>
+        """.trimIndent()
+
+        val result = parser.extractContents(Jsoup.parse(html))
+
+        assertEquals(
+            listOf(
+                ContentBlock.Text("동아일보 정치 라이브 ＜법정모독＞\n- 일시: 화·목요일 오전 10~11시"),
+                ContentBlock.Text("본문이다."),
+                ContentBlock.Text("※ 위 내용은 발췌 정리한 것입니다.")
+            ),
+            result
+        )
+    }
+
+    @Test
     fun `uses the wire credit as the dateline`() {
         val html = """
             <section class="news_view">본문이다.<br><br>(워싱턴=뉴스1)</section>
