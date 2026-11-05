@@ -47,6 +47,24 @@ class ChecksTest {
     }
 
     @Test
+    fun `the word for copyright holder in the text isn't a copyright note`() {
+        val blocks = article + ContentBlock.Text("“인공지능(AI)이 저작권자의 허락 없이 콘텐츠를 사용해선 안 된다.”")
+        assertEquals(emptyList<String>(), contentProblems(blocks, null))
+    }
+
+    @Test
+    fun `breaking news that's only its headline is fine`() {
+        val blocks = listOf(ContentBlock.Text("청해부대 임무 해역 오만 남쪽까지 확대…초계기 추가 투입"))
+        assertEquals(
+            emptyList<String>(),
+            contentProblems(blocks, "[속보]청해부대 임무 해역 오만 남쪽까지 확대…초계기 추가 투입")
+        )
+        // Without the tag it could be a parser that read the headline for the body
+        val problems = contentProblems(blocks, "청해부대 임무 해역 오만 남쪽까지 확대…초계기 추가 투입")
+        assertTrue(problems.any { it.startsWith("only 23 Hangul letters") })
+    }
+
+    @Test
     fun `repeated paragraphs and a repeated title are problems`() {
         val blocks = listOf(
             ContentBlock.Heading("내년 예산안 발표", 1),
@@ -82,6 +100,31 @@ class ChecksTest {
         val lead = "(서울=연합뉴스) 홍길동 기자 = 정부가 내년 예산안을 발표하면서… 다른 기사의 제목도 함께 실렸다."
         assertEquals(true, leadFound(article, listOf(lead)))
         assertEquals(false, leadFound(article, listOf("이 문장은 기사 본문 어디에도 나오지 않는 요약문이다.")))
+    }
+
+    @Test
+    fun `the lead can start with the writer the parser moved to the dateline`() {
+        val blocks = listOf(
+            ContentBlock.Dateline("김준일 | 시사평론가"),
+            ContentBlock.Image("https://example.com/photo.jpg", caption = "사진 설명"),
+            ContentBlock.Text(paragraph)
+        )
+        val lead = " 김준일 | 시사평론가  $paragraph"
+        assertEquals(true, leadFound(blocks, listOf(lead)))
+    }
+
+    @Test
+    fun `only leads the page shows are looked for`() {
+        // A summary that's only in the page's metadata, not in its text
+        val summary = "3분기 숙박업 객실당 매출이 모든 숙소 유형에서 늘었지만, 효과는 관문도시에 집중됐다."
+        assertEquals(null, leadFound(article, listOf(summary), pageText = "메뉴 $paragraph 구독하기"))
+        assertEquals(false, leadFound(article.take(1), listOf(paragraph), pageText = "메뉴 $paragraph 구독하기"))
+    }
+
+    @Test
+    fun `a lead that's the title isn't looked for`() {
+        val title = "[속보]청해부대 임무 해역 오만 남쪽까지 확대…초계기 추가 투입"
+        assertEquals(null, leadFound(article, listOf(title), title = title))
     }
 
     @Test
