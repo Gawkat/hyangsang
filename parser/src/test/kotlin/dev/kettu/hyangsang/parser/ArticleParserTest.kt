@@ -71,6 +71,23 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `articleUrl encodes spaces in links`() {
+        assertEquals(
+            "https://www.donga.com/news/K-TECH%20Global%20Leaders/article/all/20261105/134974654/1",
+            ArticleParser.articleUrl(" https://www.donga.com/news/K-TECH Global Leaders/article/all/20261105/134974654/1")
+        )
+    }
+
+    @Test
+    fun `should use DongaNewsParser for donga URLs with spaces`() {
+        // As stored before articleUrl encoded them
+        val url = "https://www.donga.com/news/K-TECH Global Leaders/article/all/20261105/134974654/1"
+        val doc = Jsoup.parse("<html><body><section class=\"news_view\">Donga Contents</section></body></html>")
+
+        assertTrue(articleParser.parserFor(url, doc) is DongaNewsParser)
+    }
+
+    @Test
     fun `articleUrl drops easylaw links without an article`() {
         assertEquals(null, ArticleParser.articleUrl("https://www.easylaw.go.kr/CSP/EasyLawInfoR.laf?easySeq=1"))
     }

@@ -13,9 +13,12 @@ class ArticleParser {
          * The page to download for a [link] from a feed, or null when it doesn't lead to an
          * article. Some feeds also list pages without text, or pages that are broken.
          */
-        fun articleUrl(link: String): String? = when (hostOf(link)) {
-            EasyLawParser.HOST -> EasyLawParser.articleUrl(link)
-            else -> link
+        fun articleUrl(link: String): String? {
+            val url = encodeSpaces(link)
+            return when (hostOf(url)) {
+                EasyLawParser.HOST -> EasyLawParser.articleUrl(url)
+                else -> url
+            }
         }
 
         /** The title a page gives itself, for a link that was shared without one. */
@@ -25,10 +28,14 @@ class ArticleParser {
                 ?: document.title().trim().takeIf { it.isNotEmpty() }
 
         private fun hostOf(url: String): String = try {
-            URI(url).host.removePrefix("www.")
+            URI(encodeSpaces(url)).host.removePrefix("www.")
         } catch (_: Exception) {
             ""
         }
+
+        // Links can have spaces, which aren't allowed in a URL, such as 동아일보's for sections
+        // named in English, "/news/K-TECH Global Leaders/article/...". Browsers encode them
+        private fun encodeSpaces(url: String): String = url.trim().replace(" ", "%20")
     }
 
     private val defaultParser = GenericContentsParser()
