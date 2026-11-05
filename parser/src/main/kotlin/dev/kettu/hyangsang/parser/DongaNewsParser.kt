@@ -77,7 +77,9 @@ class DongaNewsParser : ContentsParser {
     /**
      * The body with its text wrapped in paragraphs. A blank line ends a paragraph, a single line
      * break stays a line break within it, and a line that's only bold text becomes a heading.
-     * Photos and other boxes are kept as they are.
+     * Photos and other boxes are kept as they are, except boxes laid out like the body, with text
+     * separated by `<br>`, such as the details of a show above its transcript, which are split
+     * into paragraphs the same way.
      */
     private fun Element.toParagraphs(): Element {
         // Headings carry their line break inside the bold text, "<b>● 제목<br></b><br>"
@@ -127,7 +129,11 @@ class DongaNewsParser : ContentsParser {
                 node is Element && node.tagName() in blockTags -> {
                     endLine()
                     endParagraph()
-                    result.appendChild(node)
+                    if (node.tagName() == "div" && node.ownText().isNotBlank()) {
+                        node.toParagraphs().childNodes().toList().forEach { result.appendChild(it) }
+                    } else {
+                        result.appendChild(node)
+                    }
                 }
                 else -> line.add(node)
             }
